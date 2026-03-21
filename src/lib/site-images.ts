@@ -34,8 +34,8 @@ export const portfolioItems: {
   category: PortfolioCategory;
   label: string;
   subtitle: string;
-  wide?: boolean;
-  tall?: boolean;
+  colClass: string;
+  aspectClass: string;
 }[] = [
   {
     src: images.heroDunes,
@@ -43,7 +43,8 @@ export const portfolioItems: {
     category: "street",
     label: "Street Noir",
     subtitle: "Winter in Paris, 2023",
-    wide: true,
+    colClass: "col-span-12 md:col-span-8",
+    aspectClass: "aspect-[16/10]",
   },
   {
     src: images.grid[2],
@@ -51,7 +52,8 @@ export const portfolioItems: {
     category: "portrait",
     label: "The Gaze",
     subtitle: "Studio Sessions",
-    tall: true,
+    colClass: "col-span-12 md:col-span-4",
+    aspectClass: "aspect-[3/4]",
   },
   {
     src: images.grid[3],
@@ -59,6 +61,8 @@ export const portfolioItems: {
     category: "wedding",
     label: "Union",
     subtitle: "Tuscany Series",
+    colClass: "col-span-12 md:col-span-4",
+    aspectClass: "aspect-square",
   },
   {
     src: images.grid[1],
@@ -66,7 +70,8 @@ export const portfolioItems: {
     category: "architecture",
     label: "Monoliths",
     subtitle: "Concrete Poetics",
-    wide: true,
+    colClass: "col-span-12 md:col-span-8",
+    aspectClass: "aspect-[16/9]",
   },
   {
     src: images.grid[5],
@@ -74,6 +79,8 @@ export const portfolioItems: {
     category: "portrait",
     label: "Character",
     subtitle: "London, 2024",
+    colClass: "col-span-12 md:col-span-6",
+    aspectClass: "aspect-[4/5]",
   },
   {
     src: images.grid[4],
@@ -81,5 +88,7 @@ export const portfolioItems: {
     category: "street",
     label: "Organic",
     subtitle: "Macro Visions",
+    colClass: "col-span-12 md:col-span-6",
+    aspectClass: "aspect-[4/5]",
   },
 ];
