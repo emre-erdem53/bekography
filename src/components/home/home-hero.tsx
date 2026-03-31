@@ -93,7 +93,7 @@ export function HomeHero() {
           >
             <Link
               className="inline-block border border-white bg-white px-10 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-black transition-colors duration-300 hover:bg-black hover:text-white"
-              href="/portfolio"
+              href="/fotograflar"
             >
               Explore Gallery
             </Link>

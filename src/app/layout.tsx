@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { FooterDark } from "@/components/footer-dark";
 import { Inter, Newsreader, Playfair_Display } from "next/font/google";
+import { FloatingContactButtons } from "@/components/floating-contact-buttons";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
@@ -48,6 +50,8 @@ export default function RootLayout({
         <ThemeProvider>
           <SiteHeader />
           {children}
+          <FooterDark />
+          <FloatingContactButtons />
         </ThemeProvider>
       </body>
     </html>

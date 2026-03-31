@@ -79,7 +79,7 @@ export function HomeSelectedVisuals() {
           <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.25 }}>
             <Link
               className="border-b border-black pb-2 text-[10px] font-semibold uppercase tracking-[0.4em] text-black transition-colors hover:text-gray-500 dark:border-white dark:text-white dark:hover:text-zinc-400"
-              href="/portfolio"
+              href="/fotograflar"
             >
               View All Works
             </Link>

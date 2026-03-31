@@ -44,7 +44,7 @@ export function FooterDark() {
       viewport={{ once: true, margin: "-5%" }}
       transition={{ duration: 0.55, ease: EASE_OUT }}
     >
-      <div className="mx-auto max-w-[1600px] px-8 md:px-12">
+      <div className="relative mx-auto max-w-[1600px] px-8 md:px-12">
         <div className="mb-32 grid grid-cols-1 items-start gap-20 md:grid-cols-3">
           <motion.div
             custom={0}
@@ -69,29 +69,47 @@ export function FooterDark() {
             viewport={{ once: true, margin: "-8%" }}
           >
             <span className="mb-6 block text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">
-              Navigation
+              Hızlı Gezinme
             </span>
             <ul className="space-y-3 text-sm">
               <li>
                 <Link
                   className="transition-colors hover:text-gray-400"
-                  href="/portfolio"
+                  href="/"
                 >
-                  Archive
+                  Anasayfa
                 </Link>
               </li>
               <li>
-                <span className="cursor-default text-white/50">Exhibitions</span>
+                <Link
+                  className="transition-colors hover:text-gray-400"
+                  href="/fotograflar"
+                >
+                  Fotoğraflar
+                </Link>
               </li>
               <li>
-                <span className="cursor-default text-white/50">
-                  Fine Art Prints
-                </span>
+                <Link
+                  className="transition-colors hover:text-gray-400"
+                  href="/videolar"
+                >
+                  Videolar
+                </Link>
               </li>
               <li>
-                <span className="cursor-default text-white/50">
-                  Studio Journal
-                </span>
+                <Link className="transition-colors hover:text-gray-400" href="/paketler">
+                  Paketler
+                </Link>
+              </li>
+              <li>
+                <Link className="transition-colors hover:text-gray-400" href="/about">
+                  Hakkımızda
+                </Link>
+              </li>
+              <li>
+                <Link className="transition-colors hover:text-gray-400" href="/contact">
+                  İletişim
+                </Link>
               </li>
             </ul>
           </motion.div>
@@ -103,14 +121,14 @@ export function FooterDark() {
             viewport={{ once: true, margin: "-8%" }}
           >
             <span className="mb-6 block text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">
-              Inquiries
+              İletişim
             </span>
             <p className="text-sm">hello@bekography.com</p>
             <p className="text-sm text-gray-400">+44 (0) 20 7946 0123</p>
           </motion.div>
         </div>
         <motion.div
-          className="flex flex-col items-center justify-between gap-8 border-t border-white/10 pt-16 md:flex-row"
+          className="flex flex-col items-center justify-between gap-8 border-t border-white/10 pb-8 pt-16 md:flex-row"
           initial={reduce ? false : { opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
@@ -142,6 +160,9 @@ export function FooterDark() {
             © 2024 BEKOGRAPHY MONOCHROME. ALL RIGHTS RESERVED.
           </p>
         </motion.div>
+        <p className="pointer-events-none absolute bottom-2 left-8 text-[10px] text-white/45 md:left-12">
+          Developed by Framio Agency
+        </p>
       </div>
     </motion.footer>
   );

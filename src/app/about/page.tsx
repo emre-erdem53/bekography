@@ -119,7 +119,7 @@ export default function AboutPage() {
                 Next Chapter
               </p>
               <Link
-                href="/portfolio"
+                href="/fotograflar"
                 className="group inline-flex items-center gap-4 text-2xl text-zinc-900 transition-all duration-500 hover:text-[#16169c] dark:text-white dark:hover:text-[#7c8fd4] md:text-3xl"
               >
                 Explore the Gallery

@@ -9,10 +9,12 @@ import { EASE_OUT, duration } from "@/lib/motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
-  { href: "/", label: "Home" },
-  { href: "/portfolio", label: "Portfolio" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
+  { href: "/", label: "Anasayfa" },
+  { href: "/fotograflar", label: "Fotoğraflar" },
+  { href: "/videolar", label: "Videolar" },
+  { href: "/paketler", label: "Paketler" },
+  { href: "/about", label: "Hakkımızda" },
+  { href: "/contact", label: "İletişim" },
 ] as const;
 
 export function SiteHeader() {

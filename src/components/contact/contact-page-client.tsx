@@ -7,6 +7,10 @@ import { images } from "@/lib/site-images";
 
 export function ContactPageClient() {
   const reduce = useReducedMotion();
+  const phoneDisplay = "+44 (0) 20 7946 0123";
+  const phoneTel = "+442079460123";
+  const whatsappNumber = "442079460123";
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=Merhaba%20Bekography%2C%20bilgi%20almak%20istiyorum.`;
 
   return (
     <>
@@ -58,7 +62,7 @@ export function ContactPageClient() {
         >
           <div className="w-full max-w-md">
             <motion.header
-              className="mb-16"
+              className="mb-12"
               initial={reduce ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
@@ -68,18 +72,17 @@ export function ContactPageClient() {
               }}
             >
               <h1 className="mb-4 text-4xl font-extrabold tracking-tighter text-[#141414] dark:text-white md:text-5xl">
-                LET&apos;S CREATE <br />
-                TOGETHER
+                Hemen İletişime <br />
+                Geçelim
               </h1>
               <p className="text-sm font-light leading-relaxed text-[#141414]/60 dark:text-zinc-400">
-                Currently accepting new projects for the upcoming season. Reach
-                out to discuss your vision.
+                Form yerine tek tıkla WhatsApp ya da telefon ile bize ulaşın.
+                Daha hızlı geri dönüş için doğrudan iletişim kanallarımızı aktif
+                kullanıyoruz.
               </p>
             </motion.header>
-            <motion.form
-              className="space-y-12"
-              action="#"
-              method="post"
+            <motion.div
+              className="space-y-4"
               initial="hidden"
               animate="show"
               variants={{
@@ -92,45 +95,7 @@ export function ContactPageClient() {
                 },
               }}
             >
-              {[
-                {
-                  label: "Full Name",
-                  name: "name",
-                  type: "text" as const,
-                  placeholder: "Your Name",
-                },
-                {
-                  label: "Email Address",
-                  name: "email",
-                  type: "email" as const,
-                  placeholder: "hello@domain.com",
-                },
-              ].map((field) => (
-                <motion.div
-                  key={field.name}
-                  className="flex flex-col"
-                  variants={{
-                    hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 14 },
-                    show: {
-                      opacity: 1,
-                      y: 0,
-                      transition: { duration: 0.45, ease: EASE_OUT },
-                    },
-                  }}
-                >
-                  <label className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
-                    {field.label}
-                  </label>
-                  <input
-                    className="border-0 border-b border-[#141414] bg-transparent py-3 text-zinc-900 outline-none transition-[border-width] focus:border-b-2 dark:border-zinc-500 dark:text-zinc-100 dark:focus:border-zinc-300"
-                    placeholder={field.placeholder}
-                    type={field.type}
-                    name={field.name}
-                  />
-                </motion.div>
-              ))}
               <motion.div
-                className="flex flex-col"
                 variants={{
                   hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 14 },
                   show: {
@@ -140,18 +105,16 @@ export function ContactPageClient() {
                   },
                 }}
               >
-                <label className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
-                  Message
-                </label>
-                <textarea
-                  className="resize-none border-0 border-b border-[#141414] bg-transparent py-3 text-zinc-900 outline-none transition-[border-width] focus:border-b-2 dark:border-zinc-500 dark:text-zinc-100 dark:focus:border-zinc-300"
-                  placeholder="Describe your project"
-                  rows={3}
-                  name="message"
-                />
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full rounded-lg bg-[#25d366] px-5 py-4 text-center text-sm font-semibold text-black transition-opacity hover:opacity-90"
+                >
+                  WhatsApp ile Chat Başlat
+                </a>
               </motion.div>
               <motion.div
-                className="pt-4"
                 variants={{
                   hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 14 },
                   show: {
@@ -161,16 +124,28 @@ export function ContactPageClient() {
                   },
                 }}
               >
-                <motion.button
-                  className="w-full rounded-sm bg-[#141414] py-4 px-8 text-xs font-bold uppercase tracking-[0.3em] text-white transition-all hover:opacity-90 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-                  type="submit"
-                  whileHover={reduce ? undefined : { scale: 1.01 }}
-                  whileTap={reduce ? undefined : { scale: 0.98 }}
+                <a
+                  href={`tel:${phoneTel}`}
+                  className="block w-full rounded-lg bg-[#141414] px-5 py-4 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
                 >
-                  Send Message
-                </motion.button>
+                  Telefon ile Ara ({phoneDisplay})
+                </a>
               </motion.div>
-            </motion.form>
+            </motion.div>
+            <motion.div
+              className="mt-10 overflow-hidden rounded-2xl border border-black/10 dark:border-white/10"
+              initial={reduce ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: reduce ? 0 : 0.38, duration: 0.55, ease: EASE_OUT }}
+            >
+              <motion.iframe
+                className="h-[280px] w-full md:h-[340px]"
+                title="Bekography Google Maps Konumu"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                src="https://www.google.com/maps?q=Istanbul&output=embed"
+              />
+            </motion.div>
             <motion.footer
               className="mt-24 grid grid-cols-1 gap-8 border-t border-[#141414]/5 pt-12 dark:border-white/10 md:grid-cols-2"
               initial={reduce ? false : { opacity: 0 }}
@@ -187,9 +162,12 @@ export function ContactPageClient() {
                 >
                   hello@bekography.com
                 </a>
-                <p className="text-xs font-medium tracking-wider text-zinc-800 dark:text-zinc-300">
-                  +1 (555) 000-0000
-                </p>
+                <a
+                  href={`tel:${phoneTel}`}
+                  className="text-xs font-medium tracking-wider text-zinc-800 hover:underline dark:text-zinc-300"
+                >
+                  {phoneDisplay}
+                </a>
               </div>
               <div>
                 <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
