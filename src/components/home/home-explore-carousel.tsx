@@ -402,13 +402,13 @@ export function HomeExploreCarousel({
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex items-center justify-center gap-3"
                 >
-                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#833ab4] via-[#fd1d1d] to-[#fcb045] shadow-lg ring-1 ring-white/30">
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full shadow-lg">
                     <Image
                       src="/instagram.svg"
                       alt=""
                       width={16}
                       height={16}
-                      className="h-4 w-4"
+                      className="h-7 w-7"
                       aria-hidden
                     />
                   </span>
