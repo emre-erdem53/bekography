@@ -32,6 +32,7 @@ export function HomeExploreCarousel({
   const tilesRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const wheelLocked = useRef(false);
+  const navLocked = useRef(false);
 
   const media = useMemo(() => items, [items]);
   const arrangedFeedItems = useMemo(
@@ -129,18 +130,50 @@ export function HomeExploreCarousel({
     if (!media.length) {
       return;
     }
-    const safeIndex = modalIndex >= 0 ? modalIndex : 0;
-    const nextIndex = (safeIndex + 1) % media.length;
-    setModalId(media[nextIndex]?.id ?? null);
+    if (navLocked.current) {
+      return;
+    }
+    navLocked.current = true;
+    window.setTimeout(() => {
+      navLocked.current = false;
+    }, 220);
+
+    setModalId((currentId) => {
+      if (!currentId) {
+        return media[0]?.id ?? null;
+      }
+      const currentIndex = media.findIndex((item) => item.id === currentId);
+      if (currentIndex === -1) {
+        return media[0]?.id ?? null;
+      }
+      const nextIndex = (currentIndex + 1) % media.length;
+      return media[nextIndex]?.id ?? null;
+    });
   };
 
   const prev = () => {
     if (!media.length) {
       return;
     }
-    const safeIndex = modalIndex >= 0 ? modalIndex : 0;
-    const prevIndex = (safeIndex - 1 + media.length) % media.length;
-    setModalId(media[prevIndex]?.id ?? null);
+    if (navLocked.current) {
+      return;
+    }
+    navLocked.current = true;
+    window.setTimeout(() => {
+      navLocked.current = false;
+    }, 220);
+
+    setModalId((currentId) => {
+      if (!currentId) {
+        return media[0]?.id ?? null;
+      }
+      const currentIndex = media.findIndex((item) => item.id === currentId);
+      if (currentIndex === -1) {
+        return media[0]?.id ?? null;
+      }
+      const prevIndex = (currentIndex - 1 + media.length) % media.length;
+      return media[prevIndex]?.id ?? null;
+    });
   };
 
   useEffect(() => {
