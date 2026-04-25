@@ -27,9 +27,6 @@ export function HomeExploreCarousel({
   const reduce = useReducedMotion();
   const [modalId, setModalId] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
-  const [orientationById, setOrientationById] = useState<
-    Record<string, "portrait" | "landscape">
-  >({});
   const [activeVideoIds, setActiveVideoIds] = useState<Record<string, true>>({});
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const tilesRef = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -37,22 +34,21 @@ export function HomeExploreCarousel({
   const wheelLocked = useRef(false);
 
   const media = useMemo(() => items, [items]);
-  const feedItems = useMemo(
-    () => media.slice(0, Math.min(visibleCount, media.length)),
-    [media, visibleCount],
-  );
-  const arrangedFeedItems = useMemo(() => {
-    const remaining = [...feedItems];
+  const orderedMedia = useMemo(() => {
+    const remaining = [...media];
     const arranged: ExploreMediaItem[] = [];
     let currentRow = 0;
     let usedColumnsInRow = 0;
     let lastLandscapeVideoRow = -99;
 
+    const resolveOrientation = (item: ExploreMediaItem) =>
+      item.orientation ?? (item.type === "video" ? "landscape" : "portrait");
+
     const isLandscapeVideo = (item: ExploreMediaItem) => {
       if (item.type !== "video") {
         return false;
       }
-      const orientation = orientationById[item.id] ?? item.orientation;
+      const orientation = resolveOrientation(item);
       return orientation === "landscape";
     };
 
@@ -116,9 +112,14 @@ export function HomeExploreCarousel({
     }
 
     return arranged;
-  }, [feedItems, landscapeVideoSpan, orientationById]);
-  const modalIndex = modalId === null ? -1 : media.findIndex((item) => item.id === modalId);
-  const modalItem = modalIndex === -1 ? null : media[modalIndex];
+  }, [media, landscapeVideoSpan]);
+  const arrangedFeedItems = useMemo(
+    () => orderedMedia.slice(0, Math.min(visibleCount, orderedMedia.length)),
+    [orderedMedia, visibleCount],
+  );
+  const modalIndex =
+    modalId === null ? -1 : orderedMedia.findIndex((item) => item.id === modalId);
+  const modalItem = modalIndex === -1 ? null : orderedMedia[modalIndex];
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -133,7 +134,7 @@ export function HomeExploreCarousel({
         }
 
         setVisibleCount((current) =>
-          Math.min(current + LOAD_MORE_STEP, media.length),
+          Math.min(current + LOAD_MORE_STEP, orderedMedia.length),
         );
       },
       { rootMargin: "320px 0px 320px 0px" },
@@ -141,7 +142,7 @@ export function HomeExploreCarousel({
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [media.length]);
+  }, [orderedMedia.length]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -204,21 +205,21 @@ export function HomeExploreCarousel({
   }, [activeVideoIds]);
 
   const next = () => {
-    if (!media.length) {
+    if (!orderedMedia.length) {
       return;
     }
     const safeIndex = modalIndex >= 0 ? modalIndex : 0;
-    const nextIndex = (safeIndex + 1) % media.length;
-    setModalId(media[nextIndex]?.id ?? null);
+    const nextIndex = (safeIndex + 1) % orderedMedia.length;
+    setModalId(orderedMedia[nextIndex]?.id ?? null);
   };
 
   const prev = () => {
-    if (!media.length) {
+    if (!orderedMedia.length) {
       return;
     }
     const safeIndex = modalIndex >= 0 ? modalIndex : 0;
-    const prevIndex = (safeIndex - 1 + media.length) % media.length;
-    setModalId(media[prevIndex]?.id ?? null);
+    const prevIndex = (safeIndex - 1 + orderedMedia.length) % orderedMedia.length;
+    setModalId(orderedMedia[prevIndex]?.id ?? null);
   };
 
   useEffect(() => {
@@ -240,8 +241,9 @@ export function HomeExploreCarousel({
         <div className="relative z-10 w-full">
           <div className="grid w-full grid-cols-3 gap-[1px]">
             {arrangedFeedItems.map((item, tileIndex) => {
-              const itemOrientation = orientationById[item.id] ?? item.orientation;
-              const isLandscape = itemOrientation === "landscape";
+              const resolvedOrientation =
+                item.orientation ?? (item.type === "video" ? "landscape" : "portrait");
+              const isLandscape = resolvedOrientation === "landscape";
               const landscapeClass =
                 landscapeVideoSpan === 3
                   ? "col-span-3 aspect-[16/9]"
@@ -274,20 +276,6 @@ export function HomeExploreCarousel({
                       loop
                       playsInline
                       preload={activeVideoIds[item.id] ? "metadata" : "none"}
-                      onLoadedMetadata={(event) => {
-                        const { videoWidth, videoHeight } = event.currentTarget;
-                        if (!videoWidth || !videoHeight) {
-                          return;
-                        }
-                        const nextOrientation =
-                          videoWidth > videoHeight ? "landscape" : "portrait";
-                        setOrientationById((current) => {
-                          if (current[item.id] === nextOrientation) {
-                            return current;
-                          }
-                          return { ...current, [item.id]: nextOrientation };
-                        });
-                      }}
                     />
                   ) : (
                     <Image
@@ -296,19 +284,6 @@ export function HomeExploreCarousel({
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                       sizes="(max-width: 768px) 33vw, 20vw"
-                      onLoad={(event) => {
-                        const element = event.currentTarget;
-                        const nextOrientation =
-                          element.naturalWidth > element.naturalHeight
-                            ? "landscape"
-                            : "portrait";
-                        setOrientationById((current) => {
-                          if (current[item.id] === nextOrientation) {
-                            return current;
-                          }
-                          return { ...current, [item.id]: nextOrientation };
-                        });
-                      }}
                     />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
