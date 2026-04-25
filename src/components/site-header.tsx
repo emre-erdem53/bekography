@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
@@ -23,11 +24,44 @@ export function SiteHeader() {
   const reduce = useReducedMotion();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [hiddenOnScroll, setHiddenOnScroll] = useState(false);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      const delta = currentY - lastY;
+      lastY = currentY;
+
+      if (open) {
+        setHiddenOnScroll(false);
+        return;
+      }
+
+      if (currentY < 40) {
+        setHiddenOnScroll(false);
+        return;
+      }
+
+      if (delta > 6) {
+        setHiddenOnScroll(true);
+        return;
+      }
+
+      if (delta < -6) {
+        setHiddenOnScroll(false);
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [open]);
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -39,9 +73,12 @@ export function SiteHeader() {
           : "border-black/5 bg-white/85"
       }`}
       initial={reduce ? false : { y: -24, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      animate={{
+        y: hiddenOnScroll ? -112 : 0,
+        opacity: hiddenOnScroll ? 0.92 : 1,
+      }}
       transition={{
-        duration: reduce ? 0.01 : 0.65,
+        duration: reduce ? 0.01 : 0.42,
         ease: EASE_OUT,
       }}
     >
@@ -53,11 +90,17 @@ export function SiteHeader() {
         >
           <Link
             href="/"
-            className={`text-2xl font-black tracking-[0.15em] transition-opacity hover:opacity-70 md:text-3xl ${
-              isDark ? "text-white" : "text-black"
-            }`}
+            className="block transition-opacity hover:opacity-70"
+            aria-label="bekography Ana Sayfa"
           >
-            BEKOGRAPHY
+            <Image
+              src={isDark ? "/logo/logo-white.svg" : "/logo/logo-black.svg"}
+              alt="bekography"
+              width={260}
+              height={58}
+              className="h-7 w-auto md:h-9"
+              priority
+            />
           </Link>
         </motion.div>
         <nav className="hidden items-center gap-12 md:flex">

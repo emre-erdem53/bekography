@@ -3,26 +3,36 @@
 import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import { EASE_OUT } from "@/lib/motion";
-import { images } from "@/lib/site-images";
 
 export function ContactPageClient() {
   const reduce = useReducedMotion();
-  const phoneDisplay = "+44 (0) 20 7946 0123";
-  const phoneTel = "+442079460123";
-  const whatsappNumber = "442079460123";
+  const phoneDisplay = "0546 937 04 64";
+  const phoneTel = "+905469370464";
+  const whatsappNumber = "905469370464";
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=Merhaba%20Bekography%2C%20bilgi%20almak%20istiyorum.`;
+  const address =
+    "Yavuz Plaza, Eminettin, Menderes Blv. No:170-172 Kat:9 801, 53020 Rize Merkez/Rize";
+  const mapsQuery = encodeURIComponent(address);
+  const mapsLink = `https://maps.google.com/?q=${mapsQuery}`;
+  const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
+  const blobReelsPath = process.env.NEXT_PUBLIC_BLOB_REELS_PATH
+    ?.replace(/^\/+/, "")
+    .replace(/\/+$/, "");
+  const contactImage = blobBaseUrl
+    ? `${blobBaseUrl}/${blobReelsPath ? `${blobReelsPath}/` : ""}1.jpg`
+    : "/reels/1.jpg";
 
   return (
     <>
       <main className="flex min-h-screen flex-1 flex-col bg-[#f7f7f7] pt-24 transition-colors duration-300 dark:bg-zinc-950 md:flex-row">
         <motion.section
-          className="relative flex h-[50vh] w-full items-center justify-center bg-[#141414] md:h-auto md:w-1/2 md:min-h-[calc(100vh-6rem)]"
+          className="relative flex h-[50vh] w-full items-center justify-center bg-[#141414] md:h-auto md:w-[54%] md:min-h-[calc(100vh-6rem)]"
           initial={reduce ? false : { opacity: 0, x: -36 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.85, ease: EASE_OUT }}
         >
           <motion.div
-            className="relative mx-auto aspect-[3/4] w-[min(100%,420px)] overflow-hidden rounded-[50%] border-4 border-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] dark:border-zinc-700 md:my-16"
+            className="relative mx-auto aspect-[3/4] w-[min(100%,420px)] overflow-hidden rounded-[50%] border-4 border-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] dark:border-zinc-700 md:my-16 lg:w-[min(100%,520px)] 2xl:w-[min(100%,620px)]"
             initial={reduce ? false : { opacity: 0, scale: 0.92, rotate: -2 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{
@@ -32,8 +42,8 @@ export function ContactPageClient() {
             }}
           >
             <Image
-              src={images.contactLandscape}
-              alt="Black and white landscape photography"
+              src={contactImage}
+              alt="Bekography iletişim görseli"
               fill
               className="object-cover grayscale contrast-125"
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -46,12 +56,12 @@ export function ContactPageClient() {
           </motion.div>
           <div className="absolute bottom-12 left-12 hidden md:block">
             <p className="text-[10px] uppercase tracking-[0.4em] text-white/40">
-              Architectural Series — 024
+              Rize Merkez
             </p>
           </div>
         </motion.section>
         <motion.section
-          className="flex w-full items-center justify-center bg-white p-8 dark:bg-zinc-900 md:w-1/2 md:p-24 lg:p-32"
+          className="flex w-full items-center justify-center bg-white p-8 dark:bg-zinc-900 md:w-[46%] md:p-16 lg:p-20 2xl:p-24"
           initial={reduce ? false : { opacity: 0, x: 36 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{
@@ -60,7 +70,7 @@ export function ContactPageClient() {
             delay: reduce ? 0 : 0.08,
           }}
         >
-          <div className="w-full max-w-md">
+          <div className="w-full max-w-md lg:max-w-lg 2xl:max-w-xl">
             <motion.header
               className="mb-12"
               initial={reduce ? false : { opacity: 0, y: 20 }}
@@ -138,12 +148,26 @@ export function ContactPageClient() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: reduce ? 0 : 0.38, duration: 0.55, ease: EASE_OUT }}
             >
+              <div className="border-b border-black/10 bg-zinc-50 px-5 py-4 text-xs leading-relaxed text-zinc-700 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-300">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+                  Adres
+                </p>
+                <p>{address}</p>
+                <a
+                  href={mapsLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-900 underline underline-offset-4 dark:text-white"
+                >
+                  Haritada Aç
+                </a>
+              </div>
               <motion.iframe
                 className="h-[280px] w-full md:h-[340px]"
                 title="Bekography Google Maps Konumu"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                src="https://www.google.com/maps?q=Istanbul&output=embed"
+                src={`https://www.google.com/maps?q=${mapsQuery}&output=embed`}
               />
             </motion.div>
             <motion.footer

@@ -19,9 +19,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
-  --font-family-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-sans: var(--font-gilroy), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-gilroy), ui-serif, Georgia, serif;
+  --font-family-display: var(--font-gilroy), ui-serif, Georgia, serif;
+  --font-family-brand: var(--font-andes), ui-serif, Georgia, serif;
 }
 
 body {
@@ -79,4 +80,8 @@ body {
 .nav-link:hover::after,
 .nav-link[data-active="true"]::after {
   width: 100%;
+}
+
+.font-brand {
+  font-family: var(--font-family-brand);
 }

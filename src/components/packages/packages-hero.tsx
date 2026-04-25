@@ -39,6 +39,10 @@ type PriceCategory = {
   highlight?: boolean;
 };
 
+const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
+const packageMedia = (fileName: string) =>
+  blobBaseUrl ? `${blobBaseUrl}/${fileName}` : `/reels/${fileName}`;
+
 const topFeatures: PackageFeature[] = [
   {
     title: "Rehberlik Hizmeti",
@@ -160,7 +164,7 @@ export function PackagesHero() {
         <div className="rounded-2xl border border-white/10 bg-black p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] md:p-6">
           <div className="relative mb-5 overflow-hidden rounded-2xl">
             <Image
-              src="/gorsel-5.png"
+              src={packageMedia("5.jpg")}
               alt="Neden Bekography"
               width={1600}
               height={700}
@@ -172,8 +176,8 @@ export function PackagesHero() {
                 <h1 className="text-5xl font-extrabold leading-none text-[#00f27a] md:text-7xl">
                   Neden?
                 </h1>
-                <p className="mt-2 text-2xl tracking-wide text-[#00f27a] md:text-3xl">
-                  BEKOGRAPHY
+                <p className="font-brand mt-2 text-2xl tracking-wide text-[#00f27a] md:text-3xl">
+                  bekography
                 </p>
               </div>
             </div>
@@ -201,7 +205,7 @@ export function PackagesHero() {
         <div className="mt-8 rounded-2xl border border-white/10 bg-[#030303] p-4 md:p-6">
           <div className="relative mb-5 overflow-hidden rounded-2xl">
             <Image
-              src="/gorsel-2.png"
+              src={packageMedia("2.jpg")}
               alt="Fiyat Listesi"
               width={1600}
               height={700}
@@ -294,7 +298,7 @@ export function PackagesHero() {
                           <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src="/gorsel-4.png"
+                                src={packageMedia("4.jpg")}
                                 alt="Dış çekim detayları"
                                 width={1600}
                                 height={700}
@@ -410,7 +414,7 @@ export function PackagesHero() {
                           <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src="/gorsel-3.png"
+                                src={packageMedia("3.jpg")}
                                 alt="Düğün detayları"
                                 width={1600}
                                 height={700}
@@ -524,7 +528,7 @@ export function PackagesHero() {
                           <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src="/gorsel-1.png"
+                                src={packageMedia("1.jpg")}
                                 alt="Gelin çıkışı detayları"
                                 width={1600}
                                 height={700}
@@ -641,7 +645,7 @@ export function PackagesHero() {
                           <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src="/gorsel-2.png"
+                                src={packageMedia("2.jpg")}
                                 alt="Kuaför hazırlık detayları"
                                 width={1600}
                                 height={700}
@@ -756,7 +760,7 @@ export function PackagesHero() {
                           <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src="/gorsel-3.png"
+                                src={packageMedia("3.jpg")}
                                 alt="Full hikaye detayları"
                                 width={1600}
                                 height={700}

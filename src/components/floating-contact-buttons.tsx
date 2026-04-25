@@ -1,10 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Phone, MessageCircle } from "lucide-react";
+import Image from "next/image";
+import { Phone } from "lucide-react";
 
-const PHONE_TEL = "+442079460123";
-const WHATSAPP_NUMBER = "442079460123";
+const PHONE_TEL = "+905469370464";
+const WHATSAPP_NUMBER = "905469370464";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=Merhaba%20Bekography%2C%20bilgi%20almak%20istiyorum.`;
 
 export function FloatingContactButtons() {
@@ -15,10 +16,10 @@ export function FloatingContactButtons() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="WhatsApp ile iletişime geç"
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-[#25d366] text-black shadow-lg transition-transform hover:scale-[1.03]"
+        className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#ffffff] shadow-lg transition-transform hover:scale-[1.03]"
         whileTap={{ scale: 0.96 }}
       >
-        <MessageCircle className="h-5 w-5" />
+        <Image src="/whatsapp.svg" alt="" width={24} height={24} aria-hidden />
       </motion.a>
 
       <motion.a

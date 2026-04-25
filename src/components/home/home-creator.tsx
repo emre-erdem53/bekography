@@ -52,7 +52,7 @@ export function HomeCreator() {
             <Stagger className="space-y-6 text-lg font-light leading-relaxed text-gray-400" stagger={0.12}>
               <StaggerItem>
                 <p>
-                  BEKOGRAPHY is a studio dedicated to the purity of monochrome.
+                  bekography is a studio dedicated to the purity of monochrome.
                   We strip away the noise of color to find the resonance of
                   emotion and the architecture of light.
                 </p>

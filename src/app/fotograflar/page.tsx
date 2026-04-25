@@ -4,7 +4,7 @@ import { photoMediaItems } from "@/lib/explore-media";
 
 export const metadata: Metadata = {
   title: "Fotoğraflar",
-  description: "BEKOGRAPHY fotoğraflar akışı.",
+  description: "bekography fotoğraflar akışı.",
 };
 
 export default function FotograflarPage() {

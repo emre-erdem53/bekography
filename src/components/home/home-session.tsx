@@ -67,7 +67,7 @@ export function HomeSession() {
             </motion.a>
           </div>
           <p className="text-[9px] font-black uppercase tracking-[0.5em] text-black/40 dark:text-white/35">
-            © 2024 BEKOGRAPHY MONOCHROME. ALL RIGHTS RESERVED.
+            © 2024 bekography monochrome. all rights reserved.
           </p>
         </Reveal>
       </div>
