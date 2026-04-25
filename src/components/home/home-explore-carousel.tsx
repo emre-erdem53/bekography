@@ -34,92 +34,13 @@ export function HomeExploreCarousel({
   const wheelLocked = useRef(false);
 
   const media = useMemo(() => items, [items]);
-  const orderedMedia = useMemo(() => {
-    const remaining = [...media];
-    const arranged: ExploreMediaItem[] = [];
-    let currentRow = 0;
-    let usedColumnsInRow = 0;
-    let lastLandscapeVideoRow = -99;
-
-    const resolveOrientation = (item: ExploreMediaItem) =>
-      item.orientation ?? (item.type === "video" ? "landscape" : "portrait");
-
-    const isLandscapeVideo = (item: ExploreMediaItem) => {
-      if (item.type !== "video") {
-        return false;
-      }
-      const orientation = resolveOrientation(item);
-      return orientation === "landscape";
-    };
-
-    const getSpan = (item: ExploreMediaItem) =>
-      isLandscapeVideo(item) ? landscapeVideoSpan : 1;
-
-    while (remaining.length > 0) {
-      const columnsLeft = 3 - usedColumnsInRow;
-      let chosenIndex = remaining.findIndex((candidate) => {
-        const span = getSpan(candidate);
-        if (span > columnsLeft) {
-          return false;
-        }
-
-        if (isLandscapeVideo(candidate) && currentRow - lastLandscapeVideoRow <= 1) {
-          return false;
-        }
-
-        return true;
-      });
-
-      if (chosenIndex === -1) {
-        if (usedColumnsInRow > 0) {
-          currentRow += 1;
-          usedColumnsInRow = 0;
-          continue;
-        }
-
-        chosenIndex = remaining.findIndex((candidate) => {
-          if (!isLandscapeVideo(candidate)) {
-            return true;
-          }
-          return currentRow - lastLandscapeVideoRow > 1;
-        });
-
-        if (chosenIndex === -1) {
-          chosenIndex = 0;
-        }
-      }
-
-      const [chosen] = remaining.splice(chosenIndex, 1);
-      const chosenSpan = getSpan(chosen);
-
-      if (chosenSpan > 3 - usedColumnsInRow) {
-        currentRow += 1;
-        usedColumnsInRow = 0;
-      }
-
-      const rowUsedByItem = currentRow;
-      usedColumnsInRow += chosenSpan;
-      if (usedColumnsInRow >= 3) {
-        currentRow += 1;
-        usedColumnsInRow = 0;
-      }
-
-      if (isLandscapeVideo(chosen)) {
-        lastLandscapeVideoRow = rowUsedByItem;
-      }
-
-      arranged.push(chosen);
-    }
-
-    return arranged;
-  }, [media, landscapeVideoSpan]);
   const arrangedFeedItems = useMemo(
-    () => orderedMedia.slice(0, Math.min(visibleCount, orderedMedia.length)),
-    [orderedMedia, visibleCount],
+    () => media.slice(0, Math.min(visibleCount, media.length)),
+    [media, visibleCount],
   );
   const modalIndex =
-    modalId === null ? -1 : orderedMedia.findIndex((item) => item.id === modalId);
-  const modalItem = modalIndex === -1 ? null : orderedMedia[modalIndex];
+    modalId === null ? -1 : media.findIndex((item) => item.id === modalId);
+  const modalItem = modalIndex === -1 ? null : media[modalIndex];
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -134,7 +55,7 @@ export function HomeExploreCarousel({
         }
 
         setVisibleCount((current) =>
-          Math.min(current + LOAD_MORE_STEP, orderedMedia.length),
+          Math.min(current + LOAD_MORE_STEP, media.length),
         );
       },
       { rootMargin: "320px 0px 320px 0px" },
@@ -142,7 +63,7 @@ export function HomeExploreCarousel({
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [orderedMedia.length]);
+  }, [media.length]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -205,21 +126,21 @@ export function HomeExploreCarousel({
   }, [activeVideoIds]);
 
   const next = () => {
-    if (!orderedMedia.length) {
+    if (!media.length) {
       return;
     }
     const safeIndex = modalIndex >= 0 ? modalIndex : 0;
-    const nextIndex = (safeIndex + 1) % orderedMedia.length;
-    setModalId(orderedMedia[nextIndex]?.id ?? null);
+    const nextIndex = (safeIndex + 1) % media.length;
+    setModalId(media[nextIndex]?.id ?? null);
   };
 
   const prev = () => {
-    if (!orderedMedia.length) {
+    if (!media.length) {
       return;
     }
     const safeIndex = modalIndex >= 0 ? modalIndex : 0;
-    const prevIndex = (safeIndex - 1 + orderedMedia.length) % orderedMedia.length;
-    setModalId(orderedMedia[prevIndex]?.id ?? null);
+    const prevIndex = (safeIndex - 1 + media.length) % media.length;
+    setModalId(media[prevIndex]?.id ?? null);
   };
 
   useEffect(() => {

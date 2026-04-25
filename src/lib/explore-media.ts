@@ -1,6 +1,7 @@
 export type ExploreMediaItem = {
   id: string;
   type: "image" | "video";
+  fileName: string;
   src: string;
   poster?: string;
   title: string;
@@ -108,6 +109,7 @@ const videoFiles = Array.from({ length: 13 }, (_, i) => `video${i + 1}.mp4`);
 const imageItems: ExploreMediaItem[] = imageFiles.map((file, index) => ({
   id: `i-${index + 1}`,
   type: "image",
+  fileName: file,
   src: createMediaUrl(file),
   title: `Fotoğraf ${index + 1}`,
   instagramUrl: getInstagramUrl(file),
@@ -116,32 +118,80 @@ const imageItems: ExploreMediaItem[] = imageFiles.map((file, index) => ({
 const videoItems: ExploreMediaItem[] = videoFiles.map((file, index) => ({
   id: `v-${index + 1}`,
   type: "video",
+  fileName: file,
   src: createMediaUrl(file),
   poster: createMediaUrl(`${Math.min(index + 1, imageFiles.length)}.jpg`),
   title: `Video ${index + 1}`,
   instagramUrl: getInstagramUrl(file),
 }));
 
-const interleavedMediaItems = (() => {
-  const mixed: ExploreMediaItem[] = [];
-  let imageIndex = 0;
-  let videoIndex = 0;
+const manuallyOrderedMediaItems = (() => {
+  const allItems = [...imageItems, ...videoItems];
+  const byFileName = new Map(allItems.map((item) => [item.fileName, item]));
+  const used = new Set<string>();
 
-  while (imageIndex < imageItems.length || videoIndex < videoItems.length) {
-    if (imageIndex < imageItems.length) {
-      mixed.push(imageItems[imageIndex]);
-      imageIndex += 1;
+  const priorityOrder = [
+    "1.jpg",
+    "video1.mp4",
+    "video2.mp4",
+    "2.jpg",
+    "3.jpg",
+    "video3.mp4",
+    "video4.mp4",
+    "4.jpg",
+  ] as const;
+
+  const baseOrder: ExploreMediaItem[] = [];
+
+  for (const fileName of priorityOrder) {
+    const item = byFileName.get(fileName);
+    if (!item || used.has(item.id)) {
+      continue;
     }
-    if (videoIndex < videoItems.length) {
-      mixed.push(videoItems[videoIndex]);
-      videoIndex += 1;
-    }
+    baseOrder.push(item);
+    used.add(item.id);
   }
 
-  return mixed;
+  for (const item of allItems) {
+    if (used.has(item.id)) {
+      continue;
+    }
+    baseOrder.push(item);
+    used.add(item.id);
+  }
+
+  const isLandscape = (item: ExploreMediaItem) => item.type === "video";
+  const portraitQueue = baseOrder.filter((item) => !isLandscape(item));
+  const landscapeQueue = baseOrder.filter((item) => isLandscape(item));
+  const arranged: ExploreMediaItem[] = [];
+
+  let rowIndex = 0;
+  while (portraitQueue.length > 0 && landscapeQueue.length > 0) {
+    const portraitItem = portraitQueue.shift();
+    const landscapeItem = landscapeQueue.shift();
+
+    if (!portraitItem || !landscapeItem) {
+      break;
+    }
+
+    // Row pattern:
+    // - Even row: portrait left, landscape right
+    // - Odd row: landscape left, portrait right
+    if (rowIndex % 2 === 0) {
+      arranged.push(portraitItem, landscapeItem);
+    } else {
+      arranged.push(landscapeItem, portraitItem);
+    }
+
+    rowIndex += 1;
+  }
+
+  // Append leftovers while keeping their own order.
+  arranged.push(...portraitQueue, ...landscapeQueue);
+  return arranged;
 })();
 
-export const exploreMediaItems: ExploreMediaItem[] = interleavedMediaItems;
+export const exploreMediaItems: ExploreMediaItem[] = manuallyOrderedMediaItems;
 
 export const photoMediaItems = exploreMediaItems.filter(
   (item) => item.type === "image",
