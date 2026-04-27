@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function VideolarPage() {
-  return <HomeExploreCarousel items={videoMediaItems} landscapeVideoSpan={3} />;
+  return <HomeExploreCarousel items={videoMediaItems} />;
 }

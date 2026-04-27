@@ -295,22 +295,22 @@ export function PackagesHero() {
                         className="bg-black/90"
                       >
                         {category.title === "Dış Çekim" ? (
-                          <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
                                 src={packageMedia("4.jpg")}
                                 alt="Dış çekim detayları"
                                 width={1600}
                                 height={700}
-                                className="h-32 w-full object-cover brightness-75 md:h-44"
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
                               />
                               <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-[#ff9a5e]">
-                                  <p className="text-xs font-semibold uppercase tracking-[0.15em]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
                                     Stres yok, kahkaha ve güven çok.
                                   </p>
-                                  <h4 className="mt-1 text-4xl font-light md:text-6xl">
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
                                     Dış Çekim
                                   </h4>
                                 </div>
@@ -344,13 +344,13 @@ export function PackagesHero() {
                                 return (
                                   <div
                                     key={item.title}
-                                    className="bg-[#ff8a45] px-3 py-3 text-center text-[#111]"
+                                    className="bg-[#ff8a45] px-2 py-2 text-center text-[#111]"
                                   >
                                     <Icon className="mx-auto h-5 w-5" />
-                                    <p className="mt-2 text-sm font-bold leading-tight">
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[11px] leading-tight text-[#3a2314]">
+                                    <p className="mt-1 text-[10px] leading-tight text-[#3a2314] md:text-[11px]">
                                       {item.sub}
                                     </p>
                                   </div>
@@ -358,12 +358,12 @@ export function PackagesHero() {
                               })}
                             </div>
 
-                            <div className="space-y-3 rounded-2xl bg-black/80 p-3 md:p-4">
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#ff9a5e]">
+                                <h5 className="text-center text-2xl font-bold text-[#ff9a5e]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Çekimi 10.00-14.00 veya 13.00-17.00 saatleri
                                   arasında gerçekleştiriyoruz. Belirlenen sürede,
                                   bir rota üzerindeki farklı mekanlarda çekim
@@ -374,10 +374,10 @@ export function PackagesHero() {
                                 </p>
                               </div>
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#ff9a5e]">
+                                <h5 className="text-center text-2xl font-bold text-[#ff9a5e]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Çekimden kalan tüm görüntüleri yüksek
                                   çözünürlükte, 1 hafta içinde teslim ediyoruz.
                                   Seçilen fotoğraflar düzenlenir, özel albüm ve
@@ -398,12 +398,12 @@ export function PackagesHero() {
                               ].map((price) => (
                                 <div
                                   key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#1d2333] px-4 py-3 text-[#ff9a5e]"
+                                  className="flex items-center justify-between rounded-2xl bg-[#1d2333] px-3 py-2.5 text-[#ff9a5e]"
                                 >
-                                  <span className="text-lg font-semibold">
+                                  <span className="text-sm font-semibold md:text-lg">
                                     {price.label}
                                   </span>
-                                  <span className="text-2xl font-extrabold">
+                                  <span className="text-xl font-extrabold md:text-2xl">
                                     {price.price}
                                   </span>
                                 </div>
@@ -411,22 +411,22 @@ export function PackagesHero() {
                             </div>
                           </div>
                         ) : category.title === "Düğün" ? (
-                          <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
                                 src={packageMedia("3.jpg")}
                                 alt="Düğün detayları"
                                 width={1600}
                                 height={700}
-                                className="h-32 w-full object-cover brightness-75 md:h-44"
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
                               />
                               <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-[#8fffb0]">
-                                  <p className="text-xs font-semibold uppercase tracking-[0.15em]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
                                     Asalet, romantizm ve bol coşku.
                                   </p>
-                                  <h4 className="mt-1 text-4xl font-light md:text-6xl">
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
                                     Düğün
                                   </h4>
                                 </div>
@@ -460,13 +460,13 @@ export function PackagesHero() {
                                 return (
                                   <div
                                     key={item.title}
-                                    className="bg-[#93f8b6] px-3 py-3 text-center text-[#0d2d17]"
+                                    className="bg-[#93f8b6] px-2 py-2 text-center text-[#0d2d17]"
                                   >
                                     <Icon className="mx-auto h-5 w-5" />
-                                    <p className="mt-2 text-sm font-bold leading-tight">
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[11px] leading-tight text-[#234c30]">
+                                    <p className="mt-1 text-[10px] leading-tight text-[#234c30] md:text-[11px]">
                                       {item.sub}
                                     </p>
                                   </div>
@@ -474,12 +474,12 @@ export function PackagesHero() {
                               })}
                             </div>
 
-                            <div className="space-y-3 rounded-2xl bg-black/80 p-3 md:p-4">
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#8fffb0]">
+                                <h5 className="text-center text-2xl font-bold text-[#8fffb0]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Organizasyonunuzun tüm detaylarında size rehberlik
                                   ederek çekim sürecini yönetiyoruz. Düğün
                                   başlamadan önce salonda buluşup tüm akışı
@@ -489,10 +489,10 @@ export function PackagesHero() {
                                 </p>
                               </div>
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#8fffb0]">
+                                <h5 className="text-center text-2xl font-bold text-[#8fffb0]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm görüntüleri yüksek çözünürlükte, 1
                                   hafta içinde teslim ediyoruz. Seçtiğiniz müzikle
                                   düğün salon filminizi düzenliyor, fotoğrafları
@@ -512,12 +512,12 @@ export function PackagesHero() {
                               ].map((price) => (
                                 <div
                                   key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#1d2333] px-4 py-3 text-[#8fffb0]"
+                                  className="flex items-center justify-between rounded-2xl bg-[#1d2333] px-3 py-2.5 text-[#8fffb0]"
                                 >
-                                  <span className="text-lg font-semibold">
+                                  <span className="text-sm font-semibold md:text-lg">
                                     {price.label}
                                   </span>
-                                  <span className="text-2xl font-extrabold">
+                                  <span className="text-xl font-extrabold md:text-2xl">
                                     {price.price}
                                   </span>
                                 </div>
@@ -525,22 +525,22 @@ export function PackagesHero() {
                             </div>
                           </div>
                         ) : category.title === "Gelin Çıkışı" ? (
-                          <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
                                 src={packageMedia("1.jpg")}
                                 alt="Gelin çıkışı detayları"
                                 width={1600}
                                 height={700}
-                                className="h-32 w-full object-cover brightness-75 md:h-44"
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
                               />
                               <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-[#f3d46b]">
-                                  <p className="text-xs font-semibold uppercase tracking-[0.15em]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
                                     Tüm ailemiz bir arada.
                                   </p>
-                                  <h4 className="mt-1 text-4xl font-light md:text-6xl">
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
                                     Gelin Çıkışı
                                   </h4>
                                 </div>
@@ -574,13 +574,13 @@ export function PackagesHero() {
                                 return (
                                   <div
                                     key={item.title}
-                                    className="bg-[#f3d46b] px-3 py-3 text-center text-[#2e2510]"
+                                    className="bg-[#f3d46b] px-2 py-2 text-center text-[#2e2510]"
                                   >
                                     <Icon className="mx-auto h-5 w-5" />
-                                    <p className="mt-2 text-sm font-bold leading-tight">
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[11px] leading-tight text-[#574829]">
+                                    <p className="mt-1 text-[10px] leading-tight text-[#574829] md:text-[11px]">
                                       {item.sub}
                                     </p>
                                   </div>
@@ -588,12 +588,12 @@ export function PackagesHero() {
                               })}
                             </div>
 
-                            <div className="space-y-3 rounded-2xl bg-black/80 p-3 md:p-4">
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#f3d46b]">
+                                <h5 className="text-center text-2xl font-bold text-[#f3d46b]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Gelin çıkışının tüm detaylarında size rehberlik
                                   ederek süreci yönetiyoruz. Damat gelmeden önce
                                   gelinin ailesiyle vedalaşma, kurdele bağlama ve
@@ -603,16 +603,16 @@ export function PackagesHero() {
                                 </p>
                               </div>
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#f3d46b]">
+                                <h5 className="text-center text-2xl font-bold text-[#f3d46b]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm görüntüleri yüksek çözünürlükte
                                   teslim ediyoruz. Seçtiğiniz müzikle çıkış
                                   filminizi düzenliyor, fotoğrafları dijital ve
                                   baskı sürecine hazırlıyoruz.
                                 </p>
-                                <p className="mt-2 text-center text-sm text-zinc-300">
+                                <p className="mt-2 text-center text-xs text-zinc-300 md:text-sm">
                                   Bu hizmet dış çekim veya düğün filmine ek olarak
                                   satın alınabilir.
                                 </p>
@@ -629,12 +629,12 @@ export function PackagesHero() {
                               ].map((price) => (
                                 <div
                                   key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#1f2f2c] px-4 py-3 text-[#f3d46b]"
+                                  className="flex items-center justify-between rounded-2xl bg-[#1f2f2c] px-3 py-2.5 text-[#f3d46b]"
                                 >
-                                  <span className="text-lg font-semibold">
+                                  <span className="text-sm font-semibold md:text-lg">
                                     {price.label}
                                   </span>
-                                  <span className="text-2xl font-extrabold">
+                                  <span className="text-xl font-extrabold md:text-2xl">
                                     {price.price}
                                   </span>
                                 </div>
@@ -642,22 +642,22 @@ export function PackagesHero() {
                             </div>
                           </div>
                         ) : category.title === "Kuaför" ? (
-                          <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
                                 src={packageMedia("2.jpg")}
                                 alt="Kuaför hazırlık detayları"
                                 width={1600}
                                 height={700}
-                                className="h-32 w-full object-cover brightness-75 md:h-44"
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
                               />
                               <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-[#f6b8c2]">
-                                  <p className="text-xs font-semibold uppercase tracking-[0.15em]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
                                     Büyük günün özel başlangıcı.
                                   </p>
-                                  <h4 className="mt-1 text-4xl font-light md:text-6xl">
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
                                     Hazırlık
                                   </h4>
                                 </div>
@@ -691,13 +691,13 @@ export function PackagesHero() {
                                 return (
                                   <div
                                     key={item.title}
-                                    className="bg-[#f6b8c2] px-3 py-3 text-center text-[#2d1a1f]"
+                                    className="bg-[#f6b8c2] px-2 py-2 text-center text-[#2d1a1f]"
                                   >
                                     <Icon className="mx-auto h-5 w-5" />
-                                    <p className="mt-2 text-sm font-bold leading-tight">
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[11px] leading-tight text-[#5a3640]">
+                                    <p className="mt-1 text-[10px] leading-tight text-[#5a3640] md:text-[11px]">
                                       {item.sub}
                                     </p>
                                   </div>
@@ -705,29 +705,29 @@ export function PackagesHero() {
                               })}
                             </div>
 
-                            <div className="space-y-3 rounded-2xl bg-black/80 p-3 md:p-4">
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#f6b8c2]">
+                                <h5 className="text-center text-2xl font-bold text-[#f6b8c2]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-center text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-center text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Gelinin kuaförde çiftin hazırlığının son
                                   aşamasını, video çekimiyle ve anlaşmaya
                                   dahilinde fotoğraf çekimiyle yapıyoruz.
                                 </p>
                               </div>
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#f6b8c2]">
+                                <h5 className="text-center text-2xl font-bold text-[#f6b8c2]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm orijinal görüntüleri yüksek
                                   çözünürlükte, 1 hafta içinde teslim ediyoruz.
                                   Çektiğimiz video görüntülerini dış çekim veya
                                   düğün filminde kullanıyor; fotoğraf çekimi varsa
                                   düzenleyip dijital olarak teslim ediyoruz.
                                 </p>
-                                <p className="mt-2 text-center text-sm text-zinc-300">
+                                <p className="mt-2 text-center text-xs text-zinc-300 md:text-sm">
                                   Bu hizmet dış çekim veya düğün filmine ek olarak
                                   satın alınabilir.
                                 </p>
@@ -744,12 +744,12 @@ export function PackagesHero() {
                               ].map((price) => (
                                 <div
                                   key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#2f2f24] px-4 py-3 text-[#f6b8c2]"
+                                  className="flex items-center justify-between rounded-2xl bg-[#2f2f24] px-3 py-2.5 text-[#f6b8c2]"
                                 >
-                                  <span className="text-lg font-semibold">
+                                  <span className="text-sm font-semibold md:text-lg">
                                     {price.label}
                                   </span>
-                                  <span className="text-2xl font-extrabold">
+                                  <span className="text-xl font-extrabold md:text-2xl">
                                     {price.price}
                                   </span>
                                 </div>
@@ -757,22 +757,22 @@ export function PackagesHero() {
                             </div>
                           </div>
                         ) : category.title === "Full Hikaye" ? (
-                          <div className="space-y-4 px-4 py-4 md:px-5 md:py-5">
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
                                 src={packageMedia("3.jpg")}
                                 alt="Full hikaye detayları"
                                 width={1600}
                                 height={700}
-                                className="h-32 w-full object-cover brightness-75 md:h-44"
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
                               />
                               <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center text-[#ffb200]">
-                                  <p className="text-xs font-semibold uppercase tracking-[0.15em]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
                                     Hazırlık, Dış Çekim, Gelin Çıkışı, Düğün
                                   </p>
-                                  <h4 className="mt-1 text-4xl font-light md:text-6xl">
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
                                     Full Hikaye
                                   </h4>
                                 </div>
@@ -806,13 +806,13 @@ export function PackagesHero() {
                                 return (
                                   <div
                                     key={item.title}
-                                    className="bg-[#ffb200] px-3 py-3 text-center text-[#231604]"
+                                    className="bg-[#ffb200] px-2 py-2 text-center text-[#231604]"
                                   >
                                     <Icon className="mx-auto h-5 w-5" />
-                                    <p className="mt-2 text-sm font-bold leading-tight">
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[11px] leading-tight text-[#5a3a0b]">
+                                    <p className="mt-1 text-[10px] leading-tight text-[#5a3a0b] md:text-[11px]">
                                       {item.sub}
                                     </p>
                                   </div>
@@ -820,12 +820,12 @@ export function PackagesHero() {
                               })}
                             </div>
 
-                            <div className="space-y-3 rounded-2xl bg-black/80 p-3 md:p-4">
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#ffb200]">
+                                <h5 className="text-center text-2xl font-bold text-[#ffb200]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Kuaförden başlayarak dış çekim, gelin çıkışı ve
                                   düğün dahilinde fotoğraf ve video çekimi
                                   yapıyoruz. Dış çekimde ağırlıklı fotoğraf çekimi,
@@ -836,10 +836,10 @@ export function PackagesHero() {
                                 </p>
                               </div>
                               <div>
-                                <h5 className="text-center text-xl font-semibold text-[#ffb200]">
+                                <h5 className="text-center text-2xl font-bold text-[#ffb200]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-sm leading-relaxed text-zinc-300">
+                                <p className="mt-2 text-xs leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm orijinal görüntüleri yüksek
                                   çözünürlükte teslim ediyoruz. Seçtiğiniz müzikle
                                   tüm günü özetleyen karma bir film düzenliyor;
@@ -851,9 +851,9 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="rounded-2xl bg-[#202042] px-4 py-4 text-center text-[#ffb200]">
-                              <p className="text-4xl font-semibold">₺85.000</p>
-                              <p className="mt-1 text-2xl font-medium opacity-80 line-through decoration-2">
+                            <div className="rounded-2xl bg-[#202042] px-3 py-3 text-center text-[#ffb200]">
+                              <p className="text-3xl font-semibold md:text-4xl">₺85.000</p>
+                              <p className="mt-1 text-xl font-medium opacity-80 line-through decoration-2 md:text-2xl">
                                 ₺103.000
                               </p>
                             </div>

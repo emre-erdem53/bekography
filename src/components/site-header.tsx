@@ -82,7 +82,7 @@ export function SiteHeader() {
         ease: EASE_OUT,
       }}
     >
-      <div className="mx-auto flex h-24 max-w-7xl items-center justify-between gap-4 px-8 md:px-10">
+      <div className="relative mx-auto flex h-24 max-w-7xl items-center justify-between gap-4 px-8 md:px-10">
         <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -103,6 +103,15 @@ export function SiteHeader() {
             />
           </Link>
         </motion.div>
+        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 md:hidden">
+          <span
+            className={`font-brand text-lg lowercase tracking-wide ${
+              isDark ? "text-white" : "text-black"
+            }`}
+          >
+            bekography
+          </span>
+        </div>
         <nav className="hidden items-center gap-12 md:flex">
           {links.map(({ href, label }, i) => {
             const active =
@@ -169,12 +178,12 @@ export function SiteHeader() {
                 : "border-black/10 bg-white"
             }`}
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
+            animate={{ height: "78dvh", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: reduce ? 0.01 : 0.35, ease: EASE_OUT }}
           >
             <motion.div
-              className="flex flex-col gap-4 px-8 py-6"
+              className="relative flex h-full flex-col gap-7 px-8 py-10"
               initial="closed"
               animate="open"
               exit="closed"
@@ -199,7 +208,7 @@ export function SiteHeader() {
                 >
                   <Link
                     href={href}
-                    className={`block text-xs font-bold uppercase tracking-[0.3em] ${
+                    className={`block text-lg font-extrabold uppercase tracking-[0.22em] ${
                       isDark ? "text-white" : "text-black"
                     }`}
                     onClick={() => setOpen(false)}
@@ -208,6 +217,15 @@ export function SiteHeader() {
                   </Link>
                 </motion.div>
               ))}
+              <div className="pointer-events-none absolute bottom-6 left-8">
+                <Image
+                  src={isDark ? "/logo/logo-white.svg" : "/logo/logo-black.svg"}
+                  alt="bekography"
+                  width={80}
+                  height={20}
+                  className="h-5 w-auto opacity-80"
+                />
+              </div>
             </motion.div>
           </motion.div>
         ) : null}

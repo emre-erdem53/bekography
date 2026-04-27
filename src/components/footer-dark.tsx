@@ -56,9 +56,10 @@ export function FooterDark() {
               />
               <h3 className="font-brand text-2xl tracking-[0.2em]">bekography</h3>
             </div>
-            <p className="max-w-xs text-sm uppercase leading-relaxed tracking-tighter text-gray-400">
-              Exploring the silent beauty of the world through a monochrome
-              lens. Based in London, available worldwide.
+            <p className="max-w-xs text-sm leading-relaxed tracking-tight text-gray-400">
+              Her hikayeyi kurgusundan editine kadar titizlikle işleyen, butik
+              ve yüksek standartlı bir üretim anlayışıyla çalışıyoruz. Işığın
+              en doğru haliyle her çifte özel bir bekography imzası bırakıyoruz.
             </p>
           </motion.div>
           <motion.div
