@@ -155,7 +155,7 @@ export function SiteHeader() {
               isDark ? "text-white" : "text-black"
             }`}
             aria-expanded={open}
-            aria-label={open ? "Close menu" : "Open menu"}
+            aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
             onClick={() => setOpen((v) => !v)}
             whileTap={{ scale: 0.92 }}
           >

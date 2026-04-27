@@ -29,10 +29,10 @@ export function HomeSession() {
       <div className="mx-auto max-w-4xl px-8">
         <Reveal className="mb-24 text-center" y={28}>
           <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-black dark:text-white">
-            Contact
+            İletişim
           </span>
           <h2 className="mt-6 font-serif text-5xl text-black dark:text-white">
-            Secure Your Session
+            Çekiminizi Planlayın
           </h2>
         </Reveal>
         <SessionForm />
@@ -67,7 +67,7 @@ export function HomeSession() {
             </motion.a>
           </div>
           <p className="text-[9px] font-black uppercase tracking-[0.5em] text-black/40 dark:text-white/35">
-            © 2024 bekography monochrome. all rights reserved.
+            © 2024 bekography. tüm hakları saklıdır.
           </p>
         </Reveal>
       </div>

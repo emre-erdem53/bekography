@@ -191,7 +191,7 @@ export function ContactPageClient() {
             >
               <div>
                 <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
-                  Direct
+                  İletişim
                 </p>
                 <a
                   href={`tel:${phoneTel}`}
@@ -205,7 +205,7 @@ export function ContactPageClient() {
               </div>
               <div>
                 <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
-                  Connect
+                  Sosyal
                 </p>
                 <div className="flex gap-4">
                   <a

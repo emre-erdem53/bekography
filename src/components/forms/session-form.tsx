@@ -43,13 +43,13 @@ export function SessionForm() {
             className="text-[10px] font-black uppercase tracking-[0.2em] text-black dark:text-white"
             htmlFor="session-name"
           >
-            Name
+            Ad Soyad
           </label>
           <input
             id="session-name"
             name="name"
             type="text"
-            placeholder="FULL NAME"
+            placeholder="AD SOYAD"
             className={fieldClass}
           />
         </motion.div>
@@ -80,7 +80,7 @@ export function SessionForm() {
           id="session-message"
           name="message"
           rows={3}
-          placeholder="DESCRIBE YOUR VISION"
+          placeholder="HAYALİNİZİ ANLATIN"
           className={fieldClass}
         />
       </motion.div>
@@ -92,7 +92,7 @@ export function SessionForm() {
           whileTap={reduce ? undefined : { scale: 0.98 }}
           transition={{ type: "spring", stiffness: 420, damping: 22 }}
         >
-          Send Message
+          Mesaj Gönder
         </motion.button>
       </motion.div>
     </motion.form>

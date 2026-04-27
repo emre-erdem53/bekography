@@ -152,11 +152,11 @@ export function FooterDark() {
             </motion.a>
           </div>
           <p className="text-[9px] font-bold uppercase tracking-[0.5em] text-white/30">
-            © 2026 bekography monochrome. all rights reserved.
+            © 2026 bekography. tüm hakları saklıdır.
           </p>
         </motion.div>
         <p className="pointer-events-none absolute bottom-2 left-8 text-[11px] text-white/45 md:left-12">
-          Developed and Design by Emre Erdem
+          Geliştirme ve Tasarım: Emre Erdem
         </p>
       </div>
     </motion.footer>

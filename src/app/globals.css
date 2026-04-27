@@ -85,3 +85,14 @@ body {
 .font-brand {
   font-family: var(--font-family-brand);
 }
+
+/* Hide scrollbars on scroll-snap containers (modal swipe).
+   We rely on touch/wheel for navigation so the scrollbar adds noise. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
