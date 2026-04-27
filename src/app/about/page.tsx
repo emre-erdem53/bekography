@@ -22,7 +22,7 @@ export default function AboutPage() {
               bir isim, bir tutku, bir imza
             </span>
           </h1>
-          <p className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-600 dark:text-zinc-300 md:text-lg">
+          <p className="mt-6 max-w-3xl text-base font-light leading-relaxed text-zinc-600 dark:text-zinc-300 md:text-lg">
             Her hikayeyi kurgusundan editine kadar titizlikle işleyen,{" "}
             <strong>butik ve yüksek standartlı</strong> bir üretim anlayışıyla
             çalışıyoruz.{" "}
@@ -41,14 +41,14 @@ export default function AboutPage() {
             <p className="mt-1 text-sm uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
               Kreatif Göz & Stil Rehberi
             </p>
-            <p className="mt-5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <p className="mt-5 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-300">
               27 Eylül 1994 Rize doğumlu Kevser Topçu, moda tasarımına olan
               tutkusunu Süleyman Demirel ve İstanbul Üniversitelerindeki akademik
               eğitimiyle profesyonel bir temele taşıdı. 2017 yılından itibaren{" "}
               <span className="font-semibold lowercase">bekography</span> fotoğraf
               ve film bünyesinde görsel sanatlarla birleştirdi.
             </p>
-            <p className="mt-4 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <p className="mt-4 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-300">
               Kamera arkasındaki <strong>teknik uzmanlığını</strong> tasarımcı
               gözüyle
               harmanlayan Kevser, gelinliğinizin formundan saçınızın duruşuna
@@ -67,13 +67,13 @@ export default function AboutPage() {
             <p className="mt-1 text-sm uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
               Kurucu & Görsel Hikaye Anlatıcısı
             </p>
-            <p className="mt-5 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <p className="mt-5 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-300">
               15 Temmuz 1993 Rize doğumlu Bekir Topçu, görsel sanatlar
               yolculuğuna 2006 yılında profesyonel setlerde başladı. Saha
               tecrübesini Akdeniz Üniversitesi eğitimi ve Usta Öğretici unvanıyla
               birleştirerek sinematik bir bakış geliştirdi.
             </p>
-            <p className="mt-4 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+            <p className="mt-4 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-300">
               2015 yılında kurduğu{" "}
               <span className="font-semibold lowercase">bekography</span> ile hazırlık
               sürecindeki disiplinli ve mükemmeliyetçi tavrını, çekim anında
@@ -92,7 +92,7 @@ export default function AboutPage() {
               <h4 className="text-sm uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
                 Butik Yaklaşım
               </h4>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
+              <p className="mt-3 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
                 Bizim için başarı sayılar değil, her çifte ayrılan özenin
                 kalitesidir.
               </p>
@@ -101,7 +101,7 @@ export default function AboutPage() {
               <h4 className="text-sm uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
                 Güçlü Teknik
               </h4>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
+              <p className="mt-3 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
                 En iyi ekipmanları, yenilikçi teknikleri ve doğru kurguyu bir
                 araya getiriyoruz.
               </p>
@@ -110,7 +110,7 @@ export default function AboutPage() {
               <h4 className="text-sm uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
                 İmza Estetik
               </h4>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
+              <p className="mt-3 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
                 Her çekimde ışığın en doğru haliyle, hikayeye özgü bir{" "}
                 <span className="font-semibold lowercase">bekography</span> imzası
                 oluşturuyoruz.
