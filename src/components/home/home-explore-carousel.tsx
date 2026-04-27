@@ -418,7 +418,7 @@ export function HomeExploreCarousel({
                   <button
                     type="button"
                     onClick={() => setUserMuted((prev) => !prev)}
-                    className="pointer-events-auto inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/35 bg-black/55 text-white backdrop-blur-sm"
+                    className="pointer-events-auto mb-10 inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/35 bg-black/55 text-white backdrop-blur-sm sm:mb-9"
                     aria-label={userMuted ? "Sesi aç" : "Sesi kapat"}
                   >
                     {userMuted ? (
