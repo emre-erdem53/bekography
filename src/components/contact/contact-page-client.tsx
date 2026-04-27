@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { MapPin, Phone } from "lucide-react";
 import Image from "next/image";
 import { EASE_OUT } from "@/lib/motion";
 
@@ -26,13 +27,13 @@ export function ContactPageClient() {
     <>
       <main className="flex min-h-screen flex-1 flex-col bg-[#f7f7f7] pt-24 transition-colors duration-300 dark:bg-zinc-950 md:flex-row">
         <motion.section
-          className="relative flex h-[50vh] w-full items-center justify-center bg-[#141414] md:h-auto md:w-[54%] md:min-h-[calc(100vh-6rem)]"
+          className="relative flex h-[46vh] w-full items-center justify-center bg-[#141414] md:h-auto md:w-[54%] md:min-h-[calc(100vh-6rem)]"
           initial={reduce ? false : { opacity: 0, x: -36 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.85, ease: EASE_OUT }}
         >
           <motion.div
-            className="relative mx-auto aspect-[3/4] w-[min(100%,420px)] overflow-hidden rounded-[50%] border-4 border-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] dark:border-zinc-700 md:my-16 lg:w-[min(100%,520px)] 2xl:w-[min(100%,620px)]"
+            className="relative mx-auto aspect-[3/4] h-[40vh] w-auto max-w-[82vw] overflow-hidden rounded-[50%] border-4 border-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] dark:border-zinc-700 md:my-16 md:h-auto md:w-[min(100%,420px)] md:max-w-none lg:w-[min(100%,520px)] 2xl:w-[min(100%,620px)]"
             initial={reduce ? false : { opacity: 0, scale: 0.92, rotate: -2 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             transition={{
@@ -119,9 +120,17 @@ export function ContactPageClient() {
                   href={whatsappLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block w-full rounded-lg bg-[#25d366] px-5 py-4 text-center text-sm font-semibold text-black transition-opacity hover:opacity-90"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#25d366] px-5 py-4 text-sm font-semibold text-black transition-opacity hover:opacity-90"
                 >
-                  WhatsApp ile Chat Başlat
+                  <Image
+                    src="/whatsapp.svg"
+                    alt=""
+                    width={16}
+                    height={16}
+                    className="h-4 w-4 brightness-0 invert"
+                    aria-hidden
+                  />
+                  Mesaj Gönder
                 </a>
               </motion.div>
               <motion.div
@@ -136,39 +145,43 @@ export function ContactPageClient() {
               >
                 <a
                   href={`tel:${phoneTel}`}
-                  className="block w-full rounded-lg bg-[#141414] px-5 py-4 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#141414] px-5 py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
                 >
-                  Telefon ile Ara ({phoneDisplay})
+                  <Phone className="h-4 w-4" />
+                  Ara ({phoneDisplay})
                 </a>
               </motion.div>
-            </motion.div>
-            <motion.div
-              className="mt-10 overflow-hidden rounded-2xl border border-black/10 dark:border-white/10"
-              initial={reduce ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: reduce ? 0 : 0.38, duration: 0.55, ease: EASE_OUT }}
-            >
-              <div className="border-b border-black/10 bg-zinc-50 px-5 py-4 text-xs leading-relaxed text-zinc-700 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-300">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
-                  Adres
-                </p>
-                <p>{address}</p>
+              <motion.div
+                variants={{
+                  hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 14 },
+                  show: {
+                    opacity: 1,
+                    y: 0,
+                    transition: { duration: 0.45, ease: EASE_OUT },
+                  },
+                }}
+              >
                 <a
                   href={mapsLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-900 underline underline-offset-4 dark:text-white"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#141414]/20 bg-white px-5 py-4 text-sm font-semibold text-[#141414] transition-colors hover:bg-zinc-100 dark:border-white/20 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-800"
                 >
-                  Haritada Aç
+                  <MapPin className="h-4 w-4" />
+                  Adrese git
                 </a>
-              </div>
-              <motion.iframe
-                className="h-[280px] w-full md:h-[340px]"
-                title="Bekography Google Maps Konumu"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                src={`https://www.google.com/maps?q=${mapsQuery}&output=embed`}
-              />
+              </motion.div>
+            </motion.div>
+            <motion.div
+              className="mt-6 rounded-2xl border border-black/10 bg-zinc-50 px-5 py-4 text-xs leading-relaxed text-zinc-700 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-300"
+              initial={reduce ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: reduce ? 0 : 0.38, duration: 0.55, ease: EASE_OUT }}
+            >
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+                Açık Adres
+              </p>
+              <p>{address}</p>
             </motion.div>
             <motion.footer
               className="mt-24 grid grid-cols-1 gap-8 border-t border-[#141414]/5 pt-12 dark:border-white/10 md:grid-cols-2"
@@ -181,17 +194,14 @@ export function ContactPageClient() {
                   Direct
                 </p>
                 <a
-                  className="mb-1 block text-xs font-medium tracking-wider text-zinc-900 hover:underline dark:text-zinc-100"
-                  href="mailto:hello@bekography.com"
-                >
-                  hello@bekography.com
-                </a>
-                <a
                   href={`tel:${phoneTel}`}
                   className="text-xs font-medium tracking-wider text-zinc-800 hover:underline dark:text-zinc-300"
                 >
                   {phoneDisplay}
                 </a>
+                <p className="mt-3 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+                  {address}
+                </p>
               </div>
               <div>
                 <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
@@ -200,20 +210,11 @@ export function ContactPageClient() {
                 <div className="flex gap-4">
                   <a
                     className="text-xs font-medium tracking-wider text-zinc-900 transition-opacity hover:opacity-50 dark:text-zinc-200"
-                    href="https://instagram.com"
+                    href="https://www.instagram.com/bekography/"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     INSTAGRAM
-                  </a>
-                  <span className="text-[#141414]/20 dark:text-zinc-600">/</span>
-                  <a
-                    className="text-xs font-medium tracking-wider text-zinc-900 transition-opacity hover:opacity-50 dark:text-zinc-200"
-                    href="https://behance.net"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    BEHANCE
                   </a>
                 </div>
               </div>

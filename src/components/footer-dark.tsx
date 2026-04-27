@@ -126,6 +126,10 @@ export function FooterDark() {
             </span>
             <p className="text-sm">hello@bekography.com</p>
             <p className="text-sm text-gray-400">0546 937 04 64</p>
+            <p className="mt-3 max-w-xs text-xs leading-relaxed text-gray-400">
+              Yavuz Plaza, Eminettin, Menderes Blv. No:170-172 Kat:9 801,
+              53020 Rize Merkez/Rize
+            </p>
           </motion.div>
         </div>
         <motion.div

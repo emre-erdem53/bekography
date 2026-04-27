@@ -245,7 +245,7 @@ export function PackagesHero() {
                         prev === category.title ? null : category.title,
                       );
                     }}
-                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors md:px-5 ${
+                    className={`flex w-full flex-col items-center justify-center gap-2 px-4 py-3 text-center transition-colors md:flex-row md:justify-between md:gap-3 md:px-5 md:text-left ${
                       category.highlight
                         ? "bg-amber-400 text-black hover:bg-amber-300"
                         : "bg-[#050505] text-white hover:bg-[#0e0e0e]"
@@ -253,7 +253,7 @@ export function PackagesHero() {
                     aria-expanded={hasDetails ? isOpen : false}
                     aria-controls={`category-${category.title}`}
                   >
-                    <span className="flex min-w-0 items-center gap-3">
+                    <span className="flex min-w-0 items-center justify-center gap-3">
                       <Icon className="h-5 w-5 shrink-0" />
                       <span className="truncate text-base font-semibold md:text-xl">
                         {category.title}
@@ -363,7 +363,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#ff9a5e]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Çekimi 10.00-14.00 veya 13.00-17.00 saatleri
                                   arasında gerçekleştiriyoruz. Belirlenen sürede,
                                   bir rota üzerindeki farklı mekanlarda çekim
@@ -377,7 +377,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#ff9a5e]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Çekimden kalan tüm görüntüleri yüksek
                                   çözünürlükte, 1 hafta içinde teslim ediyoruz.
                                   Seçilen fotoğraflar düzenlenir, özel albüm ve
@@ -479,7 +479,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#8fffb0]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Organizasyonunuzun tüm detaylarında size rehberlik
                                   ederek çekim sürecini yönetiyoruz. Düğün
                                   başlamadan önce salonda buluşup tüm akışı
@@ -492,7 +492,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#8fffb0]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm görüntüleri yüksek çözünürlükte, 1
                                   hafta içinde teslim ediyoruz. Seçtiğiniz müzikle
                                   düğün salon filminizi düzenliyor, fotoğrafları
@@ -593,7 +593,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#f3d46b]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Gelin çıkışının tüm detaylarında size rehberlik
                                   ederek süreci yönetiyoruz. Damat gelmeden önce
                                   gelinin ailesiyle vedalaşma, kurdele bağlama ve
@@ -606,13 +606,13 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#f3d46b]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm görüntüleri yüksek çözünürlükte
                                   teslim ediyoruz. Seçtiğiniz müzikle çıkış
                                   filminizi düzenliyor, fotoğrafları dijital ve
                                   baskı sürecine hazırlıyoruz.
                                 </p>
-                                <p className="mt-2 text-center text-[10px] text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-center text-[10px] text-zinc-300 md:text-sm">
                                   Bu hizmet dış çekim veya düğün filmine ek olarak
                                   satın alınabilir.
                                 </p>
@@ -710,7 +710,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#f6b8c2]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Gelinin kuaförde çiftin hazırlığının son
                                   aşamasını, video çekimiyle ve anlaşmaya
                                   dahilinde fotoğraf çekimiyle yapıyoruz.
@@ -720,14 +720,14 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#f6b8c2]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm orijinal görüntüleri yüksek
                                   çözünürlükte, 1 hafta içinde teslim ediyoruz.
                                   Çektiğimiz video görüntülerini dış çekim veya
                                   düğün filminde kullanıyor; fotoğraf çekimi varsa
                                   düzenleyip dijital olarak teslim ediyoruz.
                                 </p>
-                                <p className="mt-2 text-center text-[10px] text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-center text-[10px] text-zinc-300 md:text-sm">
                                   Bu hizmet dış çekim veya düğün filmine ek olarak
                                   satın alınabilir.
                                 </p>
@@ -825,7 +825,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#ffb200]">
                                   Çekim
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Kuaförden başlayarak dış çekim, gelin çıkışı ve
                                   düğün dahilinde fotoğraf ve video çekimi
                                   yapıyoruz. Dış çekimde ağırlıklı fotoğraf çekimi,
@@ -839,7 +839,7 @@ export function PackagesHero() {
                                 <h5 className="text-center text-2xl font-bold text-[#ffb200]">
                                   Çekim Sonrası
                                 </h5>
-                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-xs">
+                                <p className="mt-2 text-[10px] leading-relaxed text-zinc-300 md:text-sm">
                                   Çekilen tüm orijinal görüntüleri yüksek
                                   çözünürlükte teslim ediyoruz. Seçtiğiniz müzikle
                                   tüm günü özetleyen karma bir film düzenliyor;

@@ -23,9 +23,10 @@ export default function AboutPage() {
             </span>
           </h1>
           <p className="mt-6 max-w-3xl text-base leading-relaxed text-zinc-600 dark:text-zinc-300 md:text-lg">
-            Her hikayeyi kurgusundan editine kadar titizlikle işleyen, butik ve
-            yüksek standartlı bir üretim anlayışıyla çalışıyoruz. Kalbimiz her
-            zaman aşkın hikayesinde atıyor.
+            Her hikayeyi kurgusundan editine kadar titizlikle işleyen,{" "}
+            <strong>butik ve yüksek standartlı</strong> bir üretim anlayışıyla
+            çalışıyoruz.{" "}
+            <strong>Kalbimiz her zaman aşkın hikayesinde atıyor.</strong>
           </p>
         </Reveal>
 
@@ -44,11 +45,12 @@ export default function AboutPage() {
               27 Eylül 1994 Rize doğumlu Kevser Topçu, moda tasarımına olan
               tutkusunu Süleyman Demirel ve İstanbul Üniversitelerindeki akademik
               eğitimiyle profesyonel bir temele taşıdı. 2017 yılından itibaren{" "}
-              <span className="font-brand lowercase">bekography</span> fotoğraf
+              <span className="font-semibold lowercase">bekography</span> fotoğraf
               ve film bünyesinde görsel sanatlarla birleştirdi.
             </p>
             <p className="mt-4 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-              Kamera arkasındaki teknik uzmanlığını tasarımcı gözüyle
+              Kamera arkasındaki <strong>teknik uzmanlığını</strong> tasarımcı
+              gözüyle
               harmanlayan Kevser, gelinliğinizin formundan saçınızın duruşuna
               kadar her detayı titizlikle yönetir; disiplinli yaklaşımını rahat
               ve eğlenceli bir enerjiyle dengeler.
@@ -73,10 +75,10 @@ export default function AboutPage() {
             </p>
             <p className="mt-4 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
               2015 yılında kurduğu{" "}
-              <span className="font-brand lowercase">bekography</span> ile
-              hazırlık sürecindeki disiplinli ve mükemmeliyetçi tavrını, çekim
-              anında yüksek enerji ve samimiyete dönüştürerek güçlü bir deneyim
-              sunar.
+              <span className="font-semibold lowercase">bekography</span> ile hazırlık
+              sürecindeki disiplinli ve mükemmeliyetçi tavrını, çekim anında
+              yüksek enerji ve samimiyete dönüştürerek <strong>güçlü bir
+              deneyim</strong> sunar.
             </p>
           </Reveal>
         </div>
@@ -110,7 +112,7 @@ export default function AboutPage() {
               </h4>
               <p className="mt-3 text-sm leading-relaxed text-zinc-700 dark:text-zinc-200">
                 Her çekimde ışığın en doğru haliyle, hikayeye özgü bir{" "}
-                <span className="font-brand lowercase">bekography</span> imzası
+                <span className="font-semibold lowercase">bekography</span> imzası
                 oluşturuyoruz.
               </p>
             </article>
