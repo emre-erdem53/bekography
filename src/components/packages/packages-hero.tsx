@@ -37,6 +37,7 @@ type PriceCategory = {
   price: string;
   icon: React.ComponentType<{ className?: string }>;
   highlight?: boolean;
+  backgroundImage?: string;
 };
 
 const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
@@ -104,19 +105,50 @@ const bottomFeatures: PackageFeature[] = [
 ];
 
 const priceCategories: PriceCategory[] = [
-  { title: "Dış Çekim", price: "₺25.000 - ₺35.000", icon: Mountain },
-  { title: "Düğün", price: "₺25.000 - ₺33.000", icon: Gem },
-  { title: "Gelin Çıkışı", price: "₺17.000 - ₺22.000", icon: Sparkles },
+  {
+    title: "Dış Çekim",
+    price: "₺25.000 - ₺35.000",
+    icon: Mountain,
+    backgroundImage: "dis-cekim.png",
+  },
+  {
+    title: "Düğün",
+    price: "₺25.000 - ₺33.000",
+    icon: Gem,
+    backgroundImage: "dugun.png",
+  },
+  {
+    title: "Gelin Çıkışı",
+    price: "₺17.000 - ₺22.000",
+    icon: Sparkles,
+    backgroundImage: "gelin-cikisi.png",
+  },
   { title: "Kuaför", price: "₺12.000 - ₺15.000", icon: UserRound },
   {
     title: "Full Hikaye",
     price: "₺103.000 - ₺85.000",
     icon: Diamond,
     highlight: true,
+    backgroundImage: "full-hikaye.png",
   },
-  { title: "Söz/İsteme", price: "₺22.000 - ₺28.000", icon: HandHeart },
-  { title: "Kına", price: "₺25.000 - ₺30.000", icon: PartyPopper },
-  { title: "Nişan", price: "₺25.000 - ₺30.000", icon: HeartHandshake },
+  {
+    title: "Söz/İsteme",
+    price: "₺23.000 - ₺31.000",
+    icon: HandHeart,
+    backgroundImage: "soz-isteme.png",
+  },
+  {
+    title: "Kına",
+    price: "₺25.000 - ₺33.000",
+    icon: PartyPopper,
+    backgroundImage: "kina.png",
+  },
+  {
+    title: "Nişan",
+    price: "₺25.000 - ₺33.000",
+    icon: HeartHandshake,
+    backgroundImage: "nisan.png",
+  },
 ];
 
 function FeatureCard({
@@ -156,7 +188,6 @@ function FeatureCard({
 
 export function PackagesHero() {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
-  const categoriesWithoutDetails = ["Söz/İsteme", "Kına", "Nişan"];
 
   return (
     <main className="min-h-screen flex-1 bg-black pt-24 text-[#00f27a]">
@@ -164,7 +195,7 @@ export function PackagesHero() {
         <div className="rounded-2xl border border-white/10 bg-black p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] md:p-6">
           <div className="relative mb-5 overflow-hidden rounded-2xl">
             <Image
-              src={packageMedia("5.jpg")}
+              src={packageMedia("neden-bekography.png")}
               alt="Neden Bekography"
               width={1600}
               height={700}
@@ -205,7 +236,7 @@ export function PackagesHero() {
         <div className="mt-8 rounded-2xl border border-white/10 bg-[#030303] p-4 md:p-6">
           <div className="relative mb-5 overflow-hidden rounded-2xl">
             <Image
-              src={packageMedia("2.jpg")}
+              src={packageMedia("fiyat-listesi.png")}
               alt="Fiyat Listesi"
               width={1600}
               height={700}
@@ -226,7 +257,7 @@ export function PackagesHero() {
             {priceCategories.map((category) => {
               const Icon = category.icon;
               const isOpen = openCategory === category.title;
-              const hasDetails = !categoriesWithoutDetails.includes(category.title);
+              const hasDetails = true;
 
               return (
                 <div
@@ -245,7 +276,7 @@ export function PackagesHero() {
                         prev === category.title ? null : category.title,
                       );
                     }}
-                    className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors md:px-5 ${
+                    className={`relative flex w-full items-center justify-between gap-3 overflow-hidden px-4 py-3 text-left transition-colors md:px-5 ${
                       category.highlight
                         ? "bg-amber-400 text-black hover:bg-amber-300"
                         : "bg-[#050505] text-white hover:bg-[#0e0e0e]"
@@ -253,13 +284,13 @@ export function PackagesHero() {
                     aria-expanded={hasDetails ? isOpen : false}
                     aria-controls={`category-${category.title}`}
                   >
-                    <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="relative z-10 flex min-w-0 flex-1 items-center gap-3">
                       <Icon className="h-5 w-5 shrink-0" />
                       <span className="truncate text-base font-semibold md:text-xl">
                         {category.title}
                       </span>
                     </span>
-                    <span className="flex shrink-0 items-center gap-2">
+                    <span className="relative z-10 flex shrink-0 items-center gap-2">
                       <span className="text-right text-sm font-medium md:text-xl">
                         {category.title === "Full Hikaye" ? (
                           <span className="inline-flex items-center gap-2">
@@ -298,7 +329,7 @@ export function PackagesHero() {
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src={packageMedia("4.jpg")}
+                                src={packageMedia("dis-cekim.png")}
                                 alt="Dış çekim detayları"
                                 width={1600}
                                 height={700}
@@ -414,7 +445,7 @@ export function PackagesHero() {
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src={packageMedia("3.jpg")}
+                                src={packageMedia("dugun.png")}
                                 alt="Düğün detayları"
                                 width={1600}
                                 height={700}
@@ -528,7 +559,7 @@ export function PackagesHero() {
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src={packageMedia("1.jpg")}
+                                src={packageMedia("gelin-cikisi.png")}
                                 alt="Gelin çıkışı detayları"
                                 width={1600}
                                 height={700}
@@ -630,6 +661,367 @@ export function PackagesHero() {
                                 <div
                                   key={price.label}
                                   className="flex items-center justify-between rounded-2xl bg-[#1f2f2c] px-3 py-2.5 text-[#f3d46b]"
+                                >
+                                  <span className="text-sm font-semibold md:text-lg">
+                                    {price.label}
+                                  </span>
+                                  <span className="text-xl font-extrabold md:text-2xl">
+                                    {price.price}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : category.title === "Söz/İsteme" ? (
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
+                            <div className="relative overflow-hidden rounded-2xl">
+                              <Image
+                                src={packageMedia("soz-isteme.png")}
+                                alt="Söz ve isteme detayları"
+                                width={1600}
+                                height={700}
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-center text-[#c8b5f0]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
+                                    Hayatının sözü bu akşamda verilir.
+                                  </p>
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
+                                    Söz/İsteme
+                                  </h4>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-[1px] overflow-hidden rounded-2xl bg-[#c8b5f0] md:grid-cols-4">
+                              {[
+                                {
+                                  title: "Fotoğraf Çekimi",
+                                  sub: "Aile Anlar",
+                                  icon: Camera,
+                                },
+                                {
+                                  title: "Video Çekimi",
+                                  sub: "Film Uzun Metraj",
+                                  icon: Video,
+                                },
+                                {
+                                  title: "Rehberlik Hizmeti",
+                                  sub: "Gün Planlama Öneriler",
+                                  icon: Compass,
+                                },
+                                {
+                                  title: "Tüm Dijitaller",
+                                  sub: "Çekilenler Düzenlenir",
+                                  icon: Download,
+                                },
+                              ].map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                  <div
+                                    key={item.title}
+                                    className="bg-[#c8b5f0] px-2 py-2 text-center text-[#2b1f44]"
+                                  >
+                                    <Icon className="mx-auto h-5 w-5" />
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
+                                      {item.title}
+                                    </p>
+                                    <p className="mt-1 text-[10px] leading-tight text-[#4b3f66] md:text-[11px]">
+                                      {item.sub}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
+                              <div>
+                                <h5 className="text-center text-2xl font-bold text-[#c8b5f0]">
+                                  Çekim
+                                </h5>
+                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
+                                  Sözünüzün tüm detaylarında size rehberlik ederek
+                                  uçtan uca organizasyonu yönetiyoruz. Söz
+                                  başlamadan önce evde buluşarak tüm akışı birlikte
+                                  prova ediyoruz. Damat tarafını karşılama, kahve
+                                  hazırlığı ve ikramı, isteme anı, yüzük merasimi
+                                  ve detayları en az 2 kamera ile film (video)
+                                  olarak; anlaşmamız dahilindeyse ek bir kamera ile
+                                  fotoğraf olarak kayıt altına alıyoruz. Özel bir
+                                  talep belirtilmediği sürece, takı töreni ve konuk
+                                  masası çekimleri hizmet kapsamımız dışındadır.
+                                </p>
+                              </div>
+                              <div>
+                                <h5 className="text-center text-2xl font-bold text-[#c8b5f0]">
+                                  Çekim Sonrası
+                                </h5>
+                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
+                                  Çekilen tüm orijinal görüntüleri yüksek
+                                  çözünürlükte, 1 hafta içinde teslim ediyoruz.
+                                  Seçtiğimiz bir müzikle söz/isteme filminizi
+                                  düzenliyoruz. Anlaşmada fotoğraf çekimi varsa
+                                  fotoğraflar üzerinde baskı ve düzenleme
+                                  yapılmadan doğal halleriyle dijital olarak teslim
+                                  ediyoruz.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              {[
+                                { label: "Video Film", price: "₺23.000" },
+                                {
+                                  label: "Fotoğraf + Video Film",
+                                  price: "₺31.000",
+                                },
+                              ].map((price) => (
+                                <div
+                                  key={price.label}
+                                  className="flex items-center justify-between rounded-2xl bg-[#31313a] px-3 py-2.5 text-[#c8b5f0]"
+                                >
+                                  <span className="text-sm font-semibold md:text-lg">
+                                    {price.label}
+                                  </span>
+                                  <span className="text-xl font-extrabold md:text-2xl">
+                                    {price.price}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : category.title === "Kına" ? (
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
+                            <div className="relative overflow-hidden rounded-2xl">
+                              <Image
+                                src={packageMedia("kina.png")}
+                                alt="Kına detayları"
+                                width={1600}
+                                height={700}
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-center text-[#ff2b47]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
+                                    Hüzün ve eğlence bir arada.
+                                  </p>
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
+                                    Kına
+                                  </h4>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-[1px] overflow-hidden rounded-2xl bg-[#ff2b47] md:grid-cols-4">
+                              {[
+                                {
+                                  title: "Fotoğraf Çekimi",
+                                  sub: "Ağıt Eğlence",
+                                  icon: Camera,
+                                },
+                                {
+                                  title: "Video Çekimi",
+                                  sub: "Film Uzun Metraj",
+                                  icon: Video,
+                                },
+                                {
+                                  title: "Rehberlik Hizmeti",
+                                  sub: "Gün Planlama Öneriler",
+                                  icon: Compass,
+                                },
+                                {
+                                  title: "Tüm Dijitaller",
+                                  sub: "Çekilenler Düzenlenir",
+                                  icon: Download,
+                                },
+                              ].map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                  <div
+                                    key={item.title}
+                                    className="bg-[#ff2b47] px-2 py-2 text-center text-[#24070b]"
+                                  >
+                                    <Icon className="mx-auto h-5 w-5" />
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
+                                      {item.title}
+                                    </p>
+                                    <p className="mt-1 text-[10px] leading-tight text-[#4c151d] md:text-[11px]">
+                                      {item.sub}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
+                              <div>
+                                <h5 className="text-center text-2xl font-bold text-[#ff2b47]">
+                                  Çekim
+                                </h5>
+                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
+                                  Organizasyonunuzun tüm detaylarında size
+                                  rehberlik ederek çekim sürecini uçtan uca
+                                  yönetiyoruz. Kına başlamadan önce salonda
+                                  buluşarak tüm akışı birlikte prova ediyoruz.
+                                  Giriş, ağıt ve eğlence bölümlerinin en az 2
+                                  kamera ile film (video) olarak; anlaşmamız
+                                  dahilindeyse ek bir kamera ile fotoğraf olarak
+                                  kayıt altına alınıyor. Özel bir talep
+                                  belirtilmediği sürece, takı töreni ve konuk
+                                  masası çekimleri hizmet kapsamımız dışındadır.
+                                </p>
+                              </div>
+                              <div>
+                                <h5 className="text-center text-2xl font-bold text-[#ff2b47]">
+                                  Çekim Sonrası
+                                </h5>
+                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
+                                  Çekilen tüm orijinal görüntüleri yüksek
+                                  çözünürlükte, 1 hafta içinde teslim ediyoruz.
+                                  Seçtiğimiz bir müzikle kına salon filminizi
+                                  düzenliyoruz. Anlaşmada fotoğraf çekimi varsa
+                                  fotoğraflar üzerinde baskı ve düzenleme
+                                  yapılmadan doğal halleriyle dijital olarak
+                                  teslim ediliyor.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              {[
+                                { label: "Video Film", price: "₺25.000" },
+                                {
+                                  label: "Fotoğraf + Video Film",
+                                  price: "₺33.000",
+                                },
+                              ].map((price) => (
+                                <div
+                                  key={price.label}
+                                  className="flex items-center justify-between rounded-2xl bg-[#31313a] px-3 py-2.5 text-[#ff2b47]"
+                                >
+                                  <span className="text-sm font-semibold md:text-lg">
+                                    {price.label}
+                                  </span>
+                                  <span className="text-xl font-extrabold md:text-2xl">
+                                    {price.price}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : category.title === "Nişan" ? (
+                          <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
+                            <div className="relative overflow-hidden rounded-2xl">
+                              <Image
+                                src={packageMedia("nisan.png")}
+                                alt="Nişan detayları"
+                                width={1600}
+                                height={700}
+                                className="h-24 w-full object-cover brightness-75 md:h-44"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-center text-[#9beefe]">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
+                                    Evliliğe atılan ilk adım.
+                                  </p>
+                                  <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
+                                    Nişan
+                                  </h4>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-[1px] overflow-hidden rounded-2xl bg-[#9beefe] md:grid-cols-4">
+                              {[
+                                {
+                                  title: "Fotoğraf Çekimi",
+                                  sub: "Aile Anlar",
+                                  icon: Camera,
+                                },
+                                {
+                                  title: "Video Çekimi",
+                                  sub: "Film Uzun Metraj",
+                                  icon: Video,
+                                },
+                                {
+                                  title: "Rehberlik Hizmeti",
+                                  sub: "Gün Planlama Öneriler",
+                                  icon: Compass,
+                                },
+                                {
+                                  title: "Tüm Dijitaller",
+                                  sub: "Çekilenler Düzenlenir",
+                                  icon: Download,
+                                },
+                              ].map((item) => {
+                                const Icon = item.icon;
+                                return (
+                                  <div
+                                    key={item.title}
+                                    className="bg-[#9beefe] px-2 py-2 text-center text-[#0b2630]"
+                                  >
+                                    <Icon className="mx-auto h-5 w-5" />
+                                    <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
+                                      {item.title}
+                                    </p>
+                                    <p className="mt-1 text-[10px] leading-tight text-[#2d5060] md:text-[11px]">
+                                      {item.sub}
+                                    </p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
+                              <div>
+                                <h5 className="text-center text-2xl font-bold text-[#9beefe]">
+                                  Çekim
+                                </h5>
+                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
+                                  Organizasyonunuzun tüm detaylarında size
+                                  rehberlik ederek çekim sürecini uçtan uca
+                                  yönetiyoruz. Nişan başlamadan önce salonda
+                                  buluşarak tüm akışı birlikte prova ediyoruz.
+                                  Törenin giriş, ilk dans, yüzük merasimi ve
+                                  eğlence bölümlerinin en az 2 kamera ile film
+                                  (video) olarak; anlaşmamız dahilindeyse ek bir
+                                  kamera ile fotoğraf olarak kayıt altına alınıyor.
+                                  Özel bir talep belirtilmediği sürece, takı töreni
+                                  ve konuk masası çekimleri hizmet kapsamımız
+                                  dışındadır.
+                                </p>
+                              </div>
+                              <div>
+                                <h5 className="text-center text-2xl font-bold text-[#9beefe]">
+                                  Çekim Sonrası
+                                </h5>
+                                <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
+                                  Çekilen tüm orijinal görüntüleri yüksek
+                                  çözünürlükte, 1 hafta içinde teslim ediyoruz.
+                                  Seçtiğimiz bir müzikle nişan salon filminizi
+                                  düzenliyoruz. Anlaşmada fotoğraf çekimi varsa
+                                  fotoğraflar üzerinde baskı ve düzenleme
+                                  yapılmadan doğal halleriyle dijital olarak
+                                  teslim ediliyor.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              {[
+                                { label: "Video Film", price: "₺25.000" },
+                                {
+                                  label: "Fotoğraf + Video Film",
+                                  price: "₺33.000",
+                                },
+                              ].map((price) => (
+                                <div
+                                  key={price.label}
+                                  className="flex items-center justify-between rounded-2xl bg-[#31313a] px-3 py-2.5 text-[#9beefe]"
                                 >
                                   <span className="text-sm font-semibold md:text-lg">
                                     {price.label}
@@ -760,7 +1152,7 @@ export function PackagesHero() {
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
                             <div className="relative overflow-hidden rounded-2xl">
                               <Image
-                                src={packageMedia("3.jpg")}
+                                src={packageMedia("full-hikaye.png")}
                                 alt="Full hikaye detayları"
                                 width={1600}
                                 height={700}

@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import localFont from "next/font/local";
+import { AboutEquipment } from "@/components/about/about-equipment";
 import { Reveal } from "@/components/motion/reveal";
+
+const operettaBold = localFont({
+  src: "../../../public/fonts/operetta-18-bold.ttf",
+});
 
 export const metadata: Metadata = {
   title: "Hakkımızda",
@@ -18,10 +24,14 @@ export default function AboutPage() {
           </p>
           <h1 className="mt-4 text-4xl leading-tight md:text-6xl">
             <span className="font-brand lowercase">bekography</span>
-            <span className="block text-zinc-600 dark:text-zinc-300">
-              bir isim, bir tutku, bir imza
-            </span>
           </h1>
+          <h2 className="mt-4 text-4xl leading-tight md:text-5xl">
+            <span
+              className={`${operettaBold.className} block italic text-zinc-600 dark:text-zinc-300`}
+            >
+              bir isim, bir tutku, yüzlerce mutlu hikaye...
+            </span>
+          </h2>
           <p className="mt-6 max-w-3xl text-base font-light leading-relaxed text-zinc-600 dark:text-zinc-300 md:text-lg">
             Her hikayeyi kurgusundan editine kadar titizlikle işleyen,{" "}
             <strong>butik ve yüksek standartlı</strong> bir üretim anlayışıyla
@@ -128,6 +138,8 @@ export default function AboutPage() {
             <span aria-hidden>→</span>
           </Link>
         </Reveal>
+
+        <AboutEquipment />
       </section>
     </main>
   );

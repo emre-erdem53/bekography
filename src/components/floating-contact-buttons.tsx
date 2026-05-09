@@ -19,7 +19,15 @@ export function FloatingContactButtons() {
         className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-[#ffffff] shadow-lg transition-transform hover:scale-[1.03]"
         whileTap={{ scale: 0.96 }}
       >
-        <Image src="/whatsapp.svg" alt="" width={24} height={24} aria-hidden />
+        <Image
+          src="/whatsapp.svg"
+          alt=""
+          width={24}
+          height={24}
+          priority
+          loading="eager"
+          aria-hidden
+        />
       </motion.a>
 
       <motion.a

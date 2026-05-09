@@ -127,6 +127,7 @@ export function ContactPageClient() {
                     alt=""
                     width={16}
                     height={16}
+                    loading="eager"
                     className="h-4 w-4 brightness-0 invert"
                     aria-hidden
                   />
