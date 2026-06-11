@@ -227,19 +227,6 @@ export function ContactPageClient() {
           </div>
         </motion.section>
       </main>
-      <motion.div
-        className="pointer-events-none fixed bottom-8 left-8 hidden lg:block"
-        initial={reduce ? false : { opacity: 0, x: -8 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: reduce ? 0 : 0.9, duration: 0.5 }}
-      >
-        <span
-          className="inline-block origin-left rotate-90 text-[8px] font-bold uppercase tracking-[0.5em] text-zinc-500 dark:text-zinc-400"
-          aria-hidden
-        >
-          EST. 2024
-        </span>
-      </motion.div>
     </>
   );
 }
