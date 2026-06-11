@@ -69,9 +69,6 @@ export function FooterDark() {
             whileInView="show"
             viewport={{ once: true, margin: "-8%" }}
           >
-            <span className="mb-6 block text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">
-              Hızlı Gezinme
-            </span>
             <ul className="space-y-3 text-sm">
               <li>
                 <Link
@@ -124,7 +121,6 @@ export function FooterDark() {
             <span className="mb-6 block text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">
               İletişim
             </span>
-            <p className="text-sm">hello@bekography.com</p>
             <p className="text-sm text-gray-400">0546 937 04 64</p>
             <p className="mt-3 max-w-xs text-xs leading-relaxed text-gray-400">
               Yavuz Plaza, Eminettin, Menderes Blv. No:170-172 Kat:9 801,
@@ -139,24 +135,12 @@ export function FooterDark() {
           viewport={{ once: true }}
           transition={{ delay: reduce ? 0 : 0.12, duration: 0.5 }}
         >
-          <div className="flex gap-12">
-            <motion.a
-              className="transition-opacity hover:opacity-40"
-              href="https://www.instagram.com/bekography/"
-              target="_blank"
-              rel="noopener noreferrer"
-              whileHover={reduce ? undefined : { y: -3, scale: 1.08 }}
-            >
-              <span className="sr-only">Instagram</span>
-              <InstagramIcon />
-            </motion.a>
-          </div>
           <p className="text-[9px] font-bold uppercase tracking-[0.5em] text-white/30">
             © 2026 bekography. tüm hakları saklıdır.
           </p>
         </motion.div>
         <p className="pointer-events-none absolute bottom-2 left-8 text-[11px] text-white/45 md:left-12">
-          Geliştirme ve Tasarım: Emre Erdem
+          Design and Development: Emre Erdem
         </p>
       </div>
     </motion.footer>

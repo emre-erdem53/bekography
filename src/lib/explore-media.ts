@@ -1,34 +1,14 @@
-export type DisplayPattern = {
-  colSpan: 1 | 2 | 3;
-  rowSpan: 1 | 2 | 3 | 4 | 5 | 6;
-  /** 1 tabanlı CSS grid başlangıç sütunu (paketleyici atar). */
-  colStart?: number;
-  /** 1 tabanlı CSS grid başlangıç satırı (paketleyici atar). */
-  rowStart?: number;
-};
+import type {
+  DisplayPattern,
+  ExploreCarouselSlide,
+  ExploreMediaItem,
+} from "@/lib/explore-media-types";
 
-export type ExploreCarouselSlide = {
-  id: string;
-  type: "image" | "video";
-  fileName: string;
-  src: string;
-  poster?: string;
-  title: string;
-  orientation: "portrait" | "landscape";
-};
-
-export type ExploreMediaItem = {
-  id: string;
-  type: "image" | "video";
-  fileName: string;
-  src: string;
-  poster?: string;
-  title: string;
-  instagramUrl: string;
-  orientation: "portrait" | "landscape";
-  displayPattern?: DisplayPattern;
-  carouselItems?: ExploreCarouselSlide[];
-};
+export type {
+  DisplayPattern,
+  ExploreCarouselSlide,
+  ExploreMediaItem,
+} from "@/lib/explore-media-types";
 
 // Files whose source media is landscape (verified via dimensions).
 const LANDSCAPE_FILES = new Set<string>([
@@ -571,6 +551,180 @@ function place27And33Pair(
   );
 }
 
+/** 27+33 bandı; kalan görselleri video blokları olmadan altına sıkıştırır. */
+function place27And33PairImageOnly(
+  packer: ExploreGridPacker,
+  item27: ExploreMediaItem,
+  item33: ExploreMediaItem,
+  items: ExploreMediaItem[],
+  output: GridPlacement[],
+) {
+  const band = packer.findFirst(3, 2);
+
+  const pattern27: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 2,
+    colStart: band.col,
+    rowStart: band.row,
+  };
+
+  const pattern33: DisplayPattern = {
+    colSpan: 2,
+    rowSpan: 2,
+    colStart: band.col + 1,
+    rowStart: band.row,
+  };
+
+  const displaced = dedupePlacements([
+    ...packer.evictOverlapping(pattern27),
+    ...packer.evictOverlapping(pattern33),
+  ]);
+
+  output.push(packer.place(item27, pattern27));
+  output.push(packer.place(item33, pattern33));
+
+  const belowRow = band.row + 2;
+  const displacedIds = new Set(displaced.map((entry) => entry.item.id));
+  const remaining = items.filter(
+    (entry) => !packer.isPlaced(entry) && !displacedIds.has(entry.id),
+  );
+
+  relocateBelow(
+    packer,
+    dedupePlacements([
+      ...displaced,
+      ...remaining.map((item) => ({
+        item,
+        pattern: getBasePattern(item),
+      })),
+    ]),
+    belowRow,
+    output,
+  );
+}
+
+/** Fotoğraf akışında 18.jpg, video2 yerine satırı 2 sütuna yayar. */
+function fixPhoto18Row(items: ExploreMediaItem[]): ExploreMediaItem[] {
+  const img18 = items.find((entry) => entry.fileName === "18.jpg");
+  if (!img18?.displayPattern?.rowStart) {
+    return items;
+  }
+
+  const row = img18.displayPattern.rowStart;
+  const img18Pattern: DisplayPattern = {
+    colSpan: 2,
+    rowSpan: 1,
+    colStart: 1,
+    rowStart: row,
+  };
+
+  const overlappers = items.filter(
+    (entry) =>
+      entry.fileName !== "18.jpg" &&
+      entry.displayPattern &&
+      patternsOverlap(img18Pattern, entry.displayPattern),
+  );
+
+  if (overlappers.length === 0) {
+    return items.map((entry) =>
+      entry.fileName === "18.jpg"
+        ? { ...entry, displayPattern: img18Pattern }
+        : entry,
+    );
+  }
+
+  const packer = new ExploreGridPacker();
+  const fixed = items.map((entry) =>
+    entry.fileName === "18.jpg"
+      ? { ...entry, displayPattern: img18Pattern }
+      : entry,
+  );
+
+  for (const entry of fixed) {
+    if (
+      overlappers.some((overlapper) => overlapper.id === entry.id) ||
+      !entry.displayPattern?.colStart ||
+      !entry.displayPattern?.rowStart
+    ) {
+      continue;
+    }
+    packer.place(entry, entry.displayPattern);
+  }
+
+  for (const entry of overlappers) {
+    const base = getBasePattern(entry);
+    const slot = packer.findFirst(base.colSpan, base.rowSpan, row + 1);
+    packer.place(entry, {
+      ...base,
+      colStart: slot.col,
+      rowStart: slot.row,
+    });
+  }
+
+  return packer.getResultsSorted().map((placement) => ({
+    ...placement.item,
+    displayPattern: placement.pattern,
+  }));
+}
+
+/** Sadece görseller: video yerleşim kuralları ve boş video hücreleri yok. */
+function packImageOnlyGrid(items: ExploreMediaItem[]): ExploreMediaItem[] {
+  const packer = new ExploreGridPacker();
+  const output: GridPlacement[] = [];
+
+  for (const item of items) {
+    if (packer.isPlaced(item)) continue;
+
+    if (
+      item.fileName === "27.jpg" ||
+      item.fileName === "26.jpg" ||
+      item.fileName === "38.jpg"
+    ) {
+      continue;
+    }
+
+    if (item.fileName === "33.jpg") {
+      const item27 = items.find((entry) => entry.fileName === "27.jpg");
+      if (item27 && !packer.isPlaced(item27)) {
+        place27And33PairImageOnly(packer, item27, item, items, output);
+      } else {
+        const pattern33: DisplayPattern = {
+          colSpan: 2,
+          rowSpan: 2,
+          colStart: 2,
+          rowStart: packer.findFirst(2, 2).row,
+        };
+        const displaced = packer.evictOverlapping(pattern33);
+        output.push(packer.place(item, pattern33));
+        relocateBelow(
+          packer,
+          displaced,
+          pattern33.rowStart! + pattern33.rowSpan,
+          output,
+        );
+      }
+      continue;
+    }
+
+    const base = getBasePattern(item);
+    const slot = packer.findFirst(base.colSpan, base.rowSpan);
+    output.push(
+      packer.place(item, {
+        ...base,
+        colStart: slot.col,
+        rowStart: slot.row,
+      }),
+    );
+  }
+
+  const packed = packer.getResultsSorted().map((placement) => ({
+    ...placement.item,
+    displayPattern: placement.pattern,
+  }));
+
+  return fixPhoto18Row(packed);
+}
+
 function relocateBelow(
   packer: ExploreGridPacker,
   displaced: GridPlacement[],
@@ -1033,7 +1187,7 @@ const manuallyOrderedMediaItems = (() => {
 
 export const exploreMediaItems: ExploreMediaItem[] = manuallyOrderedMediaItems;
 
-export const photoMediaItems = packExploreGrid(
+export const photoMediaItems = packImageOnlyGrid(
   buildAsymmetricLayout(
     manuallyOrderedMediaItems.filter((item) => item.type === "image"),
   ),

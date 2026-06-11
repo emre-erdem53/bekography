@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { AboutGoogleReviewsSection } from "@/components/about/about-google-reviews-section";
 import { AboutMediaSections } from "@/components/about/about-media-sections";
+import { AboutTeamPortrait } from "@/components/about/about-team-portrait";
 import { Reveal } from "@/components/motion/reveal";
+import { ABOUT_TEAM_PORTRAIT_FILES } from "@/lib/about-team-media";
+import { turkishUppercase } from "@/lib/turkish-text";
 
 const operettaBold = localFont({
   src: "../../../public/fonts/operetta-18-bold.ttf",
@@ -18,8 +22,8 @@ export default function AboutPage() {
     <main className="min-h-screen bg-[#f7f7f4] pt-28 text-zinc-900 transition-colors duration-300 dark:bg-zinc-950 dark:text-zinc-100">
       <section className="mx-auto max-w-6xl px-6 pb-24 md:px-10">
         <Reveal className="border-b border-zinc-200 pb-12 dark:border-white/10" y={24}>
-          <p className="text-[11px] uppercase tracking-[0.35em] text-zinc-500 dark:text-zinc-400">
-            Hakkımızda
+          <p className="text-[11px] tracking-[0.35em] text-zinc-500 dark:text-zinc-400">
+            {turkishUppercase("Hakkımızda")}
           </p>
           <h1 className="mt-4 text-4xl leading-tight md:text-6xl">
             <span className="font-brand lowercase">bekography</span>
@@ -41,14 +45,14 @@ export default function AboutPage() {
 
         <div className="mt-14 grid grid-cols-1 gap-10 md:grid-cols-2">
           <Reveal className="rounded-3xl border border-zinc-200 bg-white p-6 dark:border-white/10 dark:bg-zinc-900" y={20}>
-            <div className="mb-5 aspect-[4/5] rounded-2xl border border-dashed border-zinc-300 bg-zinc-100/70 p-5 dark:border-white/20 dark:bg-zinc-800/70">
-              <div className="flex h-full items-center justify-center rounded-xl bg-white/60 text-center text-sm text-zinc-500 dark:bg-zinc-900/40 dark:text-zinc-300">
-                Kevser Topçu görsel alanı
-              </div>
-            </div>
+            <AboutTeamPortrait
+              fileName={ABOUT_TEAM_PORTRAIT_FILES.kevser}
+              alt="Kevser Topçu portre fotoğrafı"
+              priority
+            />
             <h2 className="text-2xl">Kevser Topçu</h2>
-            <p className="mt-1 text-sm uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
-              Kreatif Göz & Stil Rehberi
+            <p className="mt-1 text-sm tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+              {turkishUppercase("Kreatif Göz & Stil Rehberi")}
             </p>
             <p className="mt-5 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-300">
               27 Eylül 1994 Rize doğumlu Kevser Topçu, moda tasarımına olan
@@ -67,14 +71,13 @@ export default function AboutPage() {
           </Reveal>
 
           <Reveal className="rounded-3xl border border-zinc-200 bg-white p-6 dark:border-white/10 dark:bg-zinc-900" y={24}>
-            <div className="mb-5 aspect-[4/5] rounded-2xl border border-dashed border-zinc-300 bg-zinc-100/70 p-5 dark:border-white/20 dark:bg-zinc-800/70">
-              <div className="flex h-full items-center justify-center rounded-xl bg-white/60 text-center text-sm text-zinc-500 dark:bg-zinc-900/40 dark:text-zinc-300">
-                Bekir Topçu görsel alanı
-              </div>
-            </div>
+            <AboutTeamPortrait
+              fileName={ABOUT_TEAM_PORTRAIT_FILES.bekir}
+              alt="Bekir Topçu portre fotoğrafı"
+            />
             <h2 className="text-2xl">Bekir Topçu</h2>
-            <p className="mt-1 text-sm uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
-              Kurucu & Görsel Hikaye Anlatıcısı
+            <p className="mt-1 text-sm tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+              {turkishUppercase("Kurucu & Görsel Hikaye Anlatıcısı")}
             </p>
             <p className="mt-5 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-300">
               15 Temmuz 1993 Rize doğumlu Bekir Topçu, görsel sanatlar
@@ -92,14 +95,17 @@ export default function AboutPage() {
           </Reveal>
         </div>
 
+        <AboutGoogleReviewsSection />
+
         <Reveal className="mt-14 rounded-3xl border border-zinc-200 bg-white p-7 dark:border-white/10 dark:bg-zinc-900 md:p-10" y={22}>
-          <h3 className="text-[11px] uppercase tracking-[0.35em] text-zinc-500 dark:text-zinc-400">
-            Neden <span className="font-brand lowercase">bekography</span>
+          <h3 className="text-[11px] tracking-[0.35em] text-zinc-500 dark:text-zinc-400">
+            {turkishUppercase("Neden")}{" "}
+            <span className="font-brand lowercase">bekography</span>
           </h3>
           <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
             <article className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-800/70">
-              <h4 className="text-sm uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
-                Butik Yaklaşım
+              <h4 className="text-sm tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
+                {turkishUppercase("Butik Yaklaşım")}
               </h4>
               <p className="mt-3 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
                 Bizim için başarı sayılar değil, her çifte ayrılan özenin
@@ -107,8 +113,8 @@ export default function AboutPage() {
               </p>
             </article>
             <article className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-800/70">
-              <h4 className="text-sm uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
-                Güçlü Teknik
+              <h4 className="text-sm tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
+                {turkishUppercase("Güçlü Teknik")}
               </h4>
               <p className="mt-3 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
                 En iyi ekipmanları, yenilikçi teknikleri ve doğru kurguyu bir
@@ -116,8 +122,8 @@ export default function AboutPage() {
               </p>
             </article>
             <article className="rounded-2xl bg-zinc-50 p-5 dark:bg-zinc-800/70">
-              <h4 className="text-sm uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
-                İmza Estetik
+              <h4 className="text-sm tracking-[0.2em] text-zinc-500 dark:text-zinc-300">
+                {turkishUppercase("İmza Estetik")}
               </h4>
               <p className="mt-3 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
                 Her çekimde ışığın en doğru haliyle, hikayeye özgü bir{" "}

@@ -1,5 +1,6 @@
 import { LazyBlobProductImage } from "@/components/about/lazy-blob-product-image";
 import { Reveal } from "@/components/motion/reveal";
+import { turkishUppercase } from "@/lib/turkish-text";
 import { getUrunImageSrc } from "@/lib/urun-media";
 
 type VisualItem = { label: string; fileName: string };
@@ -117,8 +118,8 @@ function EquipmentVisualCard({ label, fileName }: VisualItem) {
 function CategoryVisualBlock({ title, items }: CategoryVisual) {
   return (
     <div className="space-y-4">
-      <h4 className="text-[11px] uppercase tracking-[0.28em] text-zinc-500 dark:text-zinc-400">
-        {title}
+      <h4 className="text-[11px] tracking-[0.28em] text-zinc-500 dark:text-zinc-400">
+        {turkishUppercase(title)}
       </h4>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => (
@@ -132,8 +133,8 @@ function CategoryVisualBlock({ title, items }: CategoryVisual) {
 function CategoryTextBlock({ title, items }: CategoryTextOnly) {
   return (
     <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/80 p-5 dark:border-white/15 dark:bg-zinc-800/40 md:p-6">
-      <h4 className="text-[11px] uppercase tracking-[0.28em] text-zinc-500 dark:text-zinc-400">
-        {title}
+      <h4 className="text-[11px] tracking-[0.28em] text-zinc-500 dark:text-zinc-400">
+        {turkishUppercase(title)}
       </h4>
       <ul className="mt-4 space-y-2.5 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200 md:text-[15px]">
         {items.map((line) => (
@@ -152,13 +153,13 @@ export function AboutEquipment() {
     VISUAL_CATEGORIES;
 
   return (
-    <Reveal
+    <section
+      aria-labelledby="about-equipment-heading"
       className="mt-12 border-t border-zinc-200 pt-12 dark:border-white/10 md:mt-14 md:pt-14"
-      y={20}
     >
-      <section aria-labelledby="about-equipment-heading">
-        <p className="text-[11px] uppercase tracking-[0.35em] text-zinc-500 dark:text-zinc-400">
-          Ekipman Bilgisi
+      <Reveal y={20} viewportAmount="some" viewportMargin="0px">
+        <p className="text-[11px] tracking-[0.35em] text-zinc-500 dark:text-zinc-400">
+          {turkishUppercase("Ekipman Bilgisi")}
         </p>
         <h2
           id="about-equipment-heading"
@@ -169,8 +170,9 @@ export function AboutEquipment() {
         <p className="mt-3 max-w-2xl text-sm font-light leading-relaxed text-zinc-600 dark:text-zinc-400 md:text-base">
           Çekimlerde kullandığımız profesyonel donanımlar; prodüksiyon kalitesinin omurgasıdır.
         </p>
+      </Reveal>
 
-        <div className="mt-12 space-y-14">
+      <div className="mt-12 space-y-14">
           <CategoryVisualBlock {...cameras} />
 
           <CategoryVisualBlock {...drone} />
@@ -193,8 +195,7 @@ export function AboutEquipment() {
           <p className="rounded-2xl border border-zinc-200 bg-white/60 px-5 py-4 text-sm font-light italic leading-relaxed text-zinc-600 dark:border-white/10 dark:bg-zinc-900/60 dark:text-zinc-300 md:px-6 md:text-[15px]">
             Not: Çekim türüne göre kullanılan set değişiklik gösterir.
           </p>
-        </div>
-      </section>
-    </Reveal>
+      </div>
+    </section>
   );
 }

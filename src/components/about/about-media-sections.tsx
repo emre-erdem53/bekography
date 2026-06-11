@@ -1,6 +1,7 @@
 "use client";
 
 import { useInViewOnce } from "@/hooks/use-in-view-once";
+import { turkishUppercase } from "@/lib/turkish-text";
 import { AboutBackstage } from "./about-backstage";
 import { AboutEquipment } from "./about-equipment";
 
@@ -10,8 +11,10 @@ function BackstageBlockSkeleton() {
       className="mt-16 border-t border-zinc-200 pt-14 dark:border-white/10 md:mt-20 md:pt-16"
       aria-hidden
     >
-      <div className="h-4 w-28 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-      <div className="mt-4 h-10 max-w-xs animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+      <p className="text-[11px] tracking-[0.35em] text-zinc-400 dark:text-zinc-500">
+        {turkishUppercase("Sahne arkası")}
+      </p>
+      <div className="mt-3 h-9 max-w-[8rem] animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
       <div className="mt-3 h-14 max-w-xl animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
       <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
         {Array.from({ length: 23 }, (_, i) => (
@@ -31,8 +34,10 @@ function EquipmentBlockSkeleton() {
       className="mt-12 border-t border-zinc-200 pt-12 dark:border-white/10 md:mt-14 md:pt-14"
       aria-hidden
     >
-      <div className="h-4 w-40 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-      <div className="mt-4 h-10 max-w-sm animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+      <p className="text-[11px] tracking-[0.35em] text-zinc-400 dark:text-zinc-500">
+        {turkishUppercase("Ekipman Bilgisi")}
+      </p>
+      <div className="mt-3 h-9 max-w-[11rem] animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
       <div className="mt-3 h-12 max-w-xl animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
       <div className="mt-10 space-y-12">
         {Array.from({ length: 5 }, (_, row) => (
@@ -53,23 +58,19 @@ function EquipmentBlockSkeleton() {
   );
 }
 
-/** Backstage + ekipman: ilk yüklemede Blob isteği yok; viewport’a yaklaşınca mount, görseller satır satır yüklenir. */
+/** Backstage + ekipman: ayrı lazy mount; ekipman uzun scroll sonrası da güvenilir şekilde yüklenir. */
 export function AboutMediaSections() {
-  const { ref, inView } = useInViewOnce({ rootMargin: "280px 0px" });
+  const backstage = useInViewOnce({ rootMargin: "360px 0px" });
+  const equipment = useInViewOnce({ rootMargin: "320px 0px" });
 
   return (
-    <div ref={ref}>
-      {inView ? (
-        <>
-          <AboutBackstage />
-          <AboutEquipment />
-        </>
-      ) : (
-        <>
-          <BackstageBlockSkeleton />
-          <EquipmentBlockSkeleton />
-        </>
-      )}
+    <div>
+      <div ref={backstage.ref}>
+        {backstage.inView ? <AboutBackstage /> : <BackstageBlockSkeleton />}
+      </div>
+      <div ref={equipment.ref}>
+        {equipment.inView ? <AboutEquipment /> : <EquipmentBlockSkeleton />}
+      </div>
     </div>
   );
 }

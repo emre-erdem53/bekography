@@ -10,6 +10,9 @@ type RevealProps = {
   delay?: number;
   y?: number;
   once?: boolean;
+  /** Varsayılan 0.2; uzun bölümlerde mobilde görünmez kalabiliyor — başlık için "some" kullanın. */
+  viewportAmount?: number | "some" | "all";
+  viewportMargin?: string;
 };
 
 export function Reveal({
@@ -18,6 +21,8 @@ export function Reveal({
   delay = 0,
   y = 32,
   once = true,
+  viewportAmount = 0.2,
+  viewportMargin = "-12% 0px -8% 0px",
 }: RevealProps) {
   const reduce = useReducedMotion();
 
@@ -26,7 +31,7 @@ export function Reveal({
       className={className}
       initial={reduce ? undefined : { opacity: 0, y }}
       whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
-      viewport={{ once, margin: "-12% 0px -8% 0px", amount: 0.2 }}
+      viewport={{ once, margin: viewportMargin, amount: viewportAmount }}
       transition={{
         duration: reduce ? 0.01 : duration.reveal,
         delay: reduce ? 0 : delay,

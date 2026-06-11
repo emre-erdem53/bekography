@@ -27,11 +27,11 @@ export const metadata: Metadata = {
     "Fine art monochrome photography — cinematic narratives, high contrast, timeless frames.",
   icons: {
     icon: [
-      { url: "/logo/logo-black.png", type: "image/png" },
-      { url: "/logo/logo-black.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "32x32" },
     ],
-    shortcut: "/logo/logo-black.png",
-    apple: "/logo/logo-black.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
   },
 };
 
@@ -42,7 +42,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="tr"
       className={`${gilroy.variable} ${andes.variable} h-full antialiased`}
       suppressHydrationWarning
     >

@@ -9,15 +9,17 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  exploreMediaItems,
-  type DisplayPattern,
-  type ExploreCarouselSlide,
-  type ExploreMediaItem,
-} from "@/lib/explore-media";
+import { GridMediaTile } from "@/components/home/grid-media-tile";
+import type {
+  DisplayPattern,
+  ExploreCarouselSlide,
+  ExploreMediaItem,
+} from "@/lib/explore-media-types";
 
 const INITIAL_VISIBLE_COUNT = 12;
 const LOAD_MORE_STEP = 9;
+/** Above-fold grid tiles: erken mount + öncelikli görsel yükleme. */
+const EAGER_TILE_COUNT = 6;
 
 // `displayPattern` is computed in `lib/explore-media.ts`. The pattern is
 // orientation-aware (wide slots host landscape, narrow slots host portrait)
@@ -38,12 +40,10 @@ const ROW_SPAN_CLASS: Record<DisplayPattern["rowSpan"], string> = {
 };
 
 type HomeExploreCarouselProps = {
-  items?: ExploreMediaItem[];
+  items: ExploreMediaItem[];
 };
 
-export function HomeExploreCarousel({
-  items = exploreMediaItems,
-}: HomeExploreCarouselProps) {
+export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   // Per-post horizontal slide index (only relevant for carousel posts).
@@ -51,9 +51,6 @@ export function HomeExploreCarousel({
     Record<number, number>
   >({});
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
-  const [activeGridVideoIds, setActiveGridVideoIds] = useState<
-    Record<string, true>
-  >({});
   // True while any modal image is being pinch-zoomed; we use this to
   // freeze both the vertical scroller and any active inner carousel so
   // the user can pan within the zoomed image without the page snapping.
@@ -66,6 +63,7 @@ export function HomeExploreCarousel({
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const tilesRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const gridVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const gridVideoObserverRef = useRef<IntersectionObserver | null>(null);
   const modalScrollRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -101,53 +99,55 @@ export function HomeExploreCarousel({
     return () => observer.disconnect();
   }, [media.length]);
 
-  // Autoplay grid videos only while their tile is in view.
+  // Grid videoları: görünürken loop oynat, çıkınca duraklat — React state güncellemesi yok.
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        setActiveGridVideoIds((current) => {
-          let changed = false;
-          const next = { ...current };
-          for (const entry of entries) {
-            const id = entry.target.getAttribute("data-media-id");
-            const type = entry.target.getAttribute("data-media-type");
-            if (!id || type !== "video") continue;
-            if (entry.isIntersecting) {
-              if (!next[id]) {
-                next[id] = true;
-                changed = true;
-              }
-              continue;
+        for (const entry of entries) {
+          const id = entry.target.getAttribute("data-media-id");
+          const type = entry.target.getAttribute("data-media-type");
+          if (!id || type !== "video") continue;
+          const video = gridVideoRefs.current[id];
+          if (!video) continue;
+          if (entry.isIntersecting) {
+            if (video.preload === "none") {
+              video.preload = "metadata";
             }
-            if (next[id]) {
-              delete next[id];
-              changed = true;
-            }
+            video.play().catch(() => {});
+            continue;
           }
-          return changed ? next : current;
-        });
+          video.pause();
+        }
       },
       { threshold: 0.6, rootMargin: "120px 0px 120px 0px" },
     );
+    gridVideoObserverRef.current = observer;
 
-    const observed = Object.values(tilesRef.current).filter(
-      (tile): tile is HTMLButtonElement => tile !== null,
-    );
-    for (const tile of observed) observer.observe(tile);
-
-    return () => observer.disconnect();
-  }, [arrangedFeedItems]);
-
-  useEffect(() => {
-    for (const [id, video] of Object.entries(gridVideoRefs.current)) {
-      if (!video) continue;
-      if (activeGridVideoIds[id]) {
-        video.play().catch(() => {});
-        continue;
+    for (const tile of Object.values(tilesRef.current)) {
+      if (tile?.getAttribute("data-media-type") === "video") {
+        observer.observe(tile);
       }
-      video.pause();
     }
-  }, [activeGridVideoIds]);
+
+    return () => {
+      observer.disconnect();
+      gridVideoObserverRef.current = null;
+    };
+  }, [arrangedFeedItems.length]);
+
+  const registerGridTile = useCallback(
+    (item: ExploreMediaItem, node: HTMLButtonElement | null) => {
+      const previous = tilesRef.current[item.id];
+      if (previous && previous !== node) {
+        gridVideoObserverRef.current?.unobserve(previous);
+      }
+      tilesRef.current[item.id] = node;
+      if (node && item.type === "video") {
+        gridVideoObserverRef.current?.observe(node);
+      }
+    },
+    [],
+  );
 
   // ----------------------------- MODAL -----------------------------------
 
@@ -274,9 +274,7 @@ export function HomeExploreCarousel({
                 <button
                   key={item.id}
                   type="button"
-                  ref={(node) => {
-                    tilesRef.current[item.id] = node;
-                  }}
+                  ref={(node) => registerGridTile(item, node)}
                   data-media-id={item.id}
                   data-media-type={item.type}
                   onClick={() => openModal(tileIndex)}
@@ -284,39 +282,13 @@ export function HomeExploreCarousel({
                   className={`group relative overflow-hidden bg-zinc-900 text-left ${colClass} ${rowClass}`}
                   aria-label={`Open ${item.title}`}
                 >
-                  {item.type === "video" ? (
-                    activeGridVideoIds[item.id] ? (
-                      <video
-                        ref={(node) => {
-                          gridVideoRefs.current[item.id] = node;
-                        }}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                        src={item.src}
-                        poster={item.poster}
-                        autoPlay
-                        muted
-                        loop
-                        playsInline
-                        preload="metadata"
-                      />
-                    ) : item.poster ? (
-                      <Image
-                        src={item.poster}
-                        alt={item.title}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                        sizes="(max-width: 768px) 33vw, 20vw"
-                      />
-                    ) : null
-                  ) : (
-                    <Image
-                      src={item.src}
-                      alt={item.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      sizes="(max-width: 768px) 33vw, 20vw"
-                    />
-                  )}
+                  <GridMediaTile
+                    item={item}
+                    eager={tileIndex < EAGER_TILE_COUNT}
+                    videoRef={(node) => {
+                      gridVideoRefs.current[item.id] = node;
+                    }}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
                 </button>
               );

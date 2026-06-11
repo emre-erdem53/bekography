@@ -3,7 +3,9 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { MapPin, Phone } from "lucide-react";
 import Image from "next/image";
+import { ABOUT_TEAM_PORTRAIT_FILES, getAboutTeamPortraitSrc } from "@/lib/about-team-media";
 import { EASE_OUT } from "@/lib/motion";
+import { turkishUppercase } from "@/lib/turkish-text";
 
 export function ContactPageClient() {
   const reduce = useReducedMotion();
@@ -15,13 +17,8 @@ export function ContactPageClient() {
     "Yavuz Plaza, Eminettin, Menderes Blv. No:170-172 Kat:9 801, 53020 Rize Merkez/Rize";
   const mapsQuery = encodeURIComponent(address);
   const mapsLink = `https://maps.google.com/?q=${mapsQuery}`;
-  const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
-  const blobReelsPath = process.env.NEXT_PUBLIC_BLOB_REELS_PATH
-    ?.replace(/^\/+/, "")
-    .replace(/\/+$/, "");
-  const contactImage = blobBaseUrl
-    ? `${blobBaseUrl}/${blobReelsPath ? `${blobReelsPath}/` : ""}1.jpg`
-    : "/reels/1.jpg";
+  const mapsEmbedSrc = `https://maps.google.com/maps?q=${mapsQuery}&z=16&output=embed`;
+  const contactImage = getAboutTeamPortraitSrc(ABOUT_TEAM_PORTRAIT_FILES.bekir);
 
   return (
     <>
@@ -44,9 +41,10 @@ export function ContactPageClient() {
           >
             <Image
               src={contactImage}
-              alt="Bekography iletişim görseli"
+              alt="Bekir Topçu portre fotoğrafı"
               fill
-              className="object-cover grayscale contrast-125"
+              unoptimized
+              className="object-cover object-center"
               sizes="(max-width: 768px) 100vw, 50vw"
               priority
             />
@@ -55,9 +53,9 @@ export function ContactPageClient() {
               aria-hidden
             />
           </motion.div>
-          <div className="absolute bottom-12 left-12 hidden md:block">
-            <p className="text-[10px] uppercase tracking-[0.4em] text-white/40">
-              Rize Merkez
+          <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12">
+            <p className="text-[10px] tracking-[0.4em] text-white/50">
+              {turkishUppercase("Rize'den Tüm Dünyaya")}
             </p>
           </div>
         </motion.section>
@@ -82,14 +80,13 @@ export function ContactPageClient() {
                 ease: EASE_OUT,
               }}
             >
-              <h1 className="mb-4 text-4xl font-extrabold tracking-tighter text-[#141414] dark:text-white md:text-5xl">
-                Hemen İletişime <br />
-                Geçelim
+              <h1 className="mb-4 text-3xl font-extrabold tracking-tighter text-[#141414] dark:text-white md:text-4xl lg:text-5xl">
+                Bekir Topçu ile iletişime geçebilirsiniz
               </h1>
               <p className="text-sm font-light leading-relaxed text-[#141414]/60 dark:text-zinc-400">
-                Form yerine tek tıkla WhatsApp ya da telefon ile bize ulaşın.
-                Daha hızlı geri dönüş için doğrudan iletişim kanallarımızı aktif
-                kullanıyoruz.
+                İlk görüşmeden itibaren çalışmanızı teslim alana kadar olan tüm
+                süreçte sadece bizzat Bekir Topçu ile iletişimde olmanın
+                rahatlığını ve güvenini yaşarsınız.
               </p>
             </motion.header>
             <motion.div
@@ -125,13 +122,13 @@ export function ContactPageClient() {
                   <Image
                     src="/whatsapp.svg"
                     alt=""
-                    width={16}
-                    height={16}
+                    width={24}
+                    height={24}
                     loading="eager"
-                    className="h-4 w-4 brightness-0 invert"
+                    className="h-6 w-6 brightness-0 invert"
                     aria-hidden
                   />
-                  Mesaj Gönder
+                  Whatsapp
                 </a>
               </motion.div>
               <motion.div
@@ -148,8 +145,8 @@ export function ContactPageClient() {
                   href={`tel:${phoneTel}`}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#141414] px-5 py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
                 >
-                  <Phone className="h-4 w-4" />
-                  Ara ({phoneDisplay})
+                  <Phone className="h-6 w-6" strokeWidth={1.75} />
+                  Ara
                 </a>
               </motion.div>
               <motion.div
@@ -168,57 +165,64 @@ export function ContactPageClient() {
                   rel="noopener noreferrer"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#141414]/20 bg-white px-5 py-4 text-sm font-semibold text-[#141414] transition-colors hover:bg-zinc-100 dark:border-white/20 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-800"
                 >
-                  <MapPin className="h-4 w-4" />
-                  Adrese git
+                  <MapPin className="h-6 w-6" strokeWidth={1.75} />
+                  Adrese Git
                 </a>
               </motion.div>
             </motion.div>
             <motion.div
-              className="mt-6 rounded-2xl border border-black/10 bg-zinc-50 px-5 py-4 text-xs leading-relaxed text-zinc-700 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-300"
+              className="mt-6 overflow-hidden rounded-2xl border border-black/10 bg-zinc-50 dark:border-white/10 dark:bg-zinc-800"
               initial={reduce ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: reduce ? 0 : 0.38, duration: 0.55, ease: EASE_OUT }}
             >
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
-                Açık Adres
-              </p>
-              <p>{address}</p>
+              <div className="space-y-4 px-5 py-4 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
+                <div>
+                  <p className="mb-2 text-[10px] font-bold tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+                    {turkishUppercase("Telefon")}
+                  </p>
+                  <a
+                    href={`tel:${phoneTel}`}
+                    className="text-sm font-medium tracking-wide text-zinc-900 hover:underline dark:text-zinc-100"
+                  >
+                    {phoneDisplay}
+                  </a>
+                </div>
+                <div>
+                  <p className="mb-2 text-[10px] font-bold tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
+                    {turkishUppercase("Açık Adres")}
+                  </p>
+                  <p>{address}</p>
+                </div>
+              </div>
+              <div className="aspect-[16/10] w-full border-t border-black/10 dark:border-white/10">
+                <iframe
+                  title="bekography ofis konumu"
+                  src={mapsEmbedSrc}
+                  className="h-full w-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              </div>
             </motion.div>
             <motion.footer
-              className="mt-24 grid grid-cols-1 gap-8 border-t border-[#141414]/5 pt-12 dark:border-white/10 md:grid-cols-2"
+              className="mt-16 border-t border-[#141414]/5 pt-10 dark:border-white/10"
               initial={reduce ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: reduce ? 0 : 0.55, duration: 0.5 }}
             >
-              <div>
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
-                  İletişim
-                </p>
-                <a
-                  href={`tel:${phoneTel}`}
-                  className="text-xs font-medium tracking-wider text-zinc-800 hover:underline dark:text-zinc-300"
-                >
-                  {phoneDisplay}
-                </a>
-                <p className="mt-3 text-xs leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {address}
-                </p>
-              </div>
-              <div>
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
-                  Sosyal
-                </p>
-                <div className="flex gap-4">
-                  <a
-                    className="text-xs font-medium tracking-wider text-zinc-900 transition-opacity hover:opacity-50 dark:text-zinc-200"
-                    href="https://www.instagram.com/bekography/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    INSTAGRAM
-                  </a>
-                </div>
-              </div>
+              <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
+                {turkishUppercase("Sosyal")}
+              </p>
+              <a
+                className="text-xs font-medium tracking-wider text-zinc-900 transition-opacity hover:opacity-50 dark:text-zinc-200"
+                href="https://www.instagram.com/bekography/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                INSTAGRAM
+              </a>
             </motion.footer>
           </div>
         </motion.section>

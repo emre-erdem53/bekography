@@ -90,28 +90,26 @@ export function SiteHeader() {
         >
           <Link
             href="/"
-            className="block transition-opacity hover:opacity-70"
+            className="flex items-center gap-3 transition-opacity hover:opacity-70 sm:gap-3.5"
             aria-label="bekography Ana Sayfa"
           >
             <Image
               src={isDark ? "/logo/logo-white.svg" : "/logo/logo-black.svg"}
-              alt="bekography"
+              alt=""
               width={260}
               height={58}
-              className="h-7 w-auto md:h-9"
+              className="h-7 w-auto shrink-0 md:h-9"
               priority
             />
+            <span
+              className={`font-brand text-lg lowercase tracking-wide md:text-xl ${
+                isDark ? "text-white" : "text-black"
+              }`}
+            >
+              bekography
+            </span>
           </Link>
         </motion.div>
-        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 md:hidden">
-          <span
-            className={`font-brand text-lg lowercase tracking-wide ${
-              isDark ? "text-white" : "text-black"
-            }`}
-          >
-            bekography
-          </span>
-        </div>
         <nav className="hidden items-center gap-12 md:flex">
           {links.map(({ href, label }, i) => {
             const active =
