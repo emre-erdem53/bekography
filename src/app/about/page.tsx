@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import localFont from "next/font/local";
-import { AboutEquipment } from "@/components/about/about-equipment";
+import { AboutMediaSections } from "@/components/about/about-media-sections";
 import { Reveal } from "@/components/motion/reveal";
 
 const operettaBold = localFont({
@@ -129,17 +128,7 @@ export default function AboutPage() {
           </div>
         </Reveal>
 
-        <Reveal className="mt-16 border-t border-zinc-200 pt-10 dark:border-white/10" y={16}>
-          <Link
-            href="/fotograflar"
-            className="inline-flex items-center gap-3 text-lg transition-opacity hover:opacity-70 md:text-2xl"
-          >
-            Galeriyi keşfet
-            <span aria-hidden>→</span>
-          </Link>
-        </Reveal>
-
-        <AboutEquipment />
+        <AboutMediaSections />
       </section>
     </main>
   );

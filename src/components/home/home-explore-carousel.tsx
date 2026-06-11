@@ -11,6 +11,7 @@ import {
 } from "react";
 import {
   exploreMediaItems,
+  type DisplayPattern,
   type ExploreCarouselSlide,
   type ExploreMediaItem,
 } from "@/lib/explore-media";
@@ -27,9 +28,13 @@ const COL_SPAN_CLASS: Record<1 | 2 | 3, string> = {
   3: "col-span-3",
 };
 
-const ROW_SPAN_CLASS: Record<1 | 2, string> = {
+const ROW_SPAN_CLASS: Record<DisplayPattern["rowSpan"], string> = {
   1: "",
   2: "row-span-2",
+  3: "row-span-3",
+  4: "row-span-4",
+  5: "row-span-5",
+  6: "row-span-6",
 };
 
 type HomeExploreCarouselProps = {
@@ -246,13 +251,25 @@ export function HomeExploreCarousel({
       <section className="relative w-full bg-black pt-24">
         <div className="relative z-10 w-full">
           <div
-            className="grid w-full grid-cols-3 gap-[1px]"
+            className="grid w-full auto-flow-dense grid-cols-3 gap-[1px]"
             style={{ gridAutoRows: "30vw" }}
           >
             {arrangedFeedItems.map((item, tileIndex) => {
               const pattern = item.displayPattern ?? { colSpan: 1, rowSpan: 1 };
-              const colClass = COL_SPAN_CLASS[pattern.colSpan];
-              const rowClass = ROW_SPAN_CLASS[pattern.rowSpan];
+              const hasExplicitPlacement =
+                pattern.colStart !== undefined && pattern.rowStart !== undefined;
+              const colClass = hasExplicitPlacement
+                ? ""
+                : COL_SPAN_CLASS[pattern.colSpan];
+              const rowClass = hasExplicitPlacement
+                ? ""
+                : ROW_SPAN_CLASS[pattern.rowSpan];
+              const gridPlacementStyle = hasExplicitPlacement
+                ? {
+                    gridColumn: `${pattern.colStart} / span ${pattern.colSpan}`,
+                    gridRow: `${pattern.rowStart} / span ${pattern.rowSpan}`,
+                  }
+                : undefined;
               return (
                 <button
                   key={item.id}
@@ -263,25 +280,34 @@ export function HomeExploreCarousel({
                   data-media-id={item.id}
                   data-media-type={item.type}
                   onClick={() => openModal(tileIndex)}
+                  style={gridPlacementStyle}
                   className={`group relative overflow-hidden bg-zinc-900 text-left ${colClass} ${rowClass}`}
                   aria-label={`Open ${item.title}`}
                 >
                   {item.type === "video" ? (
-                    <video
-                      ref={(node) => {
-                        gridVideoRefs.current[item.id] = node;
-                      }}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      src={item.src}
-                      poster={item.poster}
-                      autoPlay={Boolean(activeGridVideoIds[item.id])}
-                      muted
-                      loop
-                      playsInline
-                      preload={
-                        activeGridVideoIds[item.id] ? "metadata" : "none"
-                      }
-                    />
+                    activeGridVideoIds[item.id] ? (
+                      <video
+                        ref={(node) => {
+                          gridVideoRefs.current[item.id] = node;
+                        }}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        src={item.src}
+                        poster={item.poster}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : item.poster ? (
+                      <Image
+                        src={item.poster}
+                        alt={item.title}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        sizes="(max-width: 768px) 33vw, 20vw"
+                      />
+                    ) : null
                   ) : (
                     <Image
                       src={item.src}

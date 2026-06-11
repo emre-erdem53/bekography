@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { LazyBlobProductImage } from "@/components/about/lazy-blob-product-image";
 import { Reveal } from "@/components/motion/reveal";
 import { getUrunImageSrc } from "@/lib/urun-media";
 
@@ -100,12 +100,11 @@ function EquipmentVisualCard({ label, fileName }: VisualItem) {
   return (
     <article className="flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-zinc-900 dark:shadow-none dark:hover:shadow-lg dark:hover:shadow-black/20">
       <div className="relative aspect-[4/3] w-full bg-[linear-gradient(180deg,rgba(244,244,241,1)_0%,rgba(235,235,230,1)_100%)] dark:bg-[linear-gradient(180deg,rgba(39,39,42,0.9)_0%,rgba(24,24,27,1)_100%)]">
-        <Image
+        <LazyBlobProductImage
           src={src}
           alt={label}
-          fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 22vw"
-          className="object-contain p-3 md:p-4"
+          imgClassName="object-contain p-3 md:p-4"
         />
       </div>
       <p className="border-t border-zinc-100 px-3 py-3 text-center text-[13px] font-medium leading-snug tracking-tight text-zinc-800 dark:border-white/10 dark:text-zinc-100 md:text-sm">
@@ -154,7 +153,7 @@ export function AboutEquipment() {
 
   return (
     <Reveal
-      className="mt-20 border-t border-zinc-200 pt-16 dark:border-white/10"
+      className="mt-12 border-t border-zinc-200 pt-12 dark:border-white/10 md:mt-14 md:pt-14"
       y={20}
     >
       <section aria-labelledby="about-equipment-heading">

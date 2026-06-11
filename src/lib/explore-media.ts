@@ -1,6 +1,10 @@
 export type DisplayPattern = {
   colSpan: 1 | 2 | 3;
-  rowSpan: 1 | 2;
+  rowSpan: 1 | 2 | 3 | 4 | 5 | 6;
+  /** 1 tabanlı CSS grid başlangıç sütunu (paketleyici atar). */
+  colStart?: number;
+  /** 1 tabanlı CSS grid başlangıç satırı (paketleyici atar). */
+  rowStart?: number;
 };
 
 export type ExploreCarouselSlide = {
@@ -247,6 +251,442 @@ function withPattern(item: ExploreMediaItem, pattern: DisplayPattern): ExploreMe
   return { ...item, displayPattern: pattern };
 }
 
+type GridPlacement = {
+  item: ExploreMediaItem;
+  pattern: DisplayPattern;
+};
+
+const GRID_COLS = 3;
+
+function getBasePattern(item: ExploreMediaItem): DisplayPattern {
+  const fallback = item.displayPattern ?? { colSpan: 1, rowSpan: 1 };
+
+  if (item.fileName === "video1.mp4") {
+    return { colSpan: 3, rowSpan: 2 };
+  }
+  if (item.fileName === "1.jpg") {
+    return { colSpan: 2, rowSpan: 3 };
+  }
+  if (item.fileName === "6.jpg") {
+    return { colSpan: 1, rowSpan: 2 };
+  }
+  if (item.fileName === "video2.mp4") {
+    return { colSpan: 2, rowSpan: 1 };
+  }
+
+  return { colSpan: fallback.colSpan, rowSpan: fallback.rowSpan };
+}
+
+function cellKey(row: number, col: number) {
+  return `${row},${col}`;
+}
+
+function patternCells(pattern: DisplayPattern): Array<{ row: number; col: number }> {
+  const startRow = pattern.rowStart ?? 1;
+  const startCol = pattern.colStart ?? 1;
+  const cells: Array<{ row: number; col: number }> = [];
+  for (let r = startRow; r < startRow + pattern.rowSpan; r++) {
+    for (let c = startCol; c < startCol + pattern.colSpan; c++) {
+      cells.push({ row: r, col: c });
+    }
+  }
+  return cells;
+}
+
+function patternsOverlap(a: DisplayPattern, b: DisplayPattern) {
+  const aCells = new Set(patternCells(a).map(({ row, col }) => cellKey(row, col)));
+  return patternCells(b).some(({ row, col }) => aCells.has(cellKey(row, col)));
+}
+
+class ExploreGridPacker {
+  private occupied = new Set<string>();
+  private placements: GridPlacement[] = [];
+
+  private isFree(row: number, col: number, w: number, h: number) {
+    if (col < 1 || row < 1 || col + w - 1 > GRID_COLS) return false;
+    for (let r = row; r < row + h; r++) {
+      for (let c = col; c < col + w; c++) {
+        if (this.occupied.has(cellKey(r, c))) return false;
+      }
+    }
+    return true;
+  }
+
+  private occupy(pattern: DisplayPattern) {
+    for (const { row, col } of patternCells(pattern)) {
+      this.occupied.add(cellKey(row, col));
+    }
+  }
+
+  private release(pattern: DisplayPattern) {
+    for (const { row, col } of patternCells(pattern)) {
+      this.occupied.delete(cellKey(row, col));
+    }
+  }
+
+  findFirst(w: number, h: number, minRow = 1) {
+    for (let row = minRow; row < 500; row++) {
+      for (let col = 1; col <= GRID_COLS - w + 1; col++) {
+        if (this.isFree(row, col, w, h)) {
+          return { row, col };
+        }
+      }
+    }
+    throw new Error("Grid yerleşimi taştı.");
+  }
+
+  anchorForNextSingleCell() {
+    return this.findFirst(1, 1);
+  }
+
+  place(item: ExploreMediaItem, pattern: DisplayPattern): GridPlacement {
+    let rowStart = pattern.rowStart;
+    let colStart = pattern.colStart;
+
+    if (rowStart === undefined || colStart === undefined) {
+      const slot = this.findFirst(pattern.colSpan, pattern.rowSpan);
+      rowStart = rowStart ?? slot.row;
+      colStart = colStart ?? slot.col;
+    }
+
+    if (!this.isFree(rowStart, colStart, pattern.colSpan, pattern.rowSpan)) {
+      const slot = this.findFirst(pattern.colSpan, pattern.rowSpan);
+      rowStart = slot.row;
+      colStart = slot.col;
+    }
+
+    const resolved: DisplayPattern = {
+      colSpan: pattern.colSpan,
+      rowSpan: pattern.rowSpan,
+      rowStart,
+      colStart,
+    };
+
+    this.occupy(resolved);
+    const placement = { item, pattern: resolved };
+    this.placements.push(placement);
+    return placement;
+  }
+
+  evictOverlapping(target: DisplayPattern): GridPlacement[] {
+    const evicted = this.placements.filter((p) => patternsOverlap(p.pattern, target));
+    for (const placement of evicted) {
+      this.release(placement.pattern);
+      this.placements = this.placements.filter((p) => p !== placement);
+    }
+    return evicted;
+  }
+
+  isPlaced(item: ExploreMediaItem) {
+    return this.placements.some((p) => p.item.id === item.id);
+  }
+
+  getResultsSorted() {
+    return [...this.placements].sort(
+      (a, b) =>
+        (a.pattern.rowStart ?? 0) - (b.pattern.rowStart ?? 0) ||
+        (a.pattern.colStart ?? 0) - (b.pattern.colStart ?? 0),
+    );
+  }
+}
+
+function dedupePlacements(list: GridPlacement[]): GridPlacement[] {
+  const seen = new Set<string>();
+  return list.filter((entry) => {
+    if (seen.has(entry.item.id)) return false;
+    seen.add(entry.item.id);
+    return true;
+  });
+}
+
+/** 3 sütunluk bant: solda 27.jpg (1×2), sağda 33.jpg (2×2); altında 26.jpg + video3.mp4. */
+function place27And33Pair(
+  packer: ExploreGridPacker,
+  item27: ExploreMediaItem,
+  item33: ExploreMediaItem,
+  items: ExploreMediaItem[],
+  output: GridPlacement[],
+) {
+  const band = packer.findFirst(3, 2);
+
+  const pattern27: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 2,
+    colStart: band.col,
+    rowStart: band.row,
+  };
+
+  const pattern33: DisplayPattern = {
+    colSpan: 2,
+    rowSpan: 2,
+    colStart: band.col + 1,
+    rowStart: band.row,
+  };
+
+  const displaced = dedupePlacements([
+    ...packer.evictOverlapping(pattern27),
+    ...packer.evictOverlapping(pattern33),
+  ]);
+
+  output.push(packer.place(item27, pattern27));
+  output.push(packer.place(item33, pattern33));
+
+  const belowRow = band.row + 2;
+  const item26 = items.find((entry) => entry.fileName === "26.jpg");
+  const itemVideo3 = items.find((entry) => entry.fileName === "video3.mp4");
+  const pinnedIds = new Set(
+    [item26?.id, itemVideo3?.id].filter((id): id is string => Boolean(id)),
+  );
+
+  const pattern26: DisplayPattern | undefined = item26
+    ? {
+        colSpan: 1,
+        rowSpan: 1,
+        colStart: band.col,
+        rowStart: belowRow,
+      }
+    : undefined;
+
+  const patternVideo3: DisplayPattern | undefined = itemVideo3
+    ? {
+        colSpan: 2,
+        rowSpan: 1,
+        colStart: band.col + 1,
+        rowStart: belowRow,
+      }
+    : undefined;
+
+  const displacedBelow = dedupePlacements([
+    ...(pattern26 ? packer.evictOverlapping(pattern26) : []),
+    ...(patternVideo3 ? packer.evictOverlapping(patternVideo3) : []),
+  ]).filter((entry) => !pinnedIds.has(entry.item.id));
+
+  if (item26 && pattern26 && !packer.isPlaced(item26)) {
+    output.push(packer.place(item26, pattern26));
+  }
+  if (itemVideo3 && patternVideo3 && !packer.isPlaced(itemVideo3)) {
+    output.push(packer.place(itemVideo3, patternVideo3));
+  }
+
+  const relocateFromRow = belowRow + 1;
+  relocateBelow(
+    packer,
+    dedupePlacements([
+      ...displaced.filter((entry) => !pinnedIds.has(entry.item.id)),
+      ...displacedBelow,
+    ]),
+    relocateFromRow,
+    output,
+  );
+}
+
+function relocateBelow(
+  packer: ExploreGridPacker,
+  displaced: GridPlacement[],
+  belowRow: number,
+  output: GridPlacement[],
+) {
+  for (const entry of displaced) {
+    const base = getBasePattern(entry.item);
+    const slot = packer.findFirst(base.colSpan, base.rowSpan, belowRow);
+    output.push(
+      packer.place(entry.item, {
+        ...base,
+        colStart: slot.col,
+        rowStart: slot.row,
+      }),
+    );
+  }
+}
+
+/** İki öğenin grid konumunu (colStart/rowStart) takas eder; boyutlar aynı kalır. */
+function swapGridPositions(
+  items: ExploreMediaItem[],
+  fileA: string,
+  fileB: string,
+): ExploreMediaItem[] {
+  const itemA = items.find((entry) => entry.fileName === fileA);
+  const itemB = items.find((entry) => entry.fileName === fileB);
+  const patternA = itemA?.displayPattern;
+  const patternB = itemB?.displayPattern;
+
+  if (
+    !patternA ||
+    !patternB ||
+    patternA.colStart === undefined ||
+    patternA.rowStart === undefined ||
+    patternB.colStart === undefined ||
+    patternB.rowStart === undefined
+  ) {
+    return items;
+  }
+
+  const posA = { colStart: patternA.colStart, rowStart: patternA.rowStart };
+  const posB = { colStart: patternB.colStart, rowStart: patternB.rowStart };
+
+  return items.map((entry) => {
+    if (entry.fileName === fileA) {
+      return {
+        ...entry,
+        displayPattern: { ...patternA, ...posB },
+      };
+    }
+    if (entry.fileName === fileB) {
+      return {
+        ...entry,
+        displayPattern: { ...patternB, ...posA },
+      };
+    }
+    return entry;
+  });
+}
+
+/**
+ * 18.jpg ↔ video2.mp4 takasından sonra: video2 sağda 2 sütun (2–3), 18 solda 1 sütun.
+ * Aksi halde video2 tek hücrede kalıp ortada boş (siyah) kutucuk oluşuyor.
+ */
+function fixSwappedVideo2Row(items: ExploreMediaItem[]): ExploreMediaItem[] {
+  const video2Item = items.find((entry) => entry.fileName === "video2.mp4");
+  const img18Item = items.find((entry) => entry.fileName === "18.jpg");
+  if (
+    !video2Item?.displayPattern?.rowStart ||
+    !img18Item?.displayPattern?.rowStart
+  ) {
+    return items;
+  }
+
+  const row = video2Item.displayPattern.rowStart;
+  if (row !== img18Item.displayPattern.rowStart) {
+    return items;
+  }
+
+  const video2Pattern: DisplayPattern = {
+    colSpan: 2,
+    rowSpan: 1,
+    colStart: 2,
+    rowStart: row,
+  };
+  const img18Pattern: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 1,
+    colStart: 1,
+    rowStart: row,
+  };
+
+  const blockPatterns = [video2Pattern, img18Pattern];
+  const overlappers = items.filter(
+    (entry) =>
+      entry.fileName !== "video2.mp4" &&
+      entry.fileName !== "18.jpg" &&
+      entry.displayPattern &&
+      blockPatterns.some((block) =>
+        patternsOverlap(block, entry.displayPattern!),
+      ),
+  );
+
+  const fixed = items.map((entry) => {
+    if (entry.fileName === "video2.mp4") {
+      return { ...entry, displayPattern: video2Pattern };
+    }
+    if (entry.fileName === "18.jpg") {
+      return { ...entry, displayPattern: img18Pattern };
+    }
+    return entry;
+  });
+
+  if (overlappers.length === 0) {
+    return fixed;
+  }
+
+  const packer = new ExploreGridPacker();
+  for (const entry of fixed) {
+    if (
+      overlappers.some((o) => o.id === entry.id) ||
+      !entry.displayPattern?.colStart ||
+      !entry.displayPattern?.rowStart
+    ) {
+      continue;
+    }
+    packer.place(entry, entry.displayPattern);
+  }
+
+  const belowRow = row + 1;
+  for (const entry of overlappers) {
+    const base = getBasePattern(entry);
+    const slot = packer.findFirst(base.colSpan, base.rowSpan, belowRow);
+    packer.place(entry, {
+      ...base,
+      colStart: slot.col,
+      rowStart: slot.row,
+    });
+  }
+
+  return packer.getResultsSorted().map((placement) => ({
+    ...placement.item,
+    displayPattern: placement.pattern,
+  }));
+}
+
+/** Özel boyutlar + genişletmeler; yerinden edilen öğeler hemen alt satıra sırayla taşınır. */
+function packExploreGrid(items: ExploreMediaItem[]): ExploreMediaItem[] {
+  const packer = new ExploreGridPacker();
+  const output: GridPlacement[] = [];
+
+  for (const item of items) {
+    if (packer.isPlaced(item)) continue;
+
+    if (
+      item.fileName === "27.jpg" ||
+      item.fileName === "26.jpg" ||
+      item.fileName === "video3.mp4"
+    ) {
+      // 33.jpg bloğu ile birlikte yerleştirilir.
+      continue;
+    }
+
+    if (item.fileName === "33.jpg") {
+      const item27 = items.find((entry) => entry.fileName === "27.jpg");
+      if (item27 && !packer.isPlaced(item27)) {
+        place27And33Pair(packer, item27, item, items, output);
+      } else {
+        const pattern33: DisplayPattern = {
+          colSpan: 2,
+          rowSpan: 2,
+          colStart: 2,
+          rowStart: packer.findFirst(2, 2).row,
+        };
+        const displaced = packer.evictOverlapping(pattern33);
+        output.push(packer.place(item, pattern33));
+        relocateBelow(
+          packer,
+          displaced,
+          pattern33.rowStart! + pattern33.rowSpan,
+          output,
+        );
+      }
+      continue;
+    }
+
+    const base = getBasePattern(item);
+    const slot = packer.findFirst(base.colSpan, base.rowSpan);
+    output.push(
+      packer.place(item, {
+        ...base,
+        colStart: slot.col,
+        rowStart: slot.row,
+      }),
+    );
+  }
+
+  const packed = packer.getResultsSorted().map((p) => ({
+    ...p.item,
+    displayPattern: p.pattern,
+  }));
+
+  const swapped = swapGridPositions(packed, "18.jpg", "video2.mp4");
+  return fixSwappedVideo2Row(swapped);
+}
+
 function buildAsymmetricLayout(items: ExploreMediaItem[]): ExploreMediaItem[] {
   const landscapeQueue: ExploreMediaItem[] = [];
   const portraitQueue: ExploreMediaItem[] = [];
@@ -338,13 +778,15 @@ const manuallyOrderedMediaItems = (() => {
     used.add(entry.id);
   }
 
-  return buildAsymmetricLayout(ordered);
+  return packExploreGrid(buildAsymmetricLayout(ordered));
 })();
 
 export const exploreMediaItems: ExploreMediaItem[] = manuallyOrderedMediaItems;
 
-export const photoMediaItems = buildAsymmetricLayout(
-  manuallyOrderedMediaItems.filter((item) => item.type === "image"),
+export const photoMediaItems = packExploreGrid(
+  buildAsymmetricLayout(
+    manuallyOrderedMediaItems.filter((item) => item.type === "image"),
+  ),
 );
 
 export const videoMediaItems = buildAsymmetricLayout(
