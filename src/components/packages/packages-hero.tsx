@@ -192,7 +192,7 @@ export function PackagesHero() {
   return (
     <main className="min-h-screen flex-1 bg-black pt-24 text-[#00f27a]">
       <section className="mx-auto max-w-6xl px-4 py-6 md:px-8 md:py-10">
-        <div className="rounded-2xl border border-white/10 bg-black p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] md:p-6">
+        <div className="rounded-2xl bg-black p-4 md:p-6">
           <div className="relative mb-5 overflow-hidden rounded-2xl">
             <Image
               src={packageMedia("neden-bekography.png")}
@@ -233,7 +233,7 @@ export function PackagesHero() {
           </div>
         </div>
 
-        <div className="mt-8 rounded-2xl border border-white/10 bg-[#030303] p-4 md:p-6">
+        <div className="mt-8 rounded-2xl bg-[#030303] p-4 md:p-6">
           <div className="relative mb-5 overflow-hidden rounded-2xl">
             <Image
               src={packageMedia("fiyat-listesi.png")}
