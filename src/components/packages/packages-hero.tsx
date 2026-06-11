@@ -34,11 +34,172 @@ type PackageFeature = {
 
 type PriceCategory = {
   title: string;
-  price: string;
   icon: React.ComponentType<{ className?: string }>;
   highlight?: boolean;
   backgroundImage?: string;
 };
+
+type PackagePriceOption = {
+  label: string;
+  cash: number;
+  installment: number;
+};
+
+type PackagePricing = {
+  accent: string;
+  options: PackagePriceOption[];
+};
+
+function formatPackagePrice(amount: number) {
+  return `₺${amount.toLocaleString("tr-TR")}`;
+}
+
+const packagePricing: Record<string, PackagePricing> = {
+  "Dış Çekim": {
+    accent: "#ff9a5e",
+    options: [
+      { label: "Fotoğraf", cash: 26_000, installment: 32_000 },
+      {
+        label: "Fotoğraf + Video Film",
+        cash: 37_000,
+        installment: 45_000,
+      },
+    ],
+  },
+  "Full Hikaye": {
+    accent: "#ffb200",
+    options: [{ label: "Full Hikaye", cash: 95_000, installment: 135_000 }],
+  },
+  Düğün: {
+    accent: "#8fffb0",
+    options: [
+      { label: "Video Film", cash: 26_000, installment: 32_000 },
+      {
+        label: "Fotoğraf + Video Film",
+        cash: 35_000,
+        installment: 43_000,
+      },
+    ],
+  },
+  "Gelin Çıkışı": {
+    accent: "#f3d46b",
+    options: [
+      { label: "Video Film", cash: 20_000, installment: 26_000 },
+      {
+        label: "Fotoğraf + Video Film",
+        cash: 27_000,
+        installment: 35_000,
+      },
+    ],
+  },
+  Kuaför: {
+    accent: "#f6b8c2",
+    options: [
+      { label: "Video Film", cash: 17_000, installment: 23_000 },
+      {
+        label: "Fotoğraf + Video Film",
+        cash: 25_000,
+        installment: 32_000,
+      },
+    ],
+  },
+  Kına: {
+    accent: "#ff2b47",
+    options: [
+      { label: "Video Film", cash: 26_000, installment: 32_000 },
+      {
+        label: "Fotoğraf + Video Film",
+        cash: 35_000,
+        installment: 43_000,
+      },
+    ],
+  },
+  Nişan: {
+    accent: "#9beefe",
+    options: [
+      { label: "Video Film", cash: 25_000, installment: 35_000 },
+      {
+        label: "Fotoğraf + Video Film",
+        cash: 34_000,
+        installment: 41_000,
+      },
+    ],
+  },
+  "Söz/İsteme": {
+    accent: "#c8b5f0",
+    options: [
+      { label: "Video Film", cash: 24_000, installment: 29_000 },
+      {
+        label: "Fotoğraf + Video Film",
+        cash: 32_000,
+        installment: 39_000,
+      },
+    ],
+  },
+};
+
+function getCategoryPriceLabel(title: string) {
+  const pricing = packagePricing[title];
+  if (!pricing) return "";
+
+  const cashPrices = pricing.options.map((option) => option.cash);
+  const min = Math.min(...cashPrices);
+  const max = Math.max(...cashPrices);
+
+  if (min === max) return formatPackagePrice(min);
+  return `${formatPackagePrice(min)} - ${formatPackagePrice(max)}`;
+}
+
+function PackagePricingTable({
+  options,
+  accentColor,
+}: {
+  options: PackagePriceOption[];
+  accentColor: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-[1fr_auto] items-center gap-x-3 px-4 text-sm font-semibold md:gap-x-4 md:px-5 md:text-base">
+        <span />
+        <div className="flex items-center gap-2 md:gap-2.5">
+          <span
+            className="w-[4.75rem] text-center md:w-[5.25rem]"
+            style={{ color: accentColor }}
+          >
+            Peşin
+          </span>
+          <span className="w-[4.75rem] text-center text-zinc-500 md:w-[5.25rem]">
+            Taksitli
+          </span>
+        </div>
+      </div>
+      {options.map((option) => (
+        <div
+          key={option.label}
+          className="grid grid-cols-[1fr_auto] items-center gap-x-3 rounded-full bg-[#1c1c1c] px-4 py-3 md:gap-x-4 md:px-5"
+        >
+          <span
+            className="min-w-0 text-sm font-bold leading-tight md:text-base"
+            style={{ color: accentColor }}
+          >
+            {option.label}
+          </span>
+          <div className="flex items-center gap-2 md:gap-2.5">
+            <span
+              className="w-[4.75rem] text-center text-sm font-bold tabular-nums md:w-[5.25rem] md:text-lg"
+              style={{ color: accentColor }}
+            >
+              {formatPackagePrice(option.cash)}
+            </span>
+            <span className="w-[4.75rem] text-center text-sm font-bold tabular-nums text-zinc-500 md:w-[5.25rem] md:text-lg">
+              {formatPackagePrice(option.installment)}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
 const packageMedia = (fileName: string) =>
@@ -107,45 +268,38 @@ const bottomFeatures: PackageFeature[] = [
 const priceCategories: PriceCategory[] = [
   {
     title: "Dış Çekim",
-    price: "₺25.000 - ₺35.000",
     icon: Mountain,
     backgroundImage: "dis-cekim.png",
   },
   {
     title: "Düğün",
-    price: "₺25.000 - ₺33.000",
     icon: Gem,
     backgroundImage: "dugun.png",
   },
   {
     title: "Gelin Çıkışı",
-    price: "₺17.000 - ₺22.000",
     icon: Sparkles,
     backgroundImage: "gelin-cikisi.png",
   },
-  { title: "Kuaför", price: "₺12.000 - ₺15.000", icon: UserRound },
+  { title: "Kuaför", icon: UserRound },
   {
     title: "Full Hikaye",
-    price: "₺103.000 - ₺85.000",
     icon: Diamond,
     highlight: true,
     backgroundImage: "full-hikaye.png",
   },
   {
     title: "Söz/İsteme",
-    price: "₺23.000 - ₺31.000",
     icon: HandHeart,
     backgroundImage: "soz-isteme.png",
   },
   {
     title: "Kına",
-    price: "₺25.000 - ₺33.000",
     icon: PartyPopper,
     backgroundImage: "kina.png",
   },
   {
     title: "Nişan",
-    price: "₺25.000 - ₺33.000",
     icon: HeartHandshake,
     backgroundImage: "nisan.png",
   },
@@ -292,17 +446,7 @@ export function PackagesHero() {
                     </span>
                     <span className="relative z-10 flex shrink-0 items-center gap-2">
                       <span className="text-right text-sm font-medium md:text-xl">
-                        {category.title === "Full Hikaye" ? (
-                          <span className="inline-flex items-center gap-2">
-                            <span className="opacity-85 line-through decoration-2">
-                              ₺103.000
-                            </span>
-                            <span>-</span>
-                            <span>₺85.000</span>
-                          </span>
-                        ) : (
-                          category.price
-                        )}
+                        {getCategoryPriceLabel(category.title)}
                       </span>
                       {hasDetails ? (
                         <motion.span
@@ -352,22 +496,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Albüm Çerçeveler",
+                                  subLines: ["1 Albüm", "3 Çerçeve"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Film Uzun Metraj",
+                                  subLines: ["Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -377,13 +521,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#ff8a45] px-2 py-2 text-center text-[#111]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#3a2314] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#3a2314] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -419,27 +565,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              {[
-                                { label: "Fotoğraf", price: "₺25.000" },
-                                {
-                                  label: "Fotoğraf + Video Film",
-                                  price: "₺35.000",
-                                },
-                              ].map((price) => (
-                                <div
-                                  key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#1d2333] px-3 py-2.5 text-[#ff9a5e]"
-                                >
-                                  <span className="text-sm font-semibold md:text-lg">
-                                    {price.label}
-                                  </span>
-                                  <span className="text-xl font-extrabold md:text-2xl">
-                                    {price.price}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing["Dış Çekim"].options}
+                              accentColor={packagePricing["Dış Çekim"].accent}
+                            />
                           </div>
                         ) : category.title === "Düğün" ? (
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
@@ -468,22 +597,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Aile Anlar",
+                                  subLines: ["Aile", "Anlar"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Film Uzun Metraj",
+                                  subLines: ["Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -493,13 +622,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#93f8b6] px-2 py-2 text-center text-[#0d2d17]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#234c30] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#234c30] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -533,27 +664,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              {[
-                                { label: "Video Film", price: "₺25.000" },
-                                {
-                                  label: "Fotoğraf + Video Film",
-                                  price: "₺33.000",
-                                },
-                              ].map((price) => (
-                                <div
-                                  key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#1d2333] px-3 py-2.5 text-[#8fffb0]"
-                                >
-                                  <span className="text-sm font-semibold md:text-lg">
-                                    {price.label}
-                                  </span>
-                                  <span className="text-xl font-extrabold md:text-2xl">
-                                    {price.price}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing.Düğün.options}
+                              accentColor={packagePricing.Düğün.accent}
+                            />
                           </div>
                         ) : category.title === "Gelin Çıkışı" ? (
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
@@ -582,22 +696,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Aile Anlar",
+                                  subLines: ["Aile", "Anlar"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Film Uzun Metraj",
+                                  subLines: ["Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -607,13 +721,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#f3d46b] px-2 py-2 text-center text-[#2e2510]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#574829] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#574829] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -650,27 +766,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              {[
-                                { label: "Video Film", price: "₺17.000" },
-                                {
-                                  label: "Fotoğraf + Video Film",
-                                  price: "₺22.000",
-                                },
-                              ].map((price) => (
-                                <div
-                                  key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#1f2f2c] px-3 py-2.5 text-[#f3d46b]"
-                                >
-                                  <span className="text-sm font-semibold md:text-lg">
-                                    {price.label}
-                                  </span>
-                                  <span className="text-xl font-extrabold md:text-2xl">
-                                    {price.price}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing["Gelin Çıkışı"].options}
+                              accentColor={packagePricing["Gelin Çıkışı"].accent}
+                            />
                           </div>
                         ) : category.title === "Söz/İsteme" ? (
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
@@ -699,22 +798,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Aile Anlar",
+                                  subLines: ["Aile", "Anlar"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Film Uzun Metraj",
+                                  subLines: ["Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -724,13 +823,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#c8b5f0] px-2 py-2 text-center text-[#2b1f44]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#4b3f66] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#4b3f66] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -770,27 +871,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              {[
-                                { label: "Video Film", price: "₺23.000" },
-                                {
-                                  label: "Fotoğraf + Video Film",
-                                  price: "₺31.000",
-                                },
-                              ].map((price) => (
-                                <div
-                                  key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#31313a] px-3 py-2.5 text-[#c8b5f0]"
-                                >
-                                  <span className="text-sm font-semibold md:text-lg">
-                                    {price.label}
-                                  </span>
-                                  <span className="text-xl font-extrabold md:text-2xl">
-                                    {price.price}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing["Söz/İsteme"].options}
+                              accentColor={packagePricing["Söz/İsteme"].accent}
+                            />
                           </div>
                         ) : category.title === "Kına" ? (
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
@@ -819,22 +903,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Ağıt Eğlence",
+                                  subLines: ["Ağıt", "Eğlence"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Film Uzun Metraj",
+                                  subLines: ["Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -844,13 +928,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#ff2b47] px-2 py-2 text-center text-[#24070b]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#4c151d] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#4c151d] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -890,27 +976,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              {[
-                                { label: "Video Film", price: "₺25.000" },
-                                {
-                                  label: "Fotoğraf + Video Film",
-                                  price: "₺33.000",
-                                },
-                              ].map((price) => (
-                                <div
-                                  key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#31313a] px-3 py-2.5 text-[#ff2b47]"
-                                >
-                                  <span className="text-sm font-semibold md:text-lg">
-                                    {price.label}
-                                  </span>
-                                  <span className="text-xl font-extrabold md:text-2xl">
-                                    {price.price}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing.Kına.options}
+                              accentColor={packagePricing.Kına.accent}
+                            />
                           </div>
                         ) : category.title === "Nişan" ? (
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
@@ -939,22 +1008,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Aile Anlar",
+                                  subLines: ["Aile", "Anlar"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Film Uzun Metraj",
+                                  subLines: ["Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -964,13 +1033,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#9beefe] px-2 py-2 text-center text-[#0b2630]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#2d5060] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#2d5060] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -1011,27 +1082,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              {[
-                                { label: "Video Film", price: "₺25.000" },
-                                {
-                                  label: "Fotoğraf + Video Film",
-                                  price: "₺33.000",
-                                },
-                              ].map((price) => (
-                                <div
-                                  key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#31313a] px-3 py-2.5 text-[#9beefe]"
-                                >
-                                  <span className="text-sm font-semibold md:text-lg">
-                                    {price.label}
-                                  </span>
-                                  <span className="text-xl font-extrabold md:text-2xl">
-                                    {price.price}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing.Nişan.options}
+                              accentColor={packagePricing.Nişan.accent}
+                            />
                           </div>
                         ) : category.title === "Kuaför" ? (
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
@@ -1060,22 +1114,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Makyaj Aksesuarlar",
+                                  subLines: ["Makyaj", "Aksesuarlar"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Film Uzun Metraj",
+                                  subLines: ["Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -1085,13 +1139,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#f6b8c2] px-2 py-2 text-center text-[#2d1a1f]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#5a3640] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#5a3640] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -1126,27 +1182,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="space-y-2">
-                              {[
-                                { label: "Video Film", price: "₺12.000" },
-                                {
-                                  label: "Fotoğraf + Video Film",
-                                  price: "₺15.000",
-                                },
-                              ].map((price) => (
-                                <div
-                                  key={price.label}
-                                  className="flex items-center justify-between rounded-2xl bg-[#2f2f24] px-3 py-2.5 text-[#f6b8c2]"
-                                >
-                                  <span className="text-sm font-semibold md:text-lg">
-                                    {price.label}
-                                  </span>
-                                  <span className="text-xl font-extrabold md:text-2xl">
-                                    {price.price}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing.Kuaför.options}
+                              accentColor={packagePricing.Kuaför.accent}
+                            />
                           </div>
                         ) : category.title === "Full Hikaye" ? (
                           <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
@@ -1175,22 +1214,22 @@ export function PackagesHero() {
                               {[
                                 {
                                   title: "Fotoğraf Çekimi",
-                                  sub: "Albüm Çerçeveler",
+                                  subLines: ["Albüm", "Çerçeveler"],
                                   icon: Camera,
                                 },
                                 {
                                   title: "Video Çekimi",
-                                  sub: "Karma Film Uzun Metraj",
+                                  subLines: ["Karma Film", "Uzun Metraj"],
                                   icon: Video,
                                 },
                                 {
                                   title: "Rehberlik Hizmeti",
-                                  sub: "Gün Planlama Öneriler",
+                                  subLines: ["Gün Planlama", "Öneriler"],
                                   icon: Compass,
                                 },
                                 {
                                   title: "Tüm Dijitaller",
-                                  sub: "Çekilenler Düzenlenir",
+                                  subLines: ["Çekilenler", "Düzenlenenler"],
                                   icon: Download,
                                 },
                               ].map((item) => {
@@ -1200,13 +1239,15 @@ export function PackagesHero() {
                                     key={item.title}
                                     className="bg-[#ffb200] px-2 py-2 text-center text-[#231604]"
                                   >
-                                    <Icon className="mx-auto h-5 w-5" />
+                                    <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
                                     <p className="mt-1.5 text-xs font-bold leading-tight md:mt-2 md:text-sm">
                                       {item.title}
                                     </p>
-                                    <p className="mt-1 text-[10px] leading-tight text-[#5a3a0b] md:text-[11px]">
-                                      {item.sub}
-                                    </p>
+                                    <div className="mt-1 space-y-px text-[10px] leading-none text-[#5a3a0b] md:text-[11px]">
+                                      {item.subLines.map((line) => (
+                                        <p key={line}>{line}</p>
+                                      ))}
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -1243,12 +1284,10 @@ export function PackagesHero() {
                               </div>
                             </div>
 
-                            <div className="rounded-2xl bg-[#202042] px-3 py-3 text-center text-[#ffb200]">
-                              <p className="text-3xl font-semibold md:text-4xl">₺85.000</p>
-                              <p className="mt-1 text-xl font-medium opacity-80 line-through decoration-2 md:text-2xl">
-                                ₺103.000
-                              </p>
-                            </div>
+                            <PackagePricingTable
+                              options={packagePricing["Full Hikaye"].options}
+                              accentColor={packagePricing["Full Hikaye"].accent}
+                            />
                           </div>
                         ) : (
                           <div className="px-4 py-3 text-sm text-zinc-300 md:px-5 md:text-base">
