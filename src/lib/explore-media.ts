@@ -273,6 +273,27 @@ function getBasePattern(item: ExploreMediaItem): DisplayPattern {
   if (item.fileName === "video2.mp4") {
     return { colSpan: 2, rowSpan: 1 };
   }
+  if (item.fileName === "video3.mp4") {
+    return { colSpan: 3, rowSpan: 2 };
+  }
+  if (item.fileName === "video5.mp4") {
+    return { colSpan: 3, rowSpan: 1 };
+  }
+  if (item.fileName === "video8.mp4") {
+    return { colSpan: 2, rowSpan: 3 };
+  }
+  if (item.fileName === "video6.mp4") {
+    return { colSpan: 1, rowSpan: 3 };
+  }
+  if (item.fileName === "video10.mp4") {
+    return { colSpan: 1, rowSpan: 2 };
+  }
+  if (item.fileName === "video9.mp4" || item.fileName === "video11.mp4") {
+    return { colSpan: 1, rowSpan: 1 };
+  }
+  if (item.fileName === "video12.mp4") {
+    return { colSpan: 2, rowSpan: 2 };
+  }
 
   return { colSpan: fallback.colSpan, rowSpan: fallback.rowSpan };
 }
@@ -399,7 +420,87 @@ function dedupePlacements(list: GridPlacement[]): GridPlacement[] {
   });
 }
 
-/** 3 sütunluk bant: solda 27.jpg (1×2), sağda 33.jpg (2×2); altında 26.jpg + video3.mp4. */
+/** video3 altında: solda 26.jpg (1×2) + 38.jpg (1×1), sağda video8 (2×3), altında video5 (3×1). */
+function placeVideo8BandAfterVideo3(
+  packer: ExploreGridPacker,
+  items: ExploreMediaItem[],
+  output: GridPlacement[],
+  rowAfterVideo3: number,
+  displacedPool: GridPlacement[],
+) {
+  const item26 = items.find((entry) => entry.fileName === "26.jpg");
+  const item38 = items.find((entry) => entry.fileName === "38.jpg");
+  const itemVideo8 = items.find((entry) => entry.fileName === "video8.mp4");
+  const itemVideo5 = items.find((entry) => entry.fileName === "video5.mp4");
+  const pinnedIds = new Set(
+    [item26?.id, item38?.id, itemVideo8?.id, itemVideo5?.id].filter(
+      (id): id is string => Boolean(id),
+    ),
+  );
+
+  const pattern26: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 2,
+    colStart: 1,
+    rowStart: rowAfterVideo3,
+  };
+
+  const pattern38: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 1,
+    colStart: 1,
+    rowStart: rowAfterVideo3 + pattern26.rowSpan,
+  };
+
+  const patternVideo8: DisplayPattern = {
+    colSpan: 2,
+    rowSpan: 3,
+    colStart: 2,
+    rowStart: rowAfterVideo3,
+  };
+
+  const rowAfterVideo8 = rowAfterVideo3 + patternVideo8.rowSpan;
+  const patternVideo5: DisplayPattern = {
+    colSpan: 3,
+    rowSpan: 1,
+    colStart: 1,
+    rowStart: rowAfterVideo8,
+  };
+
+  const evicted = dedupePlacements(
+    [pattern26, pattern38, patternVideo8, patternVideo5].flatMap((pattern) =>
+      packer.evictOverlapping(pattern),
+    ),
+  ).filter((entry) => !pinnedIds.has(entry.item.id));
+
+  if (item26 && !packer.isPlaced(item26)) {
+    output.push(packer.place(item26, pattern26));
+  }
+
+  if (item38 && !packer.isPlaced(item38)) {
+    output.push(packer.place(item38, pattern38));
+  }
+
+  if (itemVideo8 && !packer.isPlaced(itemVideo8)) {
+    output.push(packer.place(itemVideo8, patternVideo8));
+  }
+
+  if (itemVideo5 && !packer.isPlaced(itemVideo5)) {
+    output.push(packer.place(itemVideo5, patternVideo5));
+  }
+
+  relocateBelow(
+    packer,
+    dedupePlacements([
+      ...displacedPool.filter((entry) => !pinnedIds.has(entry.item.id)),
+      ...evicted,
+    ]),
+    rowAfterVideo8 + patternVideo5.rowSpan,
+    output,
+  );
+}
+
+/** 3 sütunluk bant: solda 27.jpg (1×2), sağda 33.jpg (2×2); altında video3.mp4 tam genişlik (3×2). */
 function place27And33Pair(
   packer: ExploreGridPacker,
   item27: ExploreMediaItem,
@@ -432,51 +533,41 @@ function place27And33Pair(
   output.push(packer.place(item33, pattern33));
 
   const belowRow = band.row + 2;
-  const item26 = items.find((entry) => entry.fileName === "26.jpg");
   const itemVideo3 = items.find((entry) => entry.fileName === "video3.mp4");
-  const pinnedIds = new Set(
-    [item26?.id, itemVideo3?.id].filter((id): id is string => Boolean(id)),
-  );
+  const pinnedVideo3Id = itemVideo3?.id;
 
-  const pattern26: DisplayPattern | undefined = item26
+  const patternVideo3: DisplayPattern | undefined = itemVideo3
     ? {
-        colSpan: 1,
-        rowSpan: 1,
+        colSpan: 3,
+        rowSpan: 2,
         colStart: band.col,
         rowStart: belowRow,
       }
     : undefined;
 
-  const patternVideo3: DisplayPattern | undefined = itemVideo3
-    ? {
-        colSpan: 2,
-        rowSpan: 1,
-        colStart: band.col + 1,
-        rowStart: belowRow,
-      }
-    : undefined;
-
   const displacedBelow = dedupePlacements([
-    ...(pattern26 ? packer.evictOverlapping(pattern26) : []),
     ...(patternVideo3 ? packer.evictOverlapping(patternVideo3) : []),
-  ]).filter((entry) => !pinnedIds.has(entry.item.id));
+  ]).filter(
+    (entry) => !pinnedVideo3Id || entry.item.id !== pinnedVideo3Id,
+  );
 
-  if (item26 && pattern26 && !packer.isPlaced(item26)) {
-    output.push(packer.place(item26, pattern26));
-  }
   if (itemVideo3 && patternVideo3 && !packer.isPlaced(itemVideo3)) {
     output.push(packer.place(itemVideo3, patternVideo3));
   }
 
-  const relocateFromRow = belowRow + 1;
-  relocateBelow(
+  const rowAfterVideo3 = belowRow + (patternVideo3?.rowSpan ?? 1);
+
+  placeVideo8BandAfterVideo3(
     packer,
+    items,
+    output,
+    rowAfterVideo3,
     dedupePlacements([
-      ...displaced.filter((entry) => !pinnedIds.has(entry.item.id)),
+      ...displaced.filter(
+        (entry) => !pinnedVideo3Id || entry.item.id !== pinnedVideo3Id,
+      ),
       ...displacedBelow,
     ]),
-    relocateFromRow,
-    output,
   );
 }
 
@@ -627,6 +718,156 @@ function fixSwappedVideo2Row(items: ExploreMediaItem[]): ExploreMediaItem[] {
   }));
 }
 
+/**
+ * Sağda video6 (1×3); solda video9 + video11 (1×1); altında video10 (1×2) + video12 (2×2).
+ */
+function placeVideo6To12Layout(items: ExploreMediaItem[]): ExploreMediaItem[] {
+  const video6Item = items.find((entry) => entry.fileName === "video6.mp4");
+  const video9Item = items.find((entry) => entry.fileName === "video9.mp4");
+  const video10Item = items.find((entry) => entry.fileName === "video10.mp4");
+  const video11Item = items.find((entry) => entry.fileName === "video11.mp4");
+  const video12Item = items.find((entry) => entry.fileName === "video12.mp4");
+  const video13Item = items.find((entry) => entry.fileName === "video13.mp4");
+  if (
+    !video6Item ||
+    !video9Item?.displayPattern?.rowStart ||
+    !video10Item?.displayPattern?.rowStart ||
+    !video10Item.displayPattern?.colStart
+  ) {
+    return items;
+  }
+
+  const blockRow = video9Item.displayPattern.rowStart;
+
+  const video6Pattern: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 3,
+    colStart: video10Item.displayPattern.colStart,
+    rowStart: video10Item.displayPattern.rowStart,
+  };
+
+  const video9Pattern: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 1,
+    colStart: 1,
+    rowStart: blockRow,
+  };
+
+  const video11Pattern: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 1,
+    colStart: 2,
+    rowStart: blockRow,
+  };
+
+  const video10Pattern: DisplayPattern = {
+    colSpan: 1,
+    rowSpan: 2,
+    colStart: 1,
+    rowStart: blockRow + 1,
+  };
+
+  const video12Pattern: DisplayPattern = {
+    colSpan: 2,
+    rowSpan: 2,
+    colStart: 2,
+    rowStart: blockRow + 1,
+  };
+
+  const rowAfterBlock = blockRow + 1 + video10Pattern.rowSpan;
+  const video13Pattern: DisplayPattern | undefined = video13Item
+    ? {
+        colSpan: 3,
+        rowSpan: 1,
+        colStart: 1,
+        rowStart: rowAfterBlock,
+      }
+    : undefined;
+
+  const pinnedFileNames = [
+    "video6.mp4",
+    "video9.mp4",
+    "video10.mp4",
+    "video11.mp4",
+    "video12.mp4",
+    "video13.mp4",
+  ];
+  const blockPatterns = [
+    video6Pattern,
+    video9Pattern,
+    video11Pattern,
+    video10Pattern,
+    video12Pattern,
+    ...(video13Pattern ? [video13Pattern] : []),
+  ];
+  const overlappers = items.filter(
+    (entry) =>
+      !pinnedFileNames.includes(entry.fileName) &&
+      entry.displayPattern &&
+      blockPatterns.some((block) =>
+        patternsOverlap(block, entry.displayPattern!),
+      ),
+  );
+
+  const fixed = items.map((entry) => {
+    if (entry.fileName === "video6.mp4") {
+      return { ...entry, displayPattern: video6Pattern };
+    }
+    if (entry.fileName === "video9.mp4") {
+      return { ...entry, displayPattern: video9Pattern };
+    }
+    if (entry.fileName === "video10.mp4") {
+      return { ...entry, displayPattern: video10Pattern };
+    }
+    if (entry.fileName === "video11.mp4" && video11Item) {
+      return { ...entry, displayPattern: video11Pattern };
+    }
+    if (entry.fileName === "video12.mp4" && video12Item) {
+      return { ...entry, displayPattern: video12Pattern };
+    }
+    if (entry.fileName === "video13.mp4" && video13Pattern) {
+      return { ...entry, displayPattern: video13Pattern };
+    }
+    return entry;
+  });
+
+  if (overlappers.length === 0) {
+    return fixed;
+  }
+
+  const packer = new ExploreGridPacker();
+  for (const entry of fixed) {
+    if (
+      overlappers.some((overlapper) => overlapper.id === entry.id) ||
+      !entry.displayPattern?.colStart ||
+      !entry.displayPattern?.rowStart
+    ) {
+      continue;
+    }
+    packer.place(entry, entry.displayPattern);
+  }
+
+  const belowRow = Math.max(
+    video6Pattern.rowStart! + video6Pattern.rowSpan,
+    rowAfterBlock + (video13Pattern?.rowSpan ?? 0),
+  );
+
+  for (const entry of overlappers) {
+    const base = getBasePattern(entry);
+    const slot = packer.findFirst(base.colSpan, base.rowSpan, belowRow);
+    packer.place(entry, {
+      ...base,
+      colStart: slot.col,
+      rowStart: slot.row,
+    });
+  }
+
+  return packer.getResultsSorted().map((placement) => ({
+    ...placement.item,
+    displayPattern: placement.pattern,
+  }));
+}
+
 /** Özel boyutlar + genişletmeler; yerinden edilen öğeler hemen alt satıra sırayla taşınır. */
 function packExploreGrid(items: ExploreMediaItem[]): ExploreMediaItem[] {
   const packer = new ExploreGridPacker();
@@ -638,9 +879,12 @@ function packExploreGrid(items: ExploreMediaItem[]): ExploreMediaItem[] {
     if (
       item.fileName === "27.jpg" ||
       item.fileName === "26.jpg" ||
-      item.fileName === "video3.mp4"
+      item.fileName === "38.jpg" ||
+      item.fileName === "video3.mp4" ||
+      item.fileName === "video8.mp4" ||
+      item.fileName === "video5.mp4"
     ) {
-      // 33.jpg bloğu ile birlikte yerleştirilir.
+      // 33.jpg / video3 bloğu ile birlikte yerleştirilir.
       continue;
     }
 
@@ -683,8 +927,14 @@ function packExploreGrid(items: ExploreMediaItem[]): ExploreMediaItem[] {
     displayPattern: p.pattern,
   }));
 
-  const swapped = swapGridPositions(packed, "18.jpg", "video2.mp4");
-  return fixSwappedVideo2Row(swapped);
+  const swappedVideo2 = swapGridPositions(packed, "18.jpg", "video2.mp4");
+  const fixedVideo2 = fixSwappedVideo2Row(swappedVideo2);
+  const swappedVideo6 = swapGridPositions(
+    fixedVideo2,
+    "video6.mp4",
+    "video10.mp4",
+  );
+  return placeVideo6To12Layout(swappedVideo6);
 }
 
 function buildAsymmetricLayout(items: ExploreMediaItem[]): ExploreMediaItem[] {
