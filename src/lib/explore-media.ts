@@ -80,7 +80,7 @@ const HAZIRAN_FILES = Array.from(
 const imageCarouselGroups: Array<{ files: string[]; url: string }> = [
   {
     files: HAZIRAN_FILES,
-    url: "https://www.instagram.com/p/DMBSKU1tsjk/?igsh=cGZycjJ0MTEyZ2F0",
+    url: "https://www.instagram.com/p/DZSnbdljkIS/?igsh=MXkyMzI5dXhmNmYxOA%3D%3D",
   },
   {
     files: ["38.jpg", "39.jpg", "40.jpg", "41.jpg", "42.jpg", "43.jpg"],
