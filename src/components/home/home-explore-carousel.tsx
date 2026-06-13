@@ -343,6 +343,7 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
                       isActive={index === activeIndex}
                       isPinching={isPinching}
                       userMuted={userMuted}
+                      onToggleMute={() => setUserMuted((prev) => !prev)}
                       onPinchChange={setIsPinching}
                       onCarouselScrollContainer={(node) => {
                         carouselScrollRefs.current[index] = node;
@@ -408,52 +409,6 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
                     </div>
                   ) : null}
                 </div>
-                {/* Sound toggle: only meaningful for video posts. Browsers
-                    may still force muted on the very first autoplay of the
-                    session, but tapping this button counts as a user
-                    gesture and reliably unmutes from that point on. */}
-                {activeItem.type === "video" ? (
-                  <button
-                    type="button"
-                    onClick={() => setUserMuted((prev) => !prev)}
-                    className="pointer-events-auto mb-10 inline-flex h-10 w-10 flex-none items-center justify-center rounded-full border border-white/35 bg-black/55 text-white backdrop-blur-sm sm:mb-9"
-                    aria-label={userMuted ? "Sesi aç" : "Sesi kapat"}
-                  >
-                    {userMuted ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-5 w-5"
-                        aria-hidden
-                      >
-                        <path d="M11 5 6 9H2v6h4l5 4V5z" />
-                        <line x1="22" y1="9" x2="16" y2="15" />
-                        <line x1="16" y1="9" x2="22" y2="15" />
-                      </svg>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="h-5 w-5"
-                        aria-hidden
-                      >
-                        <path d="M11 5 6 9H2v6h4l5 4V5z" />
-                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                      </svg>
-                    )}
-                  </button>
-                ) : null}
               </div>
               <a
                 href={activeItem.instagramUrl}
@@ -493,6 +448,7 @@ type PostViewProps = {
   isActive: boolean;
   isPinching: boolean;
   userMuted: boolean;
+  onToggleMute: () => void;
   onPinchChange: (pinching: boolean) => void;
   onCarouselScrollContainer: (node: HTMLDivElement | null) => void;
   onCarouselSlideChange: (slide: number) => void;
@@ -503,6 +459,7 @@ function PostView({
   isActive,
   isPinching,
   userMuted,
+  onToggleMute,
   onPinchChange,
   onCarouselScrollContainer,
   onCarouselSlideChange,
@@ -515,6 +472,7 @@ function PostView({
         isActive={isActive}
         isPinching={isPinching}
         userMuted={userMuted}
+        onToggleMute={onToggleMute}
         onPinchChange={onPinchChange}
         onContainer={onCarouselScrollContainer}
         onSlideChange={onCarouselSlideChange}
@@ -526,6 +484,7 @@ function PostView({
       item={item}
       isActive={isActive}
       userMuted={userMuted}
+      onToggleMute={onToggleMute}
       onPinchChange={onPinchChange}
     />
   );
@@ -541,6 +500,7 @@ type CarouselPostProps = {
   isActive: boolean;
   isPinching: boolean;
   userMuted: boolean;
+  onToggleMute: () => void;
   onPinchChange: (pinching: boolean) => void;
   onContainer: (node: HTMLDivElement | null) => void;
   onSlideChange: (slide: number) => void;
@@ -551,6 +511,7 @@ function CarouselPost({
   isActive,
   isPinching,
   userMuted,
+  onToggleMute,
   onPinchChange,
   onContainer,
   onSlideChange,
@@ -622,6 +583,7 @@ function CarouselPost({
             item={slide}
             isActive={isActive && slideIdx === currentSlide}
             userMuted={userMuted}
+            onToggleMute={onToggleMute}
             onPinchChange={onPinchChange}
           />
         </div>
@@ -640,6 +602,7 @@ type MediaContentProps = {
   item: ExploreMediaItem | ExploreCarouselSlide;
   isActive: boolean;
   userMuted: boolean;
+  onToggleMute: () => void;
   onPinchChange: (pinching: boolean) => void;
 };
 
@@ -653,6 +616,7 @@ function MediaContent({
   item,
   isActive,
   userMuted,
+  onToggleMute,
   onPinchChange,
 }: MediaContentProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -820,8 +784,7 @@ function MediaContent({
       tryPlay.catch(() => {
         // Browser refused unmuted autoplay (common on iOS without a
         // recent user gesture). Fall back to muted so the video at
-        // least plays; the user can hit the unmute button to enable
-        // sound, which counts as a fresh gesture.
+        // least plays; tapping the video counts as a fresh gesture.
         video.muted = true;
         video.play().catch(() => {});
       });
@@ -870,6 +833,10 @@ function MediaContent({
             playsInline
             controls={false}
             preload="auto"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleMute();
+            }}
           />
         ) : (
           <Image

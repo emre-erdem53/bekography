@@ -24,15 +24,15 @@ export function ContactPageClient() {
     <>
       <main className="flex min-h-screen flex-1 flex-col bg-[#f7f7f7] pt-24 transition-colors duration-300 dark:bg-zinc-950 md:flex-row">
         <motion.section
-          className="relative flex h-[46vh] w-full items-center justify-center bg-[#141414] md:h-auto md:w-[54%] md:min-h-[calc(100vh-6rem)]"
+          className="relative h-[46vh] w-full overflow-hidden bg-[#141414] md:h-auto md:w-[54%] md:min-h-[calc(100vh-6rem)]"
           initial={reduce ? false : { opacity: 0, x: -36 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.85, ease: EASE_OUT }}
         >
           <motion.div
-            className="relative mx-auto aspect-[3/4] h-[40vh] w-auto max-w-[82vw] overflow-hidden rounded-[50%] border-4 border-white shadow-[0_25px_60px_-15px_rgba(0,0,0,0.35)] dark:border-zinc-700 md:my-16 md:h-auto md:w-[min(100%,420px)] md:max-w-none lg:w-[min(100%,520px)] 2xl:w-[min(100%,620px)]"
-            initial={reduce ? false : { opacity: 0, scale: 0.92, rotate: -2 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            className="absolute inset-0"
+            initial={reduce ? false : { opacity: 0, scale: 1.04 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{
               duration: 1,
               ease: EASE_OUT,
@@ -45,15 +45,15 @@ export function ContactPageClient() {
               fill
               unoptimized
               className="object-cover object-center"
-              sizes="(max-width: 768px) 100vw, 50vw"
+              sizes="(max-width: 768px) 100vw, 54vw"
               priority
             />
             <div
-              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/10 to-transparent"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/20 to-transparent"
               aria-hidden
             />
           </motion.div>
-          <div className="absolute bottom-8 left-8 md:bottom-12 md:left-12">
+          <div className="absolute bottom-8 left-8 z-10 md:bottom-12 md:left-12">
             <p className="text-[10px] tracking-[0.4em] text-white/50">
               {turkishUppercase("Rize'den Tüm Dünyaya")}
             </p>

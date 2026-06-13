@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Quote, Star, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ExternalLink, Quote, Star, X } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -11,7 +11,31 @@ type AboutGoogleReviewsSliderProps = {
   reviews: GoogleReview[];
   rating?: number;
   totalRatings?: number;
+  placeUrl?: string;
 };
+
+function GooglePlaceLink({
+  placeUrl,
+  className,
+}: {
+  placeUrl: string;
+  className?: string;
+}) {
+  return (
+    <a
+      href={placeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={
+        className ??
+        "inline-flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-[11px] font-medium tracking-[0.12em] text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:border-white/20 dark:hover:bg-zinc-800"
+      }
+    >
+      <ExternalLink className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
+      {turkishUppercase("Google'da Gör")}
+    </a>
+  );
+}
 
 function StarRow({ count = 5 }: { count?: number }) {
   return (
@@ -65,9 +89,11 @@ function ReviewAvatar({
 
 function ReviewDetailModal({
   review,
+  placeUrl,
   onClose,
 }: {
   review: GoogleReview;
+  placeUrl?: string;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -144,6 +170,12 @@ function ReviewDetailModal({
           <p className="mt-5 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
             {review.text}
           </p>
+
+          {placeUrl ? (
+            <div className="mt-6">
+              <GooglePlaceLink placeUrl={placeUrl} />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>,
@@ -155,6 +187,7 @@ export function AboutGoogleReviewsSlider({
   reviews,
   rating,
   totalRatings,
+  placeUrl,
 }: AboutGoogleReviewsSliderProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -295,45 +328,53 @@ export function AboutGoogleReviewsSlider({
               data-review-card
               className="w-[min(88vw,22rem)] shrink-0 snap-start sm:w-[min(78vw,24rem)] md:w-[min(42vw,22rem)] lg:w-[min(34vw,20rem)]"
             >
-              <button
-                type="button"
-                onClick={() => setExpandedReview(review)}
-                className="group relative flex h-[15.5rem] w-full flex-col rounded-2xl border border-zinc-100 bg-zinc-50/80 p-5 text-left transition hover:border-zinc-200 hover:bg-zinc-50 dark:border-white/5 dark:bg-zinc-800/50 dark:hover:border-white/15 dark:hover:bg-zinc-800/80"
-                aria-label={`${review.authorName} yorumunu oku`}
-              >
-                <Quote
-                  className="absolute right-4 top-4 h-8 w-8 text-zinc-200 dark:text-zinc-700"
-                  strokeWidth={1.25}
-                  aria-hidden
-                />
-
-                <div className="flex items-center gap-3">
-                  <ReviewAvatar
-                    name={review.authorName}
-                    photoUrl={review.authorPhotoUrl}
+              <div className="flex h-[17.5rem] w-full flex-col rounded-2xl border border-zinc-100 bg-zinc-50/80 p-5 dark:border-white/5 dark:bg-zinc-800/50">
+                <button
+                  type="button"
+                  onClick={() => setExpandedReview(review)}
+                  className="group relative flex min-h-0 flex-1 flex-col text-left transition hover:opacity-95"
+                  aria-label={`${review.authorName} yorumunu oku`}
+                >
+                  <Quote
+                    className="absolute right-0 top-0 h-8 w-8 text-zinc-200 dark:text-zinc-700"
+                    strokeWidth={1.25}
+                    aria-hidden
                   />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                      {review.authorName}
-                    </p>
-                    {review.relativeTime ? (
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {review.relativeTime}
+
+                  <div className="flex items-center gap-3 pr-8">
+                    <ReviewAvatar
+                      name={review.authorName}
+                      photoUrl={review.authorPhotoUrl}
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                        {review.authorName}
                       </p>
-                    ) : null}
+                      {review.relativeTime ? (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                          {review.relativeTime}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
-                </div>
 
-                <StarRow />
+                  <StarRow />
 
-                <p className="mt-3 line-clamp-5 flex-1 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
-                  {review.text}
-                </p>
+                  <p className="mt-3 line-clamp-4 flex-1 text-sm font-light leading-relaxed text-zinc-700 dark:text-zinc-200">
+                    {review.text}
+                  </p>
 
-                <span className="mt-3 text-[11px] tracking-[0.14em] text-zinc-500 transition group-hover:text-zinc-800 dark:text-zinc-400 dark:group-hover:text-zinc-200">
-                  {turkishUppercase("Devamını oku")}
-                </span>
-              </button>
+                  <span className="mt-3 text-[11px] tracking-[0.14em] text-zinc-500 transition group-hover:text-zinc-800 dark:text-zinc-400 dark:group-hover:text-zinc-200">
+                    {turkishUppercase("Devamını oku")}
+                  </span>
+                </button>
+
+                {placeUrl ? (
+                  <div className="mt-3 shrink-0">
+                    <GooglePlaceLink placeUrl={placeUrl} />
+                  </div>
+                ) : null}
+              </div>
             </article>
           ))}
         </div>
@@ -388,6 +429,7 @@ export function AboutGoogleReviewsSlider({
       {expandedReview ? (
         <ReviewDetailModal
           review={expandedReview}
+          placeUrl={placeUrl}
           onClose={() => setExpandedReview(null)}
         />
       ) : null}

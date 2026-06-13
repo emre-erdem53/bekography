@@ -1,11 +1,17 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+} from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { EASE_OUT, duration } from "@/lib/motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -18,13 +24,33 @@ const links = [
   { href: "/contact", label: "İletişim" },
 ] as const;
 
+const HEADER_HEIGHT = 96;
+
+function scrollSpringConfig(speed: number, reduce: boolean | null) {
+  if (reduce) {
+    return { duration: 0.01 };
+  }
+
+  const stiffness = Math.min(Math.max(160 + speed * 42, 160), 980);
+  const damping = Math.min(Math.max(22 + speed * 2.2, 22), 54);
+
+  return {
+    type: "spring" as const,
+    stiffness,
+    damping,
+    mass: 0.72,
+  };
+}
+
 export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const reduce = useReducedMotion();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [hiddenOnScroll, setHiddenOnScroll] = useState(false);
+  const headerY = useMotionValue(0);
+  const hideOffsetRef = useRef(0);
+  const lastScrollYRef = useRef(0);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
@@ -32,36 +58,35 @@ export function SiteHeader() {
   }, []);
 
   useEffect(() => {
-    let lastY = window.scrollY;
+    lastScrollYRef.current = window.scrollY;
 
     const onScroll = () => {
       const currentY = window.scrollY;
-      const delta = currentY - lastY;
-      lastY = currentY;
+      const delta = currentY - lastScrollYRef.current;
+      const speed = Math.abs(delta);
+      lastScrollYRef.current = currentY;
 
-      if (open) {
-        setHiddenOnScroll(false);
+      if (open || currentY < 40) {
+        hideOffsetRef.current = 0;
+        animate(headerY, 0, scrollSpringConfig(speed, reduce));
         return;
       }
 
-      if (currentY < 40) {
-        setHiddenOnScroll(false);
-        return;
-      }
+      hideOffsetRef.current = Math.max(
+        0,
+        Math.min(HEADER_HEIGHT, hideOffsetRef.current + delta * 1.15),
+      );
 
-      if (delta > 6) {
-        setHiddenOnScroll(true);
-        return;
-      }
-
-      if (delta < -6) {
-        setHiddenOnScroll(false);
-      }
+      animate(
+        headerY,
+        -hideOffsetRef.current,
+        scrollSpringConfig(speed, reduce),
+      );
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [open]);
+  }, [headerY, open, reduce]);
 
   const isDark = mounted && resolvedTheme === "dark";
 
@@ -72,14 +97,14 @@ export function SiteHeader() {
           ? "border-white/10 bg-zinc-950/90"
           : "border-black/5 bg-white/85"
       }`}
-      initial={reduce ? false : { y: -24, opacity: 0 }}
-      animate={{
-        y: hiddenOnScroll ? -112 : 0,
-        opacity: hiddenOnScroll ? 0.92 : 1,
-      }}
+      style={{ y: headerY }}
+      initial={reduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
       transition={{
-        duration: reduce ? 0.01 : 0.42,
-        ease: EASE_OUT,
+        opacity: {
+          duration: reduce ? 0.01 : 0.45,
+          ease: EASE_OUT,
+        },
       }}
     >
       <div className="relative mx-auto flex h-24 max-w-7xl items-center justify-between gap-4 px-8 md:px-10">
@@ -102,7 +127,7 @@ export function SiteHeader() {
               priority
             />
             <span
-              className={`font-brand text-lg lowercase tracking-wide md:text-xl ${
+              className={`font-brand flex h-7 items-center text-[1.75rem] leading-none lowercase tracking-wide md:h-9 md:text-[2.25rem] ${
                 isDark ? "text-white" : "text-black"
               }`}
             >

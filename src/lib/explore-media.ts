@@ -72,7 +72,16 @@ const instagramUrlByFile: Record<string, string> = {
     "https://www.instagram.com/reel/DQrpXyHjAki/?igsh=MWJoOXU3ajd5YTlhaw==",
 };
 
+const HAZIRAN_FILES = Array.from(
+  { length: 15 },
+  (_, index) => `haziran-${index + 1}.png`,
+);
+
 const imageCarouselGroups: Array<{ files: string[]; url: string }> = [
+  {
+    files: HAZIRAN_FILES,
+    url: "https://www.instagram.com/p/DMBSKU1tsjk/?igsh=cGZycjJ0MTEyZ2F0",
+  },
   {
     files: ["38.jpg", "39.jpg", "40.jpg", "41.jpg", "42.jpg", "43.jpg"],
     url: "https://www.instagram.com/p/DS28G3sDtaZ/?igsh=anQzMjM5NXJmNGhh",
@@ -102,7 +111,7 @@ const imageCarouselGroups: Array<{ files: string[]; url: string }> = [
     url: "https://www.instagram.com/p/DNvIB9MWCGJ/?igsh=MTM5dWx2YWx0MHZyNw==",
   },
   {
-    files: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg"],
+    files: ["2.jpg", "3.jpg", "4.jpg", "5.jpg"],
     url: "https://www.instagram.com/p/DMBSKU1tsjk/?igsh=cGZycjJ0MTEyZ2F0",
   },
 ];
@@ -118,6 +127,7 @@ function getInstagramUrl(fileName: string) {
 }
 
 const imageFiles = [
+  ...HAZIRAN_FILES,
   ...Array.from({ length: 29 }, (_, i) => `${i + 1}.jpg`),
   "30.jpg",
   "31.jpg",
@@ -244,8 +254,11 @@ function getBasePattern(item: ExploreMediaItem): DisplayPattern {
   if (item.fileName === "video1.mp4") {
     return { colSpan: 3, rowSpan: 2 };
   }
-  if (item.fileName === "1.jpg") {
+  if (item.fileName === "haziran-1.png") {
     return { colSpan: 2, rowSpan: 3 };
+  }
+  if (item.fileName === "1.jpg") {
+    return { colSpan: 2, rowSpan: 2 };
   }
   if (item.fileName === "6.jpg") {
     return { colSpan: 1, rowSpan: 2 };
@@ -1151,7 +1164,7 @@ const manuallyOrderedMediaItems = (() => {
   const used = new Set<string>();
 
   const priorityOrder = [
-    "1.jpg",
+    "haziran-1.png",
     "video1.mp4",
     "video2.mp4",
     "6.jpg",
@@ -1178,8 +1191,17 @@ const manuallyOrderedMediaItems = (() => {
     if (used.has(entry.id)) {
       continue;
     }
+    if (entry.fileName === "1.jpg") {
+      continue;
+    }
     ordered.push(entry);
     used.add(entry.id);
+  }
+
+  const legacyPhoto1 = byFileName.get("1.jpg");
+  if (legacyPhoto1 && !used.has(legacyPhoto1.id)) {
+    ordered.push(legacyPhoto1);
+    used.add(legacyPhoto1.id);
   }
 
   return packExploreGrid(buildAsymmetricLayout(ordered));

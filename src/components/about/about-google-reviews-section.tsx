@@ -3,7 +3,8 @@ import { Reveal } from "@/components/motion/reveal";
 import { getFiveStarGoogleReviews } from "@/lib/google-reviews";
 
 export async function AboutGoogleReviewsSection() {
-  const { reviews, rating, totalRatings } = await getFiveStarGoogleReviews();
+  const { reviews, rating, totalRatings, placeUrl } =
+    await getFiveStarGoogleReviews();
 
   if (reviews.length === 0) {
     return null;
@@ -15,6 +16,7 @@ export async function AboutGoogleReviewsSection() {
         reviews={reviews}
         rating={rating}
         totalRatings={totalRatings}
+        placeUrl={placeUrl}
       />
     </Reveal>
   );

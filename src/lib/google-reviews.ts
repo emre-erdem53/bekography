@@ -11,6 +11,8 @@ export type GoogleReviewsResult = {
   reviews: GoogleReview[];
   rating?: number;
   totalRatings?: number;
+  /** Google Maps / İşletme Profili bağlantısı */
+  placeUrl?: string;
 };
 
 const REVIEWS_REVALIDATE_SECONDS = 60 * 60 * 24 * 7;
@@ -22,15 +24,21 @@ function getGoogleCredentials() {
   return { apiKey, placeId };
 }
 
+function buildGooglePlaceUrl(placeId: string) {
+  return `https://www.google.com/maps/search/?api=1&query_place_id=${encodeURIComponent(placeId)}`;
+}
+
 function toFiveStarReviews(
   reviews: GoogleReview[],
   rating?: number,
   totalRatings?: number,
+  placeUrl?: string,
 ): GoogleReviewsResult {
   return {
     reviews: reviews.filter((review) => review.rating === 5),
     rating,
     totalRatings,
+    placeUrl,
   };
 }
 
@@ -66,6 +74,7 @@ type NewPlacesResponse = {
   rating?: number;
   userRatingCount?: number;
   reviews?: NewPlacesReview[];
+  googleMapsUri?: string;
 };
 
 type LegacyPlacesReview = {
@@ -83,6 +92,7 @@ type LegacyPlacesResponse = {
     rating?: number;
     user_ratings_total?: number;
     reviews?: LegacyPlacesReview[];
+    url?: string;
   };
 };
 
@@ -97,7 +107,7 @@ async function fetchNewPlacesReviews(
         "Content-Type": "application/json",
         "Accept-Language": "tr",
         "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "reviews,rating,userRatingCount",
+        "X-Goog-FieldMask": "reviews,rating,userRatingCount,googleMapsUri",
       },
       next: { revalidate: REVIEWS_REVALIDATE_SECONDS },
     },
@@ -115,7 +125,12 @@ async function fetchNewPlacesReviews(
     relativeTime: review.relativePublishTimeDescription?.trim() ?? "",
   }));
 
-  return toFiveStarReviews(reviews, data.rating, data.userRatingCount);
+  return toFiveStarReviews(
+    reviews,
+    data.rating,
+    data.userRatingCount,
+    data.googleMapsUri ?? buildGooglePlaceUrl(placeId),
+  );
 }
 
 async function fetchLegacyPlacesReviews(
@@ -126,7 +141,7 @@ async function fetchLegacyPlacesReviews(
     "https://maps.googleapis.com/maps/api/place/details/json",
   );
   url.searchParams.set("place_id", placeId);
-  url.searchParams.set("fields", "reviews,rating,user_ratings_total");
+  url.searchParams.set("fields", "reviews,rating,user_ratings_total,url");
   url.searchParams.set("key", apiKey);
   url.searchParams.set("language", "tr");
 
@@ -154,6 +169,7 @@ async function fetchLegacyPlacesReviews(
     reviews,
     data.result.rating,
     data.result.user_ratings_total,
+    data.result.url ?? buildGooglePlaceUrl(placeId),
   );
 }
 
