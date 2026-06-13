@@ -18,7 +18,9 @@ export function ContactPageClient() {
   const mapsQuery = encodeURIComponent(address);
   const mapsLink = `https://maps.google.com/?q=${mapsQuery}`;
   const mapsEmbedSrc = `https://maps.google.com/maps?q=${mapsQuery}&z=16&output=embed`;
-  const contactImage = getAboutTeamPortraitSrc(ABOUT_TEAM_PORTRAIT_FILES.bekir);
+  const contactImage = getAboutTeamPortraitSrc(
+    ABOUT_TEAM_PORTRAIT_FILES.bekirContact,
+  );
 
   return (
     <>

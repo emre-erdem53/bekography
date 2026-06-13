@@ -21,6 +21,7 @@ const blobSharedBase = normalizeBase(process.env.NEXT_PUBLIC_BLOB_BASE_URL);
 export const ABOUT_TEAM_PORTRAIT_FILES = {
   kevser: "kevser.jpg",
   bekir: "bekir.jpg",
+  bekirContact: "bekir-iletisim.jpg",
 } as const;
 
 /**
