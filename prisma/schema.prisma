@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+enum RequestStatus {
+  yeni
+  teklif_verildi
+  onaylandi
+  iptal
+}
+
+enum PaymentType {
+  pesin
+  taksitli
+}
+
+enum ReservationStatus {
+  planlandi
+  cekim_yapildi
+  montaj_yapiliyor
+  album_onaylandi
+  album_siparisi_verildi
+  album_kargoda
+  teslim_edildi
+  iptal
+}
+
+model PackageCategory {
+  id                 String          @id @default(cuid())
+  slug               String          @unique
+  title              String
+  accentColor        String
+  iconKey            String
+  highlight          Boolean         @default(false)
+  backgroundImageUrl String?
+  heroImageUrl       String?
+  sortOrder          Int             @default(0)
+  isActive           Boolean         @default(true)
+  content            Json            @default("{}")
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  options            PackageOption[]
+}
+
+model PackageOption {
+  id               String            @id @default(cuid())
+  categoryId       String
+  label            String
+  cashPrice        Int
+  installmentPrice Int
+  sortOrder        Int               @default(0)
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  category         PackageCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  requestItems     RequestItem[]
+  reservationItems ReservationItem[]
+
+  @@index([categoryId])
+}
+
+model Request {
+  id             String        @id @default(cuid())
+  publicId       String        @unique
+  customerName   String
+  customerPhone  String
+  city           String
+  shootDate      DateTime      @db.Date
+  status         RequestStatus @default(yeni)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  items          RequestItem[]
+  reservation    Reservation?
+}
+
+model RequestItem {
+  id              String        @id @default(cuid())
+  requestId       String
+  packageOptionId String
+  paymentType     PaymentType
+  unitPrice       Int
+  request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
+
+  @@index([requestId])
+}
+
+model Reservation {
+  id             String                    @id @default(cuid())
+  trackingSlug   String                    @unique
+  requestId      String?                   @unique
+  customerName   String
+  customerPhone  String
+  city           String
+  shootDate      DateTime                  @db.Date
+  agreedPrice    Int
+  status         ReservationStatus         @default(planlandi)
+  notes          String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  request        Request?                  @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  items          ReservationItem[]
+  statusHistory  ReservationStatusHistory[]
+
+  @@index([shootDate])
+  @@index([status])
+}
+
+model ReservationItem {
+  id              String        @id @default(cuid())
+  reservationId   String
+  packageOptionId String
+  paymentType     PaymentType
+  unitPrice       Int
+  reservation     Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
+
+  @@index([reservationId])
+}
+
+model ReservationStatusHistory {
+  id            String            @id @default(cuid())
+  reservationId String
+  status        ReservationStatus
+  changedAt     DateTime          @default(now())
+  reservation   Reservation       @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+}

@@ -96,3 +96,37 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+.admin-calendar .rbc-calendar {
+  color: #fafafa;
+}
+
+.admin-calendar .rbc-toolbar button {
+  color: #fafafa;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.admin-calendar .rbc-toolbar button:hover,
+.admin-calendar .rbc-toolbar button.rbc-active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-calendar .rbc-header,
+.admin-calendar .rbc-date-cell,
+.admin-calendar .rbc-off-range {
+  color: #a1a1aa;
+}
+
+.admin-calendar .rbc-today {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.admin-calendar .rbc-month-view,
+.admin-calendar .rbc-time-view {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-calendar .rbc-day-bg + .rbc-day-bg,
+.admin-calendar .rbc-month-row + .rbc-month-row {
+  border-color: rgba(255, 255, 255, 0.1);
+}

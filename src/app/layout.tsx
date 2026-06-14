@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { FooterDark } from "@/components/footer-dark";
 import localFont from "next/font/local";
-import { FloatingContactButtons } from "@/components/floating-contact-buttons";
-import { SiteHeader } from "@/components/site-header";
+import { AuthSessionProvider } from "@/components/auth-session-provider";
+import { SiteShell } from "@/components/site-shell";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
@@ -48,10 +47,9 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          <SiteHeader />
-          {children}
-          <FooterDark />
-          <FloatingContactButtons />
+          <AuthSessionProvider>
+            <SiteShell>{children}</SiteShell>
+          </AuthSessionProvider>
         </ThemeProvider>
       </body>
     </html>

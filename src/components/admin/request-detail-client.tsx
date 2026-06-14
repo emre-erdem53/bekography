@@ -1,0 +1,147 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import type { RequestStatus } from "@prisma/client";
+import { StatusSelect } from "@/components/admin/status-select";
+import {
+  REQUEST_STATUS_LABELS,
+  PAYMENT_TYPE_LABELS,
+  formatPrice,
+} from "@/lib/constants";
+
+type RequestDetail = {
+  id: string;
+  publicId: string;
+  customerName: string;
+  customerPhone: string;
+  city: string;
+  shootDate: string;
+  status: RequestStatus;
+  items: {
+    paymentType: "pesin" | "taksitli";
+    unitPrice: number;
+    packageOption: {
+      id: string;
+      label: string;
+      category: { title: string };
+    };
+  }[];
+  reservation: { id: string } | null;
+};
+
+export function RequestDetailClient({ requestId }: { requestId: string }) {
+  const [request, setRequest] = useState<RequestDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/admin/requests/${requestId}`)
+      .then((res) => res.json())
+      .then(setRequest)
+      .finally(() => setLoading(false));
+  }, [requestId]);
+
+  async function updateStatus(status: RequestStatus) {
+    const response = await fetch(`/api/admin/requests/${requestId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+
+    if (response.ok) {
+      setRequest((prev) => (prev ? { ...prev, status } : prev));
+    }
+  }
+
+  if (loading) return <p className="text-zinc-400">Yükleniyor...</p>;
+  if (!request) return <p className="text-red-400">Talep bulunamadı.</p>;
+
+  const statusOptions = Object.entries(REQUEST_STATUS_LABELS).map(
+    ([value, label]) => ({
+      value: value as RequestStatus,
+      label,
+    }),
+  );
+
+  const total = request.items.reduce((sum, item) => sum + item.unitPrice, 0);
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Link href="/admin/talepler" className="text-sm text-zinc-400 hover:text-white">
+            ← Talepler
+          </Link>
+          <h1 className="mt-2 text-2xl font-semibold text-white">
+            Talep #{request.publicId}
+          </h1>
+        </div>
+        <StatusSelect
+          value={request.status}
+          options={statusOptions}
+          onChange={updateStatus}
+        />
+      </div>
+
+      <div className="grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
+        <Info label="Ad Soyad" value={request.customerName} />
+        <Info label="Telefon" value={request.customerPhone} />
+        <Info label="Şehir" value={request.city} />
+        <Info
+          label="Çekim Tarihi"
+          value={format(new Date(request.shootDate), "d MMMM yyyy", {
+            locale: tr,
+          })}
+        />
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
+        <h2 className="font-semibold text-white">Seçilen Paketler</h2>
+        <ul className="mt-4 space-y-2">
+          {request.items.map((item, index) => (
+            <li
+              key={index}
+              className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3 text-sm"
+            >
+              <span className="text-zinc-300">
+                {item.packageOption.category.title} — {item.packageOption.label} (
+                {PAYMENT_TYPE_LABELS[item.paymentType]})
+              </span>
+              <span className="text-white">{formatPrice(item.unitPrice)}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 text-right text-lg font-semibold text-white">
+          Toplam: {formatPrice(total)}
+        </p>
+      </div>
+
+      {request.status === "onaylandi" && !request.reservation ? (
+        <Link
+          href={`/admin/rezervasyonlar/yeni?requestId=${request.id}`}
+          className="inline-flex rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black"
+        >
+          Rezervasyon Oluştur
+        </Link>
+      ) : request.reservation ? (
+        <Link
+          href={`/admin/rezervasyonlar/${request.reservation.id}`}
+          className="inline-flex text-sm text-zinc-400 hover:text-white"
+        >
+          Rezervasyonu görüntüle →
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-sm text-zinc-500">{label}</p>
+      <p className="mt-1 text-white">{value}</p>
+    </div>
+  );
+}
