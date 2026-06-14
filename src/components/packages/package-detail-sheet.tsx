@@ -40,6 +40,15 @@ export function PackageDetailSheet({
     setSingleRequestItems([]);
   }, [category?.id]);
 
+  useEffect(() => {
+    if (!category) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [category]);
+
   const content = category?.content as PackageCategoryContent | undefined;
   const selectedOption =
     category?.options.find((o) => o.id === selectedOptionId) ??
@@ -69,132 +78,140 @@ export function PackageDetailSheet({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[70] bg-black/80"
+            className="fixed inset-0 z-[70] overflow-hidden bg-black/80"
             onClick={onClose}
           >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 260 }}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute inset-x-0 bottom-0 top-0 mx-auto flex max-w-md flex-col bg-black md:top-8 md:rounded-t-3xl"
-            >
-              <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                <div>
-                  <h2
-                    className="text-2xl font-semibold"
-                    style={{ color: category.accentColor }}
+            <div className="flex h-full w-full items-end justify-center md:items-center md:p-6 lg:p-10">
+              <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 28, stiffness: 260 }}
+                onClick={(e) => e.stopPropagation()}
+                className="flex h-[100dvh] w-full max-h-[100dvh] flex-col overflow-hidden bg-black md:h-auto md:max-h-[min(90vh,880px)] md:max-w-xl md:rounded-3xl md:border md:border-white/10 md:shadow-2xl lg:max-w-2xl"
+              >
+                <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3 md:px-6 md:py-4">
+                  <div className="min-w-0 pr-3">
+                    <h2
+                      className="truncate text-xl font-semibold md:text-2xl"
+                      style={{ color: category.accentColor }}
+                    >
+                      {content?.displayTitle ?? category.title}
+                    </h2>
+                    {selectedOption ? (
+                      <p className="truncate text-sm text-zinc-400">
+                        {selectedOption.label}
+                      </p>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="shrink-0 rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white"
+                    aria-label="Kapat"
                   >
-                    {content?.displayTitle ?? category.title}
-                  </h2>
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 md:px-6 md:py-5">
+                  {tags.length > 0 ? (
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-white/20 px-3 py-1 text-xs text-zinc-200"
+                        >
+                          • {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <PackageGalleryCarousel images={galleryUrls} variant="detail" />
+
+                  <div className="mt-5 space-y-2 md:mt-6">
+                    {category.options.map((option) => {
+                      const active =
+                        (selectedOptionId ?? category.options[0]?.id) ===
+                        option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setSelectedOptionId(option.id)}
+                          className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors md:px-5 md:py-3.5 ${
+                            active
+                              ? "border-white/30 bg-white/10"
+                              : "border-white/10 bg-[#111]"
+                          }`}
+                        >
+                          <span
+                            className="text-sm font-semibold md:text-base"
+                            style={{ color: category.accentColor }}
+                          >
+                            {option.label}
+                          </span>
+                          <div className="text-right text-xs md:text-sm">
+                            <p className="font-bold text-white">
+                              {formatPrice(option.cashPrice)}
+                            </p>
+                            <p className="text-zinc-500">
+                              {formatPrice(option.installmentPrice)}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   {selectedOption ? (
-                    <p className="text-sm text-zinc-400">{selectedOption.label}</p>
+                    <div className="mt-5 grid grid-cols-2 gap-3 md:mt-6 md:gap-4">
+                      <div className="rounded-2xl border border-white/10 bg-[#111] p-4">
+                        <p className="text-xs text-zinc-500">Tamamı Peşin</p>
+                        <p className="mt-1 text-lg font-bold text-white md:text-xl">
+                          {formatPrice(selectedOption.cashPrice)}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-[#111] p-4">
+                        <p className="text-xs text-zinc-500">Parçalı Ödeme</p>
+                        <p className="mt-1 text-lg font-bold text-zinc-400 md:text-xl">
+                          {formatPrice(selectedOption.installmentPrice)}
+                        </p>
+                      </div>
+                    </div>
                   ) : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-4 pb-36">
-                {tags.length > 0 ? (
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-white/20 px-3 py-1 text-xs text-zinc-200"
-                      >
-                        • {tag}
-                      </span>
-                    ))}
+                <div className="shrink-0 space-y-2 border-t border-white/10 bg-black px-4 py-4 md:px-6 md:py-5">
+                  <div className="flex flex-col gap-2 md:grid md:grid-cols-3">
+                    <button
+                      type="button"
+                      onClick={() => setInspectOpen(true)}
+                      className="w-full rounded-2xl bg-[#222] py-3 text-sm font-semibold text-white md:py-3.5"
+                    >
+                      İncele
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddToCart}
+                      disabled={!selectedOption}
+                      className="w-full rounded-2xl bg-[#93f8b6] py-3 text-sm font-semibold text-black disabled:opacity-50 md:py-3.5"
+                    >
+                      Sepete Ekle
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleQuickRequest}
+                      disabled={!selectedOption}
+                      className="w-full rounded-2xl border border-white/20 py-3 text-sm font-semibold text-white disabled:opacity-50 md:py-3.5"
+                    >
+                      Hemen Talep Oluştur
+                    </button>
                   </div>
-                ) : null}
-
-                <PackageGalleryCarousel images={galleryUrls} />
-
-                <div className="mt-5 space-y-2">
-                  {category.options.map((option) => {
-                    const active =
-                      (selectedOptionId ?? category.options[0]?.id) === option.id;
-                    return (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setSelectedOptionId(option.id)}
-                        className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors ${
-                          active
-                            ? "border-white/30 bg-white/10"
-                            : "border-white/10 bg-[#111]"
-                        }`}
-                      >
-                        <span
-                          className="font-semibold"
-                          style={{ color: category.accentColor }}
-                        >
-                          {option.label}
-                        </span>
-                        <div className="text-right text-xs">
-                          <p className="font-bold text-white">
-                            {formatPrice(option.cashPrice)}
-                          </p>
-                          <p className="text-zinc-500">
-                            {formatPrice(option.installmentPrice)}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
                 </div>
-
-                {selectedOption ? (
-                  <div className="mt-5 grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-xs text-zinc-500">Tamamı Peşin</p>
-                      <p className="text-xl font-bold text-white">
-                        {formatPrice(selectedOption.cashPrice)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-500">Parçalı Ödeme</p>
-                      <p className="text-xl font-bold text-zinc-500">
-                        {formatPrice(selectedOption.installmentPrice)}
-                      </p>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="absolute inset-x-0 bottom-0 space-y-2 border-t border-white/10 bg-black px-4 py-4">
-                <button
-                  type="button"
-                  onClick={() => setInspectOpen(true)}
-                  className="w-full rounded-2xl bg-[#222] py-3.5 text-sm font-semibold text-white"
-                >
-                  İncele
-                </button>
-                <button
-                  type="button"
-                  onClick={handleAddToCart}
-                  disabled={!selectedOption}
-                  className="w-full rounded-2xl bg-[#93f8b6] py-3.5 text-sm font-semibold text-black disabled:opacity-50"
-                >
-                  Sepete Ekle
-                </button>
-                <button
-                  type="button"
-                  onClick={handleQuickRequest}
-                  disabled={!selectedOption}
-                  className="w-full rounded-2xl border border-white/20 py-3.5 text-sm font-semibold text-white disabled:opacity-50"
-                >
-                  Hemen Talep Oluştur
-                </button>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>
@@ -214,7 +231,9 @@ export function PackageDetailSheet({
           setRequestOpen(false);
           setSingleRequestItems([]);
         }}
-        itemsOverride={singleRequestItems.length > 0 ? singleRequestItems : undefined}
+        itemsOverride={
+          singleRequestItems.length > 0 ? singleRequestItems : undefined
+        }
         clearCartOnSuccess={false}
       />
     </>
