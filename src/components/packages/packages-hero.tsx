@@ -2,17 +2,17 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import {
-  BadgeCheck,
-  Camera,
-  CalendarDays,
-  Handshake,
-  Leaf,
-  Mountain,
-  Package,
-  Truck,
-  UserRoundCheck,
-} from "lucide-react";
+// import {
+//   BadgeCheck,
+//   Camera,
+//   CalendarDays,
+//   Handshake,
+//   Leaf,
+//   Mountain,
+//   Package,
+//   Truck,
+//   UserRoundCheck,
+// } from "lucide-react";
 import type { PackageCategoryData } from "@/lib/package-types";
 import { getPackageIcon } from "@/components/packages/package-icon";
 import { PackageCartBar } from "@/components/packages/package-cart-bar";
@@ -20,86 +20,86 @@ import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { getCategoryPriceLabel, packageMediaUrl } from "@/lib/package-media";
 import { useCartStore } from "@/stores/cart-store";
 
-type PackageFeature = {
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-};
+// type PackageFeature = {
+//   title: string;
+//   description: string;
+//   icon: React.ComponentType<{ className?: string }>;
+// };
 
-const topFeatures: PackageFeature[] = [
-  {
-    title: "Rehberlik Hizmeti",
-    description:
-      "Süreç boyunca size özel tavsiye ve deneyimlerimizle yanınızdayız.",
-    icon: Leaf,
-  },
-  {
-    title: "Birebir İletişim",
-    description:
-      "Sadece Bekography ile birebir, kesintisiz ve dostça iletişim kurarsınız.",
-    icon: Handshake,
-  },
-  {
-    title: "Onaylı Süreç",
-    description:
-      "Her adım karşılıklı onay ve sözleşme ile kayıt altına alınarak güveninizi koruruz.",
-    icon: BadgeCheck,
-  },
-];
+// const topFeatures: PackageFeature[] = [
+//   {
+//     title: "Rehberlik Hizmeti",
+//     description:
+//       "Süreç boyunca size özel tavsiye ve deneyimlerimizle yanınızdayız.",
+//     icon: Leaf,
+//   },
+//   {
+//     title: "Birebir İletişim",
+//     description:
+//       "Sadece Bekography ile birebir, kesintisiz ve dostça iletişim kurarsınız.",
+//     icon: Handshake,
+//   },
+//   {
+//     title: "Onaylı Süreç",
+//     description:
+//       "Her adım karşılıklı onay ve sözleşme ile kayıt altına alınarak güveninizi koruruz.",
+//     icon: BadgeCheck,
+//   },
+// ];
 
-const middleFeatures: PackageFeature[] = [
-  {
-    title: "Tam Teslimat",
-    description:
-      "Tüm çekilen ve düzenlenen görüntüler yüksek kalitede size teslim edilir.",
-    icon: Package,
-  },
-  {
-    title: "Şeffaf Çekim",
-    description:
-      "Çekimleri size göstererek sürece hakim olmanızı ve rahat hissetmenizi sağlıyoruz.",
-    icon: Camera,
-  },
-  {
-    title: "Sınırsız Mekan",
-    description:
-      "Belirlenen süre zarfında, vakit yettiği farklı mekanlarda özgünce çekim yaparız.",
-    icon: Mountain,
-  },
-];
+// const middleFeatures: PackageFeature[] = [
+//   {
+//     title: "Tam Teslimat",
+//     description:
+//       "Tüm çekilen ve düzenlenen görüntüler yüksek kalitede size teslim edilir.",
+//     icon: Package,
+//   },
+//   {
+//     title: "Şeffaf Çekim",
+//     description:
+//       "Çekimleri size göstererek sürece hakim olmanızı ve rahat hissetmenizi sağlıyoruz.",
+//     icon: Camera,
+//   },
+//   {
+//     title: "Sınırsız Mekan",
+//     description:
+//       "Belirlenen süre zarfında, vakit yettiği farklı mekanlarda özgünce çekim yaparız.",
+//     icon: Mountain,
+//   },
+// ];
 
-const bottomFeatures: PackageFeature[] = [
-  {
-    title: "Erteleme Rahatlığı",
-    description: "Yıl sonuna kadar çekimi erteleme hakkınız olur.",
-    icon: CalendarDays,
-  },
-  {
-    title: "Ücretsiz Kargo",
-    description: "Baskılı ürünler direkt adresinize ücretsiz kargolanır.",
-    icon: Truck,
-  },
-  {
-    title: "Profesyonel Ekipman",
-    description: "Yüksek çözünürlükte görüntülere sahip olursunuz.",
-    icon: UserRoundCheck,
-  },
-];
+// const bottomFeatures: PackageFeature[] = [
+//   {
+//     title: "Erteleme Rahatlığı",
+//     description: "Yıl sonuna kadar çekimi erteleme hakkınız olur.",
+//     icon: CalendarDays,
+//   },
+//   {
+//     title: "Ücretsiz Kargo",
+//     description: "Baskılı ürünler direkt adresinize ücretsiz kargolanır.",
+//     icon: Truck,
+//   },
+//   {
+//     title: "Profesyonel Ekipman",
+//     description: "Yüksek çözünürlükte görüntülere sahip olursunuz.",
+//     icon: UserRoundCheck,
+//   },
+// ];
 
-function FeatureCard({ feature }: { feature: PackageFeature }) {
-  const Icon = feature.icon;
-  return (
-    <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 md:p-5">
-      <Icon className="h-6 w-6 text-white md:h-7 md:w-7" />
-      <h3 className="mt-3 text-base font-semibold text-white md:text-lg">
-        {feature.title}
-      </h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-        {feature.description}
-      </p>
-    </div>
-  );
-}
+// function FeatureCard({ feature }: { feature: PackageFeature }) {
+//   const Icon = feature.icon;
+//   return (
+//     <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 md:p-5">
+//       <Icon className="h-6 w-6 text-white md:h-7 md:w-7" />
+//       <h3 className="mt-3 text-base font-semibold text-white md:text-lg">
+//         {feature.title}
+//       </h3>
+//       <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+//         {feature.description}
+//       </p>
+//     </div>
+//   );
+// }
 
 export function PackagesHero({
   categories,
@@ -114,6 +114,7 @@ export function PackagesHero({
     <main
       className={`flex-1 bg-black text-white ${cartCount > 0 ? "pb-28" : "pb-10"}`}
     >
+      {/* Neden Bekography — geçici olarak gizlendi, konum daha sonra düşünülecek
       <section className="mx-auto max-w-6xl px-4 py-10 md:py-14">
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
@@ -138,15 +139,16 @@ export function PackagesHero({
           ))}
         </div>
       </section>
+      */}
 
-      <section className="mx-auto max-w-2xl px-4 pb-16">
+      <section className="mx-auto max-w-2xl px-4 pb-16 pt-8 md:pt-10">
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
             Paketler
           </p>
-          <h2 className="mt-3 text-3xl font-semibold md:text-4xl">
+          <h1 className="mt-3 text-3xl font-semibold md:text-4xl">
             Paket Oluştur
-          </h2>
+          </h1>
         </div>
 
         <div className="mt-8 space-y-2">
