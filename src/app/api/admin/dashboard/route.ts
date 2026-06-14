@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay, startOfMonth, endOfMonth } from "date-fns";
+import { startOfDay, endOfDay } from "date-fns";
 
 export async function GET() {
   const authResult = await requireAdmin();
@@ -11,15 +11,12 @@ export async function GET() {
     const now = new Date();
     const todayStart = startOfDay(now);
     const todayEnd = endOfDay(now);
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
 
     const [
       pendingRequests,
       activeReservations,
       todayShoots,
       upcomingShoots,
-      monthlyRevenue,
       approvedWithoutReservation,
     ] = await Promise.all([
       prisma.request.count({ where: { status: "yeni" } }),
@@ -41,13 +38,6 @@ export async function GET() {
         orderBy: { shootDate: "asc" },
         take: 5,
       }),
-      prisma.reservation.aggregate({
-        where: {
-          createdAt: { gte: monthStart, lte: monthEnd },
-          status: { not: "iptal" },
-        },
-        _sum: { agreedPrice: true },
-      }),
       prisma.request.findMany({
         where: {
           status: "onaylandi",
@@ -62,7 +52,6 @@ export async function GET() {
       stats: {
         pendingRequests,
         activeReservations,
-        monthlyRevenue: monthlyRevenue._sum.agreedPrice ?? 0,
         approvedWithoutReservationCount: approvedWithoutReservation.length,
       },
       todayShoots,

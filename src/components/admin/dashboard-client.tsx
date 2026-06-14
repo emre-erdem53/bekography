@@ -5,13 +5,11 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { AlertBar } from "@/components/admin/alert-bar";
-import { formatPrice } from "@/lib/constants";
 
 type DashboardData = {
   stats: {
     pendingRequests: number;
     activeReservations: number;
-    monthlyRevenue: number;
     approvedWithoutReservationCount: number;
   };
   todayShoots: {
@@ -66,7 +64,7 @@ export function DashboardClient() {
         />
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {[
           {
             label: "Bekleyen Talepler",
@@ -76,11 +74,6 @@ export function DashboardClient() {
           {
             label: "Aktif Rezervasyonlar",
             value: data.stats.activeReservations,
-            href: "/admin/rezervasyonlar",
-          },
-          {
-            label: "Bu Ayki Gelir",
-            value: formatPrice(data.stats.monthlyRevenue),
             href: "/admin/rezervasyonlar",
           },
           {
