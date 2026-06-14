@@ -23,6 +23,8 @@ type RequestDetail = {
   items: {
     paymentType: "pesin" | "taksitli";
     unitPrice: number;
+    shootDate: string | null;
+    city: string | null;
     packageOption: {
       id: string;
       label: string;
@@ -103,13 +105,28 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
           {request.items.map((item, index) => (
             <li
               key={index}
-              className="flex items-center justify-between rounded-xl bg-white/5 px-4 py-3 text-sm"
+              className="rounded-xl bg-white/5 px-4 py-3 text-sm"
             >
-              <span className="text-zinc-300">
-                {item.packageOption.category.title} — {item.packageOption.label} (
-                {PAYMENT_TYPE_LABELS[item.paymentType]})
-              </span>
-              <span className="text-white">{formatPrice(item.unitPrice)}</span>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-zinc-300">
+                  {item.packageOption.category.title} — {item.packageOption.label}{" "}
+                  ({PAYMENT_TYPE_LABELS[item.paymentType]})
+                </span>
+                <span className="shrink-0 text-white">
+                  {formatPrice(item.unitPrice)}
+                </span>
+              </div>
+              {item.city || item.shootDate ? (
+                <p className="mt-2 text-xs text-zinc-500">
+                  {item.city ? `Şehir: ${item.city}` : null}
+                  {item.city && item.shootDate ? " · " : null}
+                  {item.shootDate
+                    ? `Tarih: ${format(new Date(item.shootDate), "d MMMM yyyy", {
+                        locale: tr,
+                      })}`
+                    : null}
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>

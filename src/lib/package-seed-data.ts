@@ -6,6 +6,23 @@ export type PackageServiceItem = {
   iconKey: string;
 };
 
+export type PackageGalleryImage = {
+  url: string;
+  alt?: string;
+};
+
+export type PackageDetailSection = {
+  id: string;
+  title: string;
+  body: string;
+  sortOrder: number;
+};
+
+export type PackageRequestFieldLabels = {
+  dateLabel: string;
+  cityLabel: string;
+};
+
 export type PackageCategoryContent = {
   tagline: string;
   displayTitle?: string;
@@ -20,7 +37,27 @@ export type PackageCategoryContent = {
   afterShootExtra?: string;
   scheduleType?: "outdoor" | "indoor";
   postShootTemplates?: PostShootTemplates;
+  highlightTags?: string[];
+  galleryImages?: PackageGalleryImage[];
+  detailSections?: PackageDetailSection[];
+  requestFieldLabels?: PackageRequestFieldLabels;
 };
+
+export function defaultRequestFieldLabels(
+  title: string,
+  scheduleType: "outdoor" | "indoor" = "indoor",
+): PackageRequestFieldLabels {
+  if (scheduleType === "outdoor") {
+    return {
+      dateLabel: `${title} Tarihi`,
+      cityLabel: "Çekim Yapılacak Şehir",
+    };
+  }
+  return {
+    dateLabel: `${title} Tarihi`,
+    cityLabel: `${title} Yapılacak Şehir`,
+  };
+}
 
 export function defaultOutdoorPostShootTemplates(): PostShootTemplates {
   return {

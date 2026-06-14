@@ -113,11 +113,7 @@ export function PackageCategoryPanel({
         </div>
       </div>
 
-      <PackagePricingTable
-        categoryTitle={category.title}
-        options={category.options}
-        accentColor={category.accentColor}
-      />
+      <PackagePricingTable category={category} />
     </div>
   );
 }

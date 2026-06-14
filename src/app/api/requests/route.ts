@@ -16,7 +16,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { customerName, customerPhone, city, shootDate, items } = parsed.data;
+    const { customerName, customerPhone, items } = parsed.data;
 
     const options = await prisma.packageOption.findMany({
       where: {
@@ -33,13 +33,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const itemDates = items.map((item) => startOfDay(new Date(item.shootDate)));
+    const earliestDate = itemDates.reduce((earliest, date) =>
+      date < earliest ? date : earliest,
+    );
+    const citySummary = [...new Set(items.map((item) => item.city))].join(", ");
+
     const requestRecord = await prisma.request.create({
       data: {
         publicId: nanoid(8).toUpperCase(),
         customerName,
         customerPhone,
-        city,
-        shootDate: startOfDay(new Date(shootDate)),
+        city: citySummary,
+        shootDate: earliestDate,
         items: {
           create: items.map((item) => {
             const option = options.find((o) => o.id === item.packageOptionId)!;
@@ -51,6 +57,8 @@ export async function POST(request: Request) {
               packageOptionId: item.packageOptionId,
               paymentType: item.paymentType,
               unitPrice,
+              shootDate: startOfDay(new Date(item.shootDate)),
+              city: item.city,
             };
           }),
         },
@@ -71,6 +79,8 @@ export async function POST(request: Request) {
         categoryTitle: item.packageOption.category.title,
         optionLabel: item.packageOption.label,
         paymentType: item.paymentType,
+        shootDate: item.shootDate,
+        city: item.city,
       })),
     });
   } catch (error) {

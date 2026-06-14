@@ -28,13 +28,13 @@ const tcSchema = z
 export const createRequestSchema = z.object({
   customerName: z.string().min(2, "Ad soyad en az 2 karakter olmalı"),
   customerPhone: z.string().min(10, "Geçerli bir telefon numarası girin"),
-  city: z.string().min(2, "Şehir girin"),
-  shootDate: z.string().min(1, "Çekim tarihi seçin"),
   items: z
     .array(
       z.object({
         packageOptionId: z.string().min(1),
         paymentType: z.enum(["pesin", "taksitli"]),
+        shootDate: z.string().min(1, "Çekim tarihi seçin"),
+        city: z.string().min(2, "Şehir girin"),
       }),
     )
     .min(1, "En az bir paket seçin"),
@@ -42,6 +42,29 @@ export const createRequestSchema = z.object({
 
 export const updateRequestStatusSchema = z.object({
   status: z.enum(["yeni", "teklif_verildi", "onaylandi", "iptal"]),
+});
+
+const packageGalleryImageSchema = z.object({
+  url: z.string().min(1),
+  alt: z.string().optional(),
+});
+
+const packageDetailSectionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  body: z.string(),
+  sortOrder: z.number().int(),
+});
+
+const packageRequestFieldLabelsSchema = z.object({
+  dateLabel: z.string().min(1),
+  cityLabel: z.string().min(1),
+});
+
+const packageServiceItemSchema = z.object({
+  title: z.string().min(1),
+  subLines: z.array(z.string()),
+  iconKey: z.string().min(1),
 });
 
 export const packageCategorySchema = z.object({
@@ -58,8 +81,17 @@ export const packageCategorySchema = z.object({
     .object({
       scheduleType: z.enum(["outdoor", "indoor"]).optional(),
       postShootTemplates: postShootTemplatesSchema.optional(),
+      highlightTags: z.array(z.string()).optional(),
+      galleryImages: z.array(packageGalleryImageSchema).optional(),
+      detailSections: z.array(packageDetailSectionSchema).optional(),
+      requestFieldLabels: packageRequestFieldLabelsSchema.optional(),
+      services: z.array(packageServiceItemSchema).optional(),
+      displayTitle: z.string().optional(),
+      shootTitle: z.string().optional(),
+      afterShootTitle: z.string().optional(),
     })
     .catchall(z.unknown())
+    .passthrough()
     .optional(),
   options: z
     .array(
@@ -95,10 +127,23 @@ const installmentSchema = z.object({
   dueDate: z.string().min(1, "Vade tarihi seçin"),
 });
 
+const postShootPackageBlockSchema = z.object({
+  categoryId: z.string().min(1),
+  categorySlug: z.string(),
+  categoryTitle: z.string().min(1),
+  accentColor: z.string(),
+  pills: z.array(z.string()),
+  description: z.string(),
+});
+
+const postShootSectionGroupSchema = z.object({
+  items: z.array(postShootPackageBlockSchema),
+});
+
 const postShootSnapshotSchema = z.object({
-  digital: postShootSectionSchema,
-  editing: postShootSectionSchema,
-  printing: postShootSectionSchema.optional(),
+  digital: postShootSectionGroupSchema,
+  editing: postShootSectionGroupSchema,
+  printing: postShootSectionGroupSchema.optional(),
 });
 
 export const createReservationSchema = z.object({

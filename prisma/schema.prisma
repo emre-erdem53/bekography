@@ -85,6 +85,8 @@ model RequestItem {
   packageOptionId String
   paymentType     PaymentType
   unitPrice       Int
+  shootDate       DateTime?     @db.Date
+  city            String?
   request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
   packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
 

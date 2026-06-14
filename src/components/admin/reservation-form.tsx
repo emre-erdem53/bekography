@@ -1,17 +1,19 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AlertTriangle, Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/constants";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
+  emptyPostShootSnapshot,
   isOutdoorCategory,
-  mergePostShootTemplates,
   parsePostShootSnapshot,
   shouldShowPrintingSection,
-  type PostShootSection,
+  syncPostShootWithItems,
+  type PostShootPackageBlock,
+  type PostShootSectionGroup,
   type PostShootSnapshot,
 } from "@/lib/post-shoot";
 import { formatCoupleName } from "@/lib/reservations";
@@ -34,6 +36,7 @@ type PackageCategory = {
 
 type SelectedItem = {
   packageOptionId: string;
+  categoryId: string;
   paymentType: "pesin" | "taksitli";
   unitPrice: number;
   label: string;
@@ -83,10 +86,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [installments, setInstallments] = useState<Installment[]>([
     { amount: 0, dueDate: "" },
   ]);
-  const [postShoot, setPostShoot] = useState<PostShootSnapshot>({
-    digital: { pills: [], description: "" },
-    editing: { pills: [], description: "" },
-  });
+  const [postShoot, setPostShoot] = useState<PostShootSnapshot>(
+    emptyPostShootSnapshot(),
+  );
   const [categories, setCategories] = useState<PackageCategory[]>([]);
   const [dateConflicts, setDateConflicts] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -122,30 +124,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
   const expectedPayable = totalPrice - discountAmount;
 
-  const refreshPostShootFromItems = useCallback(
-    (nextItems: SelectedItem[]) => {
-      const selectedCategories = nextItems
-        .map((item) => {
-          const category = categories.find((c) =>
-            c.options.some((o) => o.id === item.packageOptionId),
-          );
-          if (!category) return null;
-          return { slug: category.slug, content: category.content };
-        })
-        .filter(Boolean) as { slug: string; content: PackageCategoryContent }[];
-
-      if (selectedCategories.length === 0) {
-        setPostShoot({
-          digital: { pills: [], description: "" },
-          editing: { pills: [], description: "" },
-        });
-        return;
-      }
-
-      setPostShoot(mergePostShootTemplates(selectedCategories));
-    },
-    [categories],
-  );
+  function applyPostShootSync(nextItems: SelectedItem[], forceReset = false) {
+    setPostShoot((prev) =>
+      syncPostShootWithItems(prev, nextItems, categories, { forceReset }),
+    );
+  }
 
   useEffect(() => {
     async function load() {
@@ -177,6 +160,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 id: string;
                 label: string;
                 category: {
+                  id: string;
                   title: string;
                   slug: string;
                   accentColor: string;
@@ -195,6 +179,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               endTime: string | null;
             }) => ({
               packageOptionId: item.packageOption.id,
+              categoryId: item.packageOption.category.id,
               paymentType: item.paymentType,
               unitPrice: item.unitPrice,
               label: item.packageOption.label,
@@ -235,6 +220,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               id: string;
               label: string;
               category: {
+                id: string;
                 title: string;
                 slug: string;
                 accentColor: string;
@@ -250,6 +236,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             );
             return {
               packageOptionId: item.packageOption.id,
+              categoryId: item.packageOption.category.id,
               paymentType: item.paymentType,
               unitPrice: item.unitPrice,
               label: item.packageOption.label,
@@ -286,8 +273,10 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   useEffect(() => {
     if (categories.length === 0 || reservationId || items.length === 0) return;
     if (!requestId) return;
-    refreshPostShootFromItems(items);
-  }, [categories, requestId, reservationId, items, refreshPostShootFromItems]);
+    setPostShoot(
+      syncPostShootWithItems(emptyPostShootSnapshot(), items, categories),
+    );
+  }, [categories, requestId, reservationId, items]);
 
   useEffect(() => {
     if (!totalPriceManual && items.length > 0) {
@@ -330,9 +319,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     const option = category?.options.find((o) => o.id === optionId);
     if (!category || !option) return;
 
-    const outdoor = isOutdoorCategory(category.slug, category.content);
     const newItem: SelectedItem = {
       packageOptionId: option.id,
+      categoryId: category.id,
       paymentType: "pesin",
       unitPrice: option.cashPrice,
       label: option.label,
@@ -352,17 +341,13 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
     const nextItems = [...items, newItem];
     setItems(nextItems);
-    refreshPostShootFromItems(nextItems);
-
-    if (!outdoor) {
-      // no-op, fields initialized empty
-    }
+    applyPostShootSync(nextItems);
   }
 
   function removeItem(index: number) {
     const nextItems = items.filter((_, i) => i !== index);
     setItems(nextItems);
-    refreshPostShootFromItems(nextItems);
+    applyPostShootSync(nextItems);
   }
 
   function updateItem(index: number, patch: Partial<SelectedItem>) {
@@ -373,11 +358,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     });
   }
 
-  function updatePostShootSection(
+  function updatePostShootGroup(
     key: keyof PostShootSnapshot,
-    section: PostShootSection,
+    group: PostShootSectionGroup,
   ) {
-    setPostShoot((prev) => ({ ...prev, [key]: section }));
+    setPostShoot((prev) => ({ ...prev, [key]: group }));
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -758,28 +743,30 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       </Section>
 
       <Section title="3. Çekim Sonrası">
-        <PostShootEditor
+        <p className="text-sm text-zinc-400">
+          Her paketin şablonu kendi bloğu olarak gelir; içerikler birbirine
+          karışmaz. Gerekirse paket bazında düzenleyebilirsiniz.
+        </p>
+        <PostShootGroupEditor
           title="Dijital"
-          section={postShoot.digital}
-          onChange={(section) => updatePostShootSection("digital", section)}
+          group={postShoot.digital}
+          onChange={(group) => updatePostShootGroup("digital", group)}
         />
-        <PostShootEditor
+        <PostShootGroupEditor
           title="Düzenleme"
-          section={postShoot.editing}
-          onChange={(section) => updatePostShootSection("editing", section)}
+          group={postShoot.editing}
+          onChange={(group) => updatePostShootGroup("editing", group)}
         />
         {showPrinting ? (
-          <PostShootEditor
+          <PostShootGroupEditor
             title="Baskı"
-            section={
-              postShoot.printing ?? { pills: [], description: "" }
-            }
-            onChange={(section) => updatePostShootSection("printing", section)}
+            group={postShoot.printing ?? { items: [] }}
+            onChange={(group) => updatePostShootGroup("printing", group)}
           />
         ) : null}
         <button
           type="button"
-          onClick={() => refreshPostShootFromItems(items)}
+          onClick={() => applyPostShootSync(items, true)}
           className="text-sm text-zinc-400 hover:text-white"
         >
           Paket şablonlarından yeniden doldur
@@ -921,29 +908,67 @@ function Section({
   );
 }
 
-function PostShootEditor({
+function PostShootGroupEditor({
   title,
-  section,
+  group,
   onChange,
 }: {
   title: string;
-  section: PostShootSection;
-  onChange: (section: PostShootSection) => void;
+  group: PostShootSectionGroup;
+  onChange: (group: PostShootSectionGroup) => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
+      <h3 className="text-sm font-medium text-white">{title}</h3>
+      {group.items.length === 0 ? (
+        <p className="text-sm text-zinc-500">
+          Çekim hizmetine paket eklendiğinde burada görünür.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {group.items.map((block, index) => (
+            <PostShootPackageBlockEditor
+              key={block.categoryId}
+              block={block}
+              onChange={(updated) => {
+                const next = [...group.items];
+                next[index] = updated;
+                onChange({ items: next });
+              }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PostShootPackageBlockEditor({
+  block,
+  onChange,
+}: {
+  block: PostShootPackageBlock;
+  onChange: (block: PostShootPackageBlock) => void;
 }) {
   const [pillInput, setPillInput] = useState("");
 
   function addPill() {
     const value = pillInput.trim();
     if (!value) return;
-    onChange({ ...section, pills: [...section.pills, value] });
+    onChange({ ...block, pills: [...block.pills, value] });
     setPillInput("");
   }
 
   return (
-    <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
-      <h3 className="text-sm font-medium text-white">{title}</h3>
+    <div
+      className="space-y-3 rounded-lg border border-white/10 p-3"
+      style={{ borderColor: `${block.accentColor}44` }}
+    >
+      <h4 className="text-sm font-semibold" style={{ color: block.accentColor }}>
+        {block.categoryTitle}
+      </h4>
       <div className="flex flex-wrap gap-2">
-        {section.pills.map((pill, index) => (
+        {block.pills.map((pill, index) => (
           <span
             key={`${pill}-${index}`}
             className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-200"
@@ -953,8 +978,8 @@ function PostShootEditor({
               type="button"
               onClick={() =>
                 onChange({
-                  ...section,
-                  pills: section.pills.filter((_, i) => i !== index),
+                  ...block,
+                  pills: block.pills.filter((_, i) => i !== index),
                 })
               }
               className="text-zinc-400 hover:text-white"
@@ -974,7 +999,7 @@ function PostShootEditor({
               addPill();
             }
           }}
-          placeholder="Pill ekle..."
+          placeholder="Etiket ekle..."
           className={inputClass}
         />
         <button
@@ -986,8 +1011,8 @@ function PostShootEditor({
         </button>
       </div>
       <textarea
-        value={section.description}
-        onChange={(e) => onChange({ ...section, description: e.target.value })}
+        value={block.description}
+        onChange={(e) => onChange({ ...block, description: e.target.value })}
         rows={3}
         className={inputClass}
       />

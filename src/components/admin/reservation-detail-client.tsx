@@ -225,10 +225,10 @@ export function ReservationDetailClient({
       </Section>
 
       <Section title="Çekim Sonrası">
-        <PostShootReadOnly title="Dijital" section={postShoot.digital} />
-        <PostShootReadOnly title="Düzenleme" section={postShoot.editing} />
-        {postShoot.printing ? (
-          <PostShootReadOnly title="Baskı" section={postShoot.printing} />
+        <PostShootGroupReadOnly title="Dijital" group={postShoot.digital} />
+        <PostShootGroupReadOnly title="Düzenleme" group={postShoot.editing} />
+        {postShoot.printing && postShoot.printing.items.length > 0 ? (
+          <PostShootGroupReadOnly title="Baskı" group={postShoot.printing} />
         ) : null}
       </Section>
 
@@ -289,31 +289,49 @@ function Section({
   );
 }
 
-function PostShootReadOnly({
+function PostShootGroupReadOnly({
   title,
-  section,
+  group,
 }: {
   title: string;
-  section: { pills: string[]; description: string };
+  group: { items: { categoryTitle: string; accentColor: string; pills: string[]; description: string }[] };
 }) {
+  if (group.items.length === 0) return null;
+
   return (
     <div className="mb-4 rounded-xl bg-white/5 p-4">
       <h3 className="text-sm font-medium text-white">{title}</h3>
-      {section.pills.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {section.pills.map((pill) => (
-            <span
-              key={pill}
-              className="rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-300"
+      <div className="mt-3 space-y-3">
+        {group.items.map((block) => (
+          <div
+            key={block.categoryTitle}
+            className="rounded-lg border border-white/10 p-3"
+            style={{ borderColor: `${block.accentColor}44` }}
+          >
+            <h4
+              className="text-sm font-semibold"
+              style={{ color: block.accentColor }}
             >
-              {pill}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {section.description ? (
-        <p className="mt-2 text-sm text-zinc-400">{section.description}</p>
-      ) : null}
+              {block.categoryTitle}
+            </h4>
+            {block.pills.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {block.pills.map((pill) => (
+                  <span
+                    key={pill}
+                    className="rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-300"
+                  >
+                    {pill}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            {block.description ? (
+              <p className="mt-2 text-sm text-zinc-400">{block.description}</p>
+            ) : null}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

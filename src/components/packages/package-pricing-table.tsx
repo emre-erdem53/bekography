@@ -1,19 +1,19 @@
 "use client";
 
 import { formatPrice } from "@/lib/constants";
-import type { PackageOptionData } from "@/lib/package-types";
-import { useCartStore } from "@/stores/cart-store";
+import type { PackageCategoryData } from "@/lib/package-types";
+import {
+  buildCartItemFromCategory,
+  useCartStore,
+} from "@/stores/cart-store";
 
 export function PackagePricingTable({
-  categoryTitle,
-  options,
-  accentColor,
+  category,
 }: {
-  categoryTitle: string;
-  options: PackageOptionData[];
-  accentColor: string;
+  category: PackageCategoryData;
 }) {
   const addItem = useCartStore((state) => state.addItem);
+  const { options, accentColor } = category;
 
   return (
     <div className="space-y-2">
@@ -55,38 +55,13 @@ export function PackagePricingTable({
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                addItem({
-                  packageOptionId: option.id,
-                  categoryTitle,
-                  optionLabel: option.label,
-                  paymentType: "pesin",
-                  unitPrice: option.cashPrice,
-                })
-              }
-              className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white hover:text-black"
-            >
-              Peşin — Sepete Ekle
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                addItem({
-                  packageOptionId: option.id,
-                  categoryTitle,
-                  optionLabel: option.label,
-                  paymentType: "taksitli",
-                  unitPrice: option.installmentPrice,
-                })
-              }
-              className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:bg-white hover:text-black"
-            >
-              Taksitli — Sepete Ekle
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => addItem(buildCartItemFromCategory(category, option))}
+            className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white hover:text-black"
+          >
+            Sepete Ekle
+          </button>
         </div>
       ))}
     </div>

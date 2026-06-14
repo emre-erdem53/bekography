@@ -1,16 +1,27 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { Phone } from "lucide-react";
+import { useCartStore } from "@/stores/cart-store";
 
 const PHONE_TEL = "+905469370464";
 const WHATSAPP_NUMBER = "905469370464";
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=Merhaba%20Bekography%2C%20bilgi%20almak%20istiyorum.`;
 
 export function FloatingContactButtons() {
+  const pathname = usePathname();
+  const cartCount = useCartStore((state) => state.items.length);
+  const onPackagesRoute = pathname.startsWith("/paketler");
+  const raised = onPackagesRoute && cartCount > 0;
+
   return (
-    <div className="fixed bottom-5 right-4 z-[70] flex flex-col gap-2 md:right-5">
+    <div
+      className={`fixed right-4 z-[55] flex flex-col gap-2 md:right-5 ${
+        raised ? "bottom-28" : "bottom-5"
+      }`}
+    >
       <motion.a
         href={WHATSAPP_LINK}
         target="_blank"

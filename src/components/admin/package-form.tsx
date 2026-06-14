@@ -3,10 +3,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type {
+  PackageCategoryContent,
+  PackageDetailSection,
+  PackageGalleryImage,
+  PackageServiceItem,
+} from "@/lib/package-seed-data";
 import {
   defaultIndoorPostShootTemplates,
   defaultOutdoorPostShootTemplates,
+  defaultRequestFieldLabels,
 } from "@/lib/package-seed-data";
 import type { PostShootSection } from "@/lib/post-shoot";
 import { normalizeHexColor } from "@/lib/color-utils";
@@ -24,6 +30,10 @@ const defaultContent: PackageCategoryContent = {
   afterShootDescription: "",
   scheduleType: "indoor",
   postShootTemplates: defaultIndoorPostShootTemplates(),
+  highlightTags: [],
+  galleryImages: [],
+  detailSections: [],
+  requestFieldLabels: defaultRequestFieldLabels("Paket", "indoor"),
 };
 
 type OptionForm = {
@@ -87,6 +97,15 @@ export function PackageForm({
             (loadedContent.scheduleType === "outdoor"
               ? defaultOutdoorPostShootTemplates()
               : defaultIndoorPostShootTemplates()),
+          highlightTags: loadedContent.highlightTags ?? [],
+          galleryImages: loadedContent.galleryImages ?? [],
+          detailSections: loadedContent.detailSections ?? [],
+          requestFieldLabels:
+            loadedContent.requestFieldLabels ??
+            defaultRequestFieldLabels(
+              data.title,
+              loadedContent.scheduleType ?? "indoor",
+            ),
         });
         setOptions(
           data.options.map(
@@ -128,6 +147,31 @@ export function PackageForm({
     }
   }
 
+  async function handleGalleryUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setContent({
+        ...content,
+        galleryImages: [
+          ...(content.galleryImages ?? []),
+          { url: data.url, alt: title },
+        ],
+      });
+    }
+    event.target.value = "";
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -140,7 +184,7 @@ export function PackageForm({
       return;
     }
 
-    const normalizedContent = {
+    const normalizedContent: PackageCategoryContent = {
       ...content,
       serviceGridColor:
         normalizeHexColor(content.serviceGridColor) ?? content.serviceGridColor,
@@ -149,6 +193,12 @@ export function PackageForm({
       serviceSubTextColor:
         normalizeHexColor(content.serviceSubTextColor) ??
         content.serviceSubTextColor,
+      scheduleType: content.scheduleType ?? "indoor",
+      postShootTemplates:
+        content.postShootTemplates ??
+        (content.scheduleType === "outdoor"
+          ? defaultOutdoorPostShootTemplates()
+          : defaultIndoorPostShootTemplates()),
     };
 
     const payload = {
@@ -333,7 +383,7 @@ export function PackageForm({
             className={inputClass}
           />
         </Field>
-        <Field label="Çekim Sonrası Açıklaması">
+        <Field label="Çekim Sonrası Açıklaması (site)">
           <textarea
             value={content.afterShootDescription}
             onChange={(e) =>
@@ -342,30 +392,256 @@ export function PackageForm({
                 afterShootDescription: e.target.value,
               })
             }
-            rows={4}
+            rows={3}
             className={inputClass}
           />
+          <p className="mt-1 text-xs text-zinc-500">
+            Paketler sayfasında gösterilen genel metin. Rezervasyon formundaki
+            etiketler aşağıdaki şablonlardan gelir.
+          </p>
         </Field>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <h2 className="font-semibold text-white">Çekim Sonrası Şablonları</h2>
-        <p className="text-sm text-zinc-400">
-          Rezervasyon formunda otomatik doldurulacak metinler. Her alt başlık için
-          pill etiketleri ve açıklama metni girin.
-        </p>
+        <div>
+          <h2 className="font-semibold text-white">Müşteri Deneyimi (Mobil)</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Paket detay, İncele ekranı ve sepet/talep formlarında kullanılır.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label="Görünen Başlık (opsiyonel)">
+            <input
+              value={content.displayTitle ?? ""}
+              onChange={(e) =>
+                setContent({ ...content, displayTitle: e.target.value })
+              }
+              placeholder={title || "Paket adı"}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Çekim Bölüm Başlığı">
+            <input
+              value={content.shootTitle}
+              onChange={(e) =>
+                setContent({ ...content, shootTitle: e.target.value })
+              }
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Çekim Sonrası Bölüm Başlığı">
+            <input
+              value={content.afterShootTitle}
+              onChange={(e) =>
+                setContent({ ...content, afterShootTitle: e.target.value })
+              }
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90">
+          <p className="font-medium text-amber-200">Galeri fotoğraf rehberi</p>
+          <p className="mt-1">
+            Önerilen boyut: 1080×1350 px (4:5 dikey), en fazla 2 MB, JPEG veya
+            WebP. Dikey odaklı görseller paket detayındaki kaydırmalı galeride
+            en iyi görünür.
+          </p>
+        </div>
+
+        <Field label="Galeri Görselleri">
+          <div className="space-y-3">
+            {(content.galleryImages ?? []).map((image, index) => (
+              <div
+                key={`${image.url}-${index}`}
+                className="flex items-center gap-3 rounded-xl bg-white/5 p-3"
+              >
+                <img
+                  src={image.url}
+                  alt={image.alt ?? ""}
+                  className="h-16 w-12 rounded-lg object-cover"
+                />
+                <input
+                  value={image.alt ?? ""}
+                  onChange={(e) => {
+                    const next = [...(content.galleryImages ?? [])];
+                    next[index] = { ...next[index], alt: e.target.value };
+                    setContent({ ...content, galleryImages: next });
+                  }}
+                  placeholder="Alt metin (opsiyonel)"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = (content.galleryImages ?? []).filter(
+                      (_, i) => i !== index,
+                    );
+                    setContent({ ...content, galleryImages: next });
+                  }}
+                  className="shrink-0 text-sm text-red-400"
+                >
+                  Sil
+                </button>
+              </div>
+            ))}
+            <input
+              type="file"
+              accept="image/jpeg,image/webp,image/png"
+              onChange={handleGalleryUpload}
+              className="text-sm text-zinc-400"
+            />
+          </div>
+        </Field>
+
+        <TagsEditor
+          title="Detay Etiketleri"
+          tags={content.highlightTags ?? []}
+          onChange={(highlightTags) => setContent({ ...content, highlightTags })}
+        />
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-white">İncele Bölümleri</h3>
+            <button
+              type="button"
+              onClick={() => {
+                const sections = content.detailSections ?? [];
+                setContent({
+                  ...content,
+                  detailSections: [
+                    ...sections,
+                    {
+                      id: crypto.randomUUID(),
+                      title: "",
+                      body: "",
+                      sortOrder: sections.length,
+                    },
+                  ],
+                });
+              }}
+              className="text-sm text-zinc-400 hover:text-white"
+            >
+              + Bölüm Ekle
+            </button>
+          </div>
+          {(content.detailSections ?? [])
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((section, index) => (
+              <div
+                key={section.id}
+                className="space-y-2 rounded-xl border border-white/5 bg-white/5 p-4"
+              >
+                <input
+                  value={section.title}
+                  onChange={(e) => {
+                    const next = [...(content.detailSections ?? [])];
+                    next[index] = { ...next[index], title: e.target.value };
+                    setContent({ ...content, detailSections: next });
+                  }}
+                  placeholder="Başlık"
+                  className={inputClass}
+                />
+                <textarea
+                  value={section.body}
+                  onChange={(e) => {
+                    const next = [...(content.detailSections ?? [])];
+                    next[index] = { ...next[index], body: e.target.value };
+                    setContent({ ...content, detailSections: next });
+                  }}
+                  rows={4}
+                  placeholder="Açıklama metni"
+                  className={inputClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = (content.detailSections ?? []).filter(
+                      (_, i) => i !== index,
+                    );
+                    setContent({ ...content, detailSections: next });
+                  }}
+                  className="text-sm text-red-400"
+                >
+                  Bölümü Sil
+                </button>
+              </div>
+            ))}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field label="Talep Tarih Alanı Etiketi">
+            <input
+              value={content.requestFieldLabels?.dateLabel ?? ""}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  requestFieldLabels: {
+                    dateLabel: e.target.value,
+                    cityLabel:
+                      content.requestFieldLabels?.cityLabel ?? "Şehir",
+                  },
+                })
+              }
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Talep Şehir Alanı Etiketi">
+            <input
+              value={content.requestFieldLabels?.cityLabel ?? ""}
+              onChange={(e) =>
+                setContent({
+                  ...content,
+                  requestFieldLabels: {
+                    dateLabel:
+                      content.requestFieldLabels?.dateLabel ?? "Tarih",
+                    cityLabel: e.target.value,
+                  },
+                })
+              }
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        <ServicesEditor
+          services={content.services}
+          onChange={(services) => setContent({ ...content, services })}
+        />
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
+        <div>
+          <h2 className="font-semibold text-white">Çekim Sonrası</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Rezervasyon formunun 3. bölümünde görünecek etiketler ve açıklamalar.
+            Her paket için Dijital, Düzenleme ve (salon paketlerinde) Baskı alt
+            başlıklarını buradan belirleyin; rezervasyon oluşturulurken seçilen
+            paketlere göre otomatik doldurulur.
+          </p>
+        </div>
         <Field label="Çekim Tipi">
           <select
             value={content.scheduleType ?? "indoor"}
             onChange={(e) => {
               const scheduleType = e.target.value as "outdoor" | "indoor";
+              const current =
+                content.postShootTemplates ?? defaultIndoorPostShootTemplates();
               setContent({
                 ...content,
                 scheduleType,
-                postShootTemplates:
-                  scheduleType === "outdoor"
-                    ? defaultOutdoorPostShootTemplates()
-                    : defaultIndoorPostShootTemplates(),
+                postShootTemplates: {
+                  digital: current.digital,
+                  editing: current.editing,
+                  ...(scheduleType === "indoor"
+                    ? {
+                        printing:
+                          current.printing ??
+                          defaultIndoorPostShootTemplates().printing,
+                      }
+                    : {}),
+                },
               });
             }}
             className={inputClass}
@@ -419,7 +695,11 @@ export function PackageForm({
               })
             }
           />
-        ) : null}
+        ) : (
+          <p className="text-sm text-zinc-500">
+            Dış çekim paketlerinde Baskı şablonu kullanılmaz.
+          </p>
+        )}
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
@@ -495,6 +775,141 @@ export function PackageForm({
   );
 }
 
+function TagsEditor({
+  title,
+  tags,
+  onChange,
+}: {
+  title: string;
+  tags: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [input, setInput] = useState("");
+
+  function addTag() {
+    const value = input.trim();
+    if (!value) return;
+    onChange([...tags, value]);
+    setInput("");
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
+      <h3 className="text-sm font-medium text-white">{title}</h3>
+      <div className="flex flex-wrap gap-2">
+        {tags.map((tag, index) => (
+          <span
+            key={`${tag}-${index}`}
+            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-200"
+          >
+            {tag}
+            <button
+              type="button"
+              onClick={() => onChange(tags.filter((_, i) => i !== index))}
+              className="text-zinc-400 hover:text-white"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addTag();
+            }
+          }}
+          placeholder="Etiket ekle..."
+          className={inputClass}
+        />
+        <button
+          type="button"
+          onClick={addTag}
+          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white"
+        >
+          Ekle
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ServicesEditor({
+  services,
+  onChange,
+}: {
+  services: PackageServiceItem[];
+  onChange: (services: PackageServiceItem[]) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-white">Hizmet Grid</h3>
+        <button
+          type="button"
+          onClick={() =>
+            onChange([
+              ...services,
+              { title: "", subLines: ["", ""], iconKey: "Camera" },
+            ])
+          }
+          className="text-sm text-zinc-400 hover:text-white"
+        >
+          + Hizmet Ekle
+        </button>
+      </div>
+      {services.map((service, index) => (
+        <div key={index} className="grid gap-2 rounded-xl bg-white/5 p-3 md:grid-cols-4">
+          <input
+            value={service.title}
+            onChange={(e) => {
+              const next = [...services];
+              next[index] = { ...next[index], title: e.target.value };
+              onChange(next);
+            }}
+            placeholder="Başlık"
+            className={inputClass}
+          />
+          <input
+            value={service.iconKey}
+            onChange={(e) => {
+              const next = [...services];
+              next[index] = { ...next[index], iconKey: e.target.value };
+              onChange(next);
+            }}
+            placeholder="Lucide ikon"
+            className={inputClass}
+          />
+          <input
+            value={service.subLines.join(", ")}
+            onChange={(e) => {
+              const next = [...services];
+              next[index] = {
+                ...next[index],
+                subLines: e.target.value.split(",").map((s) => s.trim()),
+              };
+              onChange(next);
+            }}
+            placeholder="Alt satırlar (virgülle)"
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(services.filter((_, i) => i !== index))}
+            className="text-sm text-red-400"
+          >
+            Sil
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PostShootSectionEditor({
   title,
   section,
@@ -548,7 +963,7 @@ function PostShootSectionEditor({
               addPill();
             }
           }}
-          placeholder="Pill ekle..."
+          placeholder="Etiket ekle..."
           className={inputClass}
         />
         <button
@@ -566,6 +981,10 @@ function PostShootSectionEditor({
         placeholder="Açıklama metni..."
         className={inputClass}
       />
+      <p className="text-xs text-zinc-500">
+        Etiketleri yazıp Enter veya Ekle ile ekleyin. Rezervasyon formunda bu
+        başlık altında görünür.
+      </p>
     </div>
   );
 }

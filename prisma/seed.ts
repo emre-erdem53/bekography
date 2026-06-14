@@ -1,12 +1,31 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { seedPackageCategories } from "../src/lib/package-seed-data";
+import {
+  defaultRequestFieldLabels,
+  seedPackageCategories,
+} from "../src/lib/package-seed-data";
 
 const prisma = new PrismaClient();
+
+function enrichContent(
+  category: (typeof seedPackageCategories)[number],
+): Prisma.InputJsonValue {
+  const scheduleType = category.content.scheduleType ?? "indoor";
+  return {
+    ...category.content,
+    requestFieldLabels:
+      category.content.requestFieldLabels ??
+      defaultRequestFieldLabels(category.title, scheduleType),
+    highlightTags: category.content.highlightTags ?? [],
+    galleryImages: category.content.galleryImages ?? [],
+    detailSections: category.content.detailSections ?? [],
+  } as Prisma.InputJsonValue;
+}
 
 async function main() {
   console.log("Seeding package categories...");
 
   for (const category of seedPackageCategories) {
+    const content = enrichContent(category);
     await prisma.packageCategory.upsert({
       where: { slug: category.slug },
       update: {
@@ -17,7 +36,7 @@ async function main() {
         backgroundImageUrl: category.backgroundImage ?? null,
         heroImageUrl: category.heroImage ?? null,
         sortOrder: category.sortOrder,
-        content: category.content as Prisma.InputJsonValue,
+        content,
         isActive: true,
       },
       create: {
@@ -29,7 +48,7 @@ async function main() {
         backgroundImageUrl: category.backgroundImage ?? null,
         heroImageUrl: category.heroImage ?? null,
         sortOrder: category.sortOrder,
-        content: category.content as Prisma.InputJsonValue,
+        content,
         isActive: true,
         options: {
           create: category.options.map((option, index) => ({
