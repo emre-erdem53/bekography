@@ -1,4 +1,13 @@
 import { z } from "zod";
+import { isValidHexColor, normalizeHexColor } from "@/lib/color-utils";
+
+const hexColorSchema = z
+  .string()
+  .min(1)
+  .refine((value) => isValidHexColor(value), {
+    message: "Geçerli bir hex renk kodu girin (örn. #ff9a5e)",
+  })
+  .transform((value) => normalizeHexColor(value)!);
 
 export const createRequestSchema = z.object({
   customerName: z.string().min(2, "Ad soyad en az 2 karakter olmalı"),
@@ -22,7 +31,7 @@ export const updateRequestStatusSchema = z.object({
 export const packageCategorySchema = z.object({
   title: z.string().min(1),
   slug: z.string().min(1).optional(),
-  accentColor: z.string().min(1),
+  accentColor: hexColorSchema,
   iconKey: z.string().min(1),
   highlight: z.boolean().optional(),
   backgroundImageUrl: z.string().nullable().optional(),

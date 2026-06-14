@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import { normalizeHexColor } from "@/lib/color-utils";
+import { HexColorInput } from "@/components/admin/hex-color-input";
 
 const defaultContent: PackageCategoryContent = {
   tagline: "",
@@ -53,14 +55,26 @@ export function PackageForm({
       .then((res) => res.json())
       .then((data) => {
         setTitle(data.title);
-        setAccentColor(data.accentColor);
+        setAccentColor(normalizeHexColor(data.accentColor) ?? data.accentColor);
         setIconKey(data.iconKey);
         setHighlight(data.highlight);
         setBackgroundImageUrl(data.backgroundImageUrl ?? "");
         setHeroImageUrl(data.heroImageUrl ?? "");
         setSortOrder(data.sortOrder);
         setIsActive(data.isActive);
-        setContent((data.content as PackageCategoryContent) ?? defaultContent);
+        const loadedContent = (data.content as PackageCategoryContent) ?? defaultContent;
+        setContent({
+          ...loadedContent,
+          serviceGridColor:
+            normalizeHexColor(loadedContent.serviceGridColor) ??
+            loadedContent.serviceGridColor,
+          serviceTextColor:
+            normalizeHexColor(loadedContent.serviceTextColor) ??
+            loadedContent.serviceTextColor,
+          serviceSubTextColor:
+            normalizeHexColor(loadedContent.serviceSubTextColor) ??
+            loadedContent.serviceSubTextColor,
+        });
         setOptions(
           data.options.map(
             (option: {
@@ -106,16 +120,34 @@ export function PackageForm({
     setSaving(true);
     setError("");
 
+    const normalizedAccent = normalizeHexColor(accentColor);
+    if (!normalizedAccent) {
+      setError("Accent renk geçerli bir hex kodu olmalı (örn. #ff9a5e)");
+      setSaving(false);
+      return;
+    }
+
+    const normalizedContent = {
+      ...content,
+      serviceGridColor:
+        normalizeHexColor(content.serviceGridColor) ?? content.serviceGridColor,
+      serviceTextColor:
+        normalizeHexColor(content.serviceTextColor) ?? content.serviceTextColor,
+      serviceSubTextColor:
+        normalizeHexColor(content.serviceSubTextColor) ??
+        content.serviceSubTextColor,
+    };
+
     const payload = {
       title,
-      accentColor,
+      accentColor: normalizedAccent,
       iconKey,
       highlight,
       backgroundImageUrl: backgroundImageUrl || null,
       heroImageUrl: heroImageUrl || null,
       sortOrder,
       isActive,
-      content,
+      content: normalizedContent,
       options: options.map((option, index) => ({
         ...(option.id ? { id: option.id } : {}),
         label: option.label,
@@ -177,13 +209,8 @@ export function PackageForm({
             className={inputClass}
           />
         </Field>
-        <Field label="Accent Renk">
-          <input
-            type="color"
-            value={accentColor}
-            onChange={(e) => setAccentColor(e.target.value)}
-            className="h-11 w-full rounded-xl border border-white/10 bg-[#141414]"
-          />
+        <Field label="Accent Renk (#hex)">
+          <HexColorInput value={accentColor} onChange={setAccentColor} />
         </Field>
         <Field label="İkon (Lucide adı)">
           <input
@@ -257,6 +284,32 @@ export function PackageForm({
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
         <h2 className="font-semibold text-white">İçerik</h2>
+        <div className="grid gap-4 md:grid-cols-3">
+          <Field label="Hizmet Kutusu Rengi (#hex)">
+            <HexColorInput
+              value={content.serviceGridColor}
+              onChange={(value) =>
+                setContent({ ...content, serviceGridColor: value })
+              }
+            />
+          </Field>
+          <Field label="Hizmet Yazı Rengi (#hex)">
+            <HexColorInput
+              value={content.serviceTextColor}
+              onChange={(value) =>
+                setContent({ ...content, serviceTextColor: value })
+              }
+            />
+          </Field>
+          <Field label="Hizmet Alt Yazı Rengi (#hex)">
+            <HexColorInput
+              value={content.serviceSubTextColor}
+              onChange={(value) =>
+                setContent({ ...content, serviceSubTextColor: value })
+              }
+            />
+          </Field>
+        </div>
         <Field label="Çekim Açıklaması">
           <textarea
             value={content.shootDescription}

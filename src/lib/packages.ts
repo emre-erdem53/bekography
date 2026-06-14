@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { normalizeHexColor } from "@/lib/color-utils";
 
 export async function getActivePackages() {
   return prisma.packageCategory.findMany({
@@ -31,7 +32,7 @@ export function serializePackageCategories(
     id: category.id,
     slug: category.slug,
     title: category.title,
-    accentColor: category.accentColor,
+    accentColor: normalizeHexColor(category.accentColor) ?? category.accentColor,
     iconKey: category.iconKey,
     highlight: category.highlight,
     backgroundImageUrl: category.backgroundImageUrl,
