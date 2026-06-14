@@ -111,7 +111,7 @@ const imageCarouselGroups: Array<{ files: string[]; url: string }> = [
     url: "https://www.instagram.com/p/DNvIB9MWCGJ/?igsh=MTM5dWx2YWx0MHZyNw==",
   },
   {
-    files: ["2.jpg", "3.jpg", "4.jpg", "5.jpg"],
+    files: ["1.jpg", "2.jpg", "3.jpg", "4.jpg", "5.jpg"],
     url: "https://www.instagram.com/p/DMBSKU1tsjk/?igsh=cGZycjJ0MTEyZ2F0",
   },
 ];
@@ -256,9 +256,6 @@ function getBasePattern(item: ExploreMediaItem): DisplayPattern {
   }
   if (item.fileName === "haziran-1.png") {
     return { colSpan: 2, rowSpan: 3 };
-  }
-  if (item.fileName === "1.jpg") {
-    return { colSpan: 2, rowSpan: 2 };
   }
   if (item.fileName === "6.jpg") {
     return { colSpan: 1, rowSpan: 2 };
