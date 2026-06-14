@@ -89,8 +89,8 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
       </div>
 
       <div className="grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
-        <Info label="Ad Soyad" value={request.customerName} />
-        <Info label="Telefon" value={request.customerPhone} />
+        <Info label="Gelin & Damat" value={request.customerName} />
+        <Info label="Telefonlar" value={request.customerPhone} />
         <Info label="Şehir" value={request.city} />
         <Info
           label="Çekim Tarihi"

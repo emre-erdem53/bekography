@@ -140,17 +140,17 @@ export function PackagesHero({
       </section>
       */}
 
-      <section className="mx-auto max-w-2xl px-4 pb-16 pt-4">
+      <section className="mx-auto w-full max-w-2xl px-4 pb-16 pt-4 sm:max-w-3xl sm:px-6 lg:max-w-4xl xl:max-w-5xl">
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
             Paketler
           </p>
-          <h1 className="mt-3 text-3xl font-semibold md:text-4xl">
+          <h1 className="mt-3 text-3xl font-semibold md:text-4xl lg:text-5xl">
             Paket Oluştur
           </h1>
         </div>
 
-        <div className="mt-8 space-y-2">
+        <div className="mt-8 grid gap-2 sm:gap-3 lg:grid-cols-2 lg:gap-4">
           {categories.map((category) => {
             const Icon = getPackageIcon(category.iconKey);
 
@@ -159,29 +159,29 @@ export function PackagesHero({
                 key={category.id}
                 type="button"
                 onClick={() => setSelectedCategory(category)}
-                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors md:px-5 md:py-5 ${
                   category.highlight
                     ? "border-amber-300/60 bg-amber-400/10 hover:bg-amber-400/15"
                     : "border-white/10 bg-[#0a0a0a] hover:bg-[#111]"
                 }`}
               >
                 <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl md:h-12 md:w-12"
                   style={{ backgroundColor: `${category.accentColor}22` }}
                 >
                   <Icon
-                    className="h-5 w-5"
+                    className="h-5 w-5 md:h-6 md:w-6"
                     style={{ color: category.accentColor }}
                   />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span
-                    className="block text-base font-semibold"
+                    className="block text-base font-semibold md:text-lg"
                     style={{ color: category.accentColor }}
                   >
                     {category.title}
                   </span>
-                  <span className="block text-sm text-zinc-400">
+                  <span className="block text-sm text-zinc-400 md:text-base">
                     {getCategoryPriceLabel(category)}
                   </span>
                 </span>

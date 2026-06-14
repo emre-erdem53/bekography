@@ -16,7 +16,9 @@ export async function POST(request: Request) {
       );
     }
 
-    const { customerName, customerPhone, items } = parsed.data;
+    const { brideName, bridePhone, groomName, groomPhone, items } = parsed.data;
+    const customerName = `${brideName} & ${groomName}`;
+    const customerPhone = `Gelin: ${bridePhone} | Damat: ${groomPhone}`;
 
     const options = await prisma.packageOption.findMany({
       where: {

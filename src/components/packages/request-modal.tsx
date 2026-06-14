@@ -24,6 +24,13 @@ type RequestModalProps = {
 type CategoryFields = Record<string, { shootDate: string; city: string }>;
 type PaymentFields = Record<string, "pesin" | "taksitli">;
 
+const emptyForm = {
+  brideName: "",
+  bridePhone: "",
+  groomName: "",
+  groomPhone: "",
+};
+
 export function RequestModal({
   open,
   onClose,
@@ -56,7 +63,7 @@ export function RequestModal({
   const categories = useMemo(() => {
     const map = new Map<
       string,
-      { categoryId: string; dateLabel: string; cityLabel: string }
+      { categoryId: string; dateLabel: string; cityLabel: string; title: string }
     >();
     for (const item of items) {
       if (!map.has(item.categoryId)) {
@@ -64,19 +71,31 @@ export function RequestModal({
           categoryId: item.categoryId,
           dateLabel: item.dateLabel,
           cityLabel: item.cityLabel,
+          title: item.categoryTitle,
         });
       }
     }
     return [...map.values()];
   }, [items]);
 
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [brideName, setBrideName] = useState("");
+  const [bridePhone, setBridePhone] = useState("");
+  const [groomName, setGroomName] = useState("");
+  const [groomPhone, setGroomPhone] = useState("");
   const [categoryFields, setCategoryFields] = useState<CategoryFields>({});
   const [paymentFields, setPaymentFields] = useState<PaymentFields>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -93,19 +112,50 @@ export function RequestModal({
     });
   }, [open, itemIdsKey, items]);
 
+  function resetForm() {
+    setBrideName(emptyForm.brideName);
+    setBridePhone(emptyForm.bridePhone);
+    setGroomName(emptyForm.groomName);
+    setGroomPhone(emptyForm.groomPhone);
+    setCategoryFields({});
+    setPaymentFields({});
+    setError("");
+    setSuccess(false);
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
 
+    const missingCategory = categories.find((category) => {
+      const fields = categoryFields[category.categoryId];
+      return !fields?.city?.trim() || !fields?.shootDate;
+    });
+
+    if (missingCategory) {
+      setLoading(false);
+      setError(`${missingCategory.title} için tarih ve şehir bilgisi zorunludur.`);
+      return;
+    }
+
+    const missingPayment = items.find(
+      (item) => !paymentFields[item.packageOptionId],
+    );
+    if (missingPayment) {
+      setLoading(false);
+      setError("Her paket için ödeme tipi seçin.");
+      return;
+    }
+
     const payloadItems = items.map((item) => {
       const category = categoryFields[item.categoryId];
-      const paymentType = paymentFields[item.packageOptionId] ?? "pesin";
+      const paymentType = paymentFields[item.packageOptionId]!;
       return {
         packageOptionId: item.packageOptionId,
         paymentType,
-        shootDate: category?.shootDate ?? "",
-        city: category?.city ?? "",
+        shootDate: category.shootDate,
+        city: category.city.trim(),
       };
     });
 
@@ -113,8 +163,10 @@ export function RequestModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerName,
-        customerPhone,
+        brideName: brideName.trim(),
+        bridePhone: bridePhone.trim(),
+        groomName: groomName.trim(),
+        groomPhone: groomPhone.trim(),
         items: payloadItems,
       }),
     });
@@ -128,11 +180,12 @@ export function RequestModal({
     }
 
     const message = buildRequestWhatsAppMessage(
-      customerName,
+      brideName.trim(),
+      groomName.trim(),
       items.map((item) => ({
         categoryTitle: item.categoryTitle,
         optionLabel: item.optionLabel,
-        paymentType: paymentFields[item.packageOptionId] ?? "pesin",
+        paymentType: paymentFields[item.packageOptionId]!,
       })),
     );
 
@@ -142,8 +195,7 @@ export function RequestModal({
   }
 
   function handleClose() {
-    setSuccess(false);
-    setError("");
+    resetForm();
     onClose();
   }
 
@@ -154,7 +206,7 @@ export function RequestModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[90] flex items-end justify-center bg-black/70 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[90] flex items-end justify-center overflow-hidden bg-black/70 p-0 sm:items-center sm:p-4"
           onClick={handleClose}
         >
           <motion.div
@@ -162,7 +214,7 @@ export function RequestModal({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
             onClick={(event) => event.stopPropagation()}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl border border-white/10 bg-[#111] p-6 sm:rounded-2xl"
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-2xl border border-white/10 bg-[#111] p-6 sm:max-w-xl sm:rounded-2xl lg:max-w-2xl"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Talep Oluştur</h2>
@@ -170,6 +222,7 @@ export function RequestModal({
                 type="button"
                 onClick={handleClose}
                 className="text-zinc-400 hover:text-white"
+                aria-label="Kapat"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -191,112 +244,145 @@ export function RequestModal({
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-                <Field label="Ad Soyad">
-                  <input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    required
-                    className={inputClass}
-                  />
-                </Field>
-                <Field label="Telefon">
-                  <input
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    required
-                    className={inputClass}
-                  />
-                </Field>
-
-                {categories.map((category) => (
-                  <div
-                    key={category.categoryId}
-                    className="space-y-3 rounded-xl border border-white/10 bg-black/40 p-4"
-                  >
-                    <Field label={category.cityLabel}>
+                <FormSection title="Gelin Bilgileri">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Gelin Ad Soyad" required>
                       <input
-                        value={categoryFields[category.categoryId]?.city ?? ""}
-                        onChange={(e) =>
-                          setCategoryFields((prev) => ({
-                            ...prev,
-                            [category.categoryId]: {
-                              shootDate:
-                                prev[category.categoryId]?.shootDate ?? "",
-                              city: e.target.value,
-                            },
-                          }))
-                        }
+                        value={brideName}
+                        onChange={(e) => setBrideName(e.target.value)}
                         required
+                        minLength={2}
                         className={inputClass}
                       />
                     </Field>
-                    <Field label={category.dateLabel}>
+                    <Field label="Gelin Telefon" required>
                       <input
-                        type="date"
-                        value={categoryFields[category.categoryId]?.shootDate ?? ""}
-                        onChange={(e) =>
-                          setCategoryFields((prev) => ({
-                            ...prev,
-                            [category.categoryId]: {
-                              city: prev[category.categoryId]?.city ?? "",
-                              shootDate: e.target.value,
-                            },
-                          }))
-                        }
+                        type="tel"
+                        value={bridePhone}
+                        onChange={(e) => setBridePhone(e.target.value)}
                         required
+                        minLength={10}
                         className={inputClass}
                       />
                     </Field>
                   </div>
+                </FormSection>
+
+                <FormSection title="Damat Bilgileri">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Damat Ad Soyad" required>
+                      <input
+                        value={groomName}
+                        onChange={(e) => setGroomName(e.target.value)}
+                        required
+                        minLength={2}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Damat Telefon" required>
+                      <input
+                        type="tel"
+                        value={groomPhone}
+                        onChange={(e) => setGroomPhone(e.target.value)}
+                        required
+                        minLength={10}
+                        className={inputClass}
+                      />
+                    </Field>
+                  </div>
+                </FormSection>
+
+                {categories.map((category) => (
+                  <FormSection key={category.categoryId} title={category.title}>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Field label={category.cityLabel} required>
+                        <input
+                          value={categoryFields[category.categoryId]?.city ?? ""}
+                          onChange={(e) =>
+                            setCategoryFields((prev) => ({
+                              ...prev,
+                              [category.categoryId]: {
+                                shootDate:
+                                  prev[category.categoryId]?.shootDate ?? "",
+                                city: e.target.value,
+                              },
+                            }))
+                          }
+                          required
+                          minLength={2}
+                          className={inputClass}
+                        />
+                      </Field>
+                      <Field label={category.dateLabel} required>
+                        <input
+                          type="date"
+                          value={
+                            categoryFields[category.categoryId]?.shootDate ?? ""
+                          }
+                          onChange={(e) =>
+                            setCategoryFields((prev) => ({
+                              ...prev,
+                              [category.categoryId]: {
+                                city: prev[category.categoryId]?.city ?? "",
+                                shootDate: e.target.value,
+                              },
+                            }))
+                          }
+                          required
+                          className={inputClass}
+                        />
+                      </Field>
+                    </div>
+                  </FormSection>
                 ))}
 
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-white">Ödeme Tipi</p>
-                  {items.map((item) => {
-                    const paymentType =
-                      paymentFields[item.packageOptionId] ?? "pesin";
-                    const price =
-                      paymentType === "pesin"
-                        ? item.cashPrice
-                        : item.installmentPrice;
+                <FormSection title="Ödeme Tipi">
+                  <div className="space-y-3">
+                    {items.map((item) => {
+                      const paymentType =
+                        paymentFields[item.packageOptionId] ?? "pesin";
+                      const price =
+                        paymentType === "pesin"
+                          ? item.cashPrice
+                          : item.installmentPrice;
 
-                    return (
-                      <div
-                        key={item.packageOptionId}
-                        className="rounded-xl border border-white/10 bg-black/40 p-4"
-                      >
-                        <p className="text-sm font-medium text-white">
-                          {item.categoryTitle} — {item.optionLabel}
-                        </p>
-                        <div className="mt-3 flex gap-2">
-                          {(["pesin", "taksitli"] as const).map((type) => (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() =>
-                                setPaymentFields((prev) => ({
-                                  ...prev,
-                                  [item.packageOptionId]: type,
-                                }))
-                              }
-                              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium ${
-                                paymentType === type
-                                  ? "border-white bg-white text-black"
-                                  : "border-white/20 text-zinc-400"
-                              }`}
-                            >
-                              {PAYMENT_TYPE_LABELS[type]}
-                            </button>
-                          ))}
+                      return (
+                        <div
+                          key={item.packageOptionId}
+                          className="rounded-xl border border-white/10 bg-black/40 p-4"
+                        >
+                          <p className="text-sm font-medium text-white">
+                            {item.categoryTitle} — {item.optionLabel}
+                          </p>
+                          <div className="mt-3 flex gap-2">
+                            {(["pesin", "taksitli"] as const).map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() =>
+                                  setPaymentFields((prev) => ({
+                                    ...prev,
+                                    [item.packageOptionId]: type,
+                                  }))
+                                }
+                                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium ${
+                                  paymentType === type
+                                    ? "border-white bg-white text-black"
+                                    : "border-white/20 text-zinc-400"
+                                }`}
+                              >
+                                {PAYMENT_TYPE_LABELS[type]}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="mt-2 text-sm text-zinc-400">
+                            {formatPrice(price)}
+                          </p>
                         </div>
-                        <p className="mt-2 text-sm text-zinc-400">
-                          {formatPrice(price)}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                </FormSection>
 
                 {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
@@ -316,16 +402,36 @@ export function RequestModal({
   );
 }
 
+function FormSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3 rounded-xl border border-white/10 bg-black/40 p-4">
+      <h3 className="text-sm font-medium text-white">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 function Field({
   label,
+  required,
   children,
 }: {
   label: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-sm text-zinc-400">{label}</span>
+      <span className="text-sm text-zinc-400">
+        {label}
+        {required ? <span className="text-red-400"> *</span> : null}
+      </span>
       {children}
     </label>
   );

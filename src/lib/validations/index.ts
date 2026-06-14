@@ -26,8 +26,10 @@ const tcSchema = z
   .or(z.literal(""));
 
 export const createRequestSchema = z.object({
-  customerName: z.string().min(2, "Ad soyad en az 2 karakter olmalı"),
-  customerPhone: z.string().min(10, "Geçerli bir telefon numarası girin"),
+  brideName: z.string().min(2, "Gelin ad soyad en az 2 karakter olmalı"),
+  bridePhone: z.string().min(10, "Gelin telefonu en az 10 haneli olmalı"),
+  groomName: z.string().min(2, "Damat ad soyad en az 2 karakter olmalı"),
+  groomPhone: z.string().min(10, "Damat telefonu en az 10 haneli olmalı"),
   items: z
     .array(
       z.object({

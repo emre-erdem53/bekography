@@ -7,7 +7,8 @@ type CartItemForMessage = {
 };
 
 export function buildRequestWhatsAppMessage(
-  customerName: string,
+  brideName: string,
+  groomName: string,
   items: CartItemForMessage[],
 ) {
   const packageList = items
@@ -17,7 +18,7 @@ export function buildRequestWhatsAppMessage(
     )
     .join(", ");
 
-  return `Merhabalar, ben ${customerName}. ${packageList} için sizden bilgi almak ve iletişime geçmek istiyorum.`;
+  return `Merhabalar, ben ${brideName} (gelin) ve ${groomName} (damat). ${packageList} için sizden bilgi almak ve iletişime geçmek istiyorum.`;
 }
 
 export function buildWhatsAppUrl(message: string) {
