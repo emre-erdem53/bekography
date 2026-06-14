@@ -248,9 +248,9 @@ export function PackageForm({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">
+          <h1 className="text-xl font-semibold text-white sm:text-2xl">
             {packageId ? "Paket Düzenle" : "Yeni Paket"}
           </h1>
           <p className="mt-1 text-sm text-zinc-400">Temel bilgiler ve fiyatlar</p>
@@ -325,7 +325,7 @@ export function PackageForm({
             className="mt-2 text-sm text-zinc-400"
           />
         </Field>
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <label className="flex items-center gap-2 text-sm text-zinc-300">
             <input
               type="checkbox"
@@ -455,7 +455,7 @@ export function PackageForm({
             {(content.galleryImages ?? []).map((image, index) => (
               <div
                 key={`${image.url}-${index}`}
-                className="flex items-center gap-3 rounded-xl bg-white/5 p-3"
+                className="flex flex-col gap-3 rounded-xl bg-white/5 p-3 sm:flex-row sm:items-center"
               >
                 <img
                   src={image.url}
@@ -502,7 +502,7 @@ export function PackageForm({
         />
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-medium text-white">İncele Bölümleri</h3>
             <button
               type="button"
@@ -703,7 +703,7 @@ export function PackageForm({
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="font-semibold text-white">Fiyat Seçenekleri</h2>
           <button
             type="button"
@@ -767,7 +767,7 @@ export function PackageForm({
       <button
         type="submit"
         disabled={saving}
-        className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50"
+        className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50 sm:w-auto"
       >
         {saving ? "Kaydediliyor..." : "Kaydet"}
       </button>
@@ -847,7 +847,7 @@ function ServicesEditor({
 }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h3 className="text-sm font-medium text-white">Hizmet Grid</h3>
         <button
           type="button"

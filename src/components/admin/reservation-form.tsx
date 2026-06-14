@@ -464,7 +464,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         <p className="mt-2 text-xs uppercase tracking-widest text-zinc-500">
           Sipariş Formu
         </p>
-        <h1 className="mt-1 text-2xl font-semibold text-white">
+        <h1 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
           {isEditing ? `${coupleTitle} — Düzenle` : "Yeni Rezervasyon"}
         </h1>
       </div>
@@ -547,7 +547,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       </Section>
 
       <Section title="2. Çekim Hizmeti">
-        <div className="mb-4 flex justify-end">
+        <div className="mb-4">
           <select
             onChange={(e) => {
               if (e.target.value) {
@@ -555,7 +555,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 e.target.value = "";
               }
             }}
-            className="rounded-lg border border-white/10 bg-[#141414] px-3 py-2 text-sm text-white"
+            className="w-full rounded-lg border border-white/10 bg-[#141414] px-3 py-2 text-sm text-white sm:max-w-xs sm:ml-auto sm:block"
             defaultValue=""
           >
             <option value="">Paket ekle...</option>
@@ -806,7 +806,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         </div>
 
         <div className="mt-4 space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-sm font-medium text-white">Ödeme Vadeleri</h3>
             <button
               type="button"
@@ -820,7 +820,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             </button>
           </div>
           {installments.map((row, index) => (
-            <div key={index} className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+            <div key={index} className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_1fr_auto]">
               <Field label={`Ödenecek Tutar ${index + 1} (₺)`}>
                 <input
                   type="number"
@@ -853,7 +853,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                   onClick={() =>
                     setInstallments((prev) => prev.filter((_, i) => i !== index))
                   }
-                  className="mt-6 rounded-lg p-2 text-zinc-400 hover:text-red-400"
+                  className="self-end rounded-lg p-2 text-zinc-400 hover:text-red-400 sm:mt-6"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -879,7 +879,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       <button
         type="submit"
         disabled={saving || dateConflicts.length > 0 || items.length === 0}
-        className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50"
+        className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50 sm:w-auto"
       >
         {saving
           ? isEditing

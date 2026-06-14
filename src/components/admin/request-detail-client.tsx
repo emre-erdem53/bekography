@@ -71,12 +71,12 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <Link href="/admin/talepler" className="text-sm text-zinc-400 hover:text-white">
             ← Talepler
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-white">
+          <h1 className="mt-2 text-xl font-semibold text-white sm:text-2xl">
             Talep #{request.publicId}
           </h1>
         </div>
@@ -84,6 +84,7 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
           value={request.status}
           options={statusOptions}
           onChange={updateStatus}
+          className="sm:min-w-[10rem]"
         />
       </div>
 
@@ -107,7 +108,7 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
               key={index}
               className="rounded-xl bg-white/5 px-4 py-3 text-sm"
             >
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <span className="text-zinc-300">
                   {item.packageOption.category.title} — {item.packageOption.label}{" "}
                   ({PAYMENT_TYPE_LABELS[item.paymentType]})
@@ -138,7 +139,7 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
       {request.status === "onaylandi" && !request.reservation ? (
         <Link
           href={`/admin/rezervasyonlar/yeni?requestId=${request.id}`}
-          className="inline-flex rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black sm:w-auto"
         >
           Rezervasyon Oluştur
         </Link>

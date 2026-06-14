@@ -27,6 +27,15 @@ type RequestItem = {
   reservation: { id: string } | null;
 };
 
+function formatPackages(request: RequestItem) {
+  return request.items
+    .map(
+      (item) =>
+        `${item.packageOption.category.title} - ${item.packageOption.label} (${PAYMENT_TYPE_LABELS[item.paymentType]})`,
+    )
+    .join(", ");
+}
+
 export function RequestsAdminClient() {
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +71,7 @@ export function RequestsAdminClient() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Talepler</h1>
+        <h1 className="text-xl font-semibold text-white sm:text-2xl">Talepler</h1>
         <p className="mt-1 text-sm text-zinc-400">Müşteri taleplerini yönetin</p>
       </div>
 
@@ -71,59 +80,103 @@ export function RequestsAdminClient() {
       ) : requests.length === 0 ? (
         <p className="text-zinc-500">Henüz talep yok.</p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-white/10">
-          <table className="min-w-full text-left text-sm">
-            <thead className="bg-[#0f0f0f] text-zinc-400">
-              <tr>
-                <th className="px-4 py-3 font-medium">Müşteri</th>
-                <th className="px-4 py-3 font-medium">Tarih</th>
-                <th className="px-4 py-3 font-medium">Şehir</th>
-                <th className="px-4 py-3 font-medium">Paketler</th>
-                <th className="px-4 py-3 font-medium">Durum</th>
-                <th className="px-4 py-3 font-medium" />
-              </tr>
-            </thead>
-            <tbody>
-              {requests.map((request) => (
-                <tr key={request.id} className="border-t border-white/5">
-                  <td className="px-4 py-3 text-white">
-                    <p>{request.customerName}</p>
+        <>
+          <div className="space-y-3 md:hidden">
+            {requests.map((request) => (
+              <article
+                key={request.id}
+                className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-white">{request.customerName}</p>
                     <p className="text-xs text-zinc-500">{request.customerPhone}</p>
-                  </td>
-                  <td className="px-4 py-3 text-zinc-300">
-                    {format(new Date(request.shootDate), "d MMM yyyy", {
-                      locale: tr,
-                    })}
-                  </td>
-                  <td className="px-4 py-3 text-zinc-300">{request.city}</td>
-                  <td className="max-w-xs px-4 py-3 text-zinc-400">
-                    {request.items
-                      .map(
-                        (item) =>
-                          `${item.packageOption.category.title} - ${item.packageOption.label} (${PAYMENT_TYPE_LABELS[item.paymentType]})`,
-                      )
-                      .join(", ")}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusSelect
-                      value={request.status}
-                      options={statusOptions}
-                      onChange={(status) => updateStatus(request.id, status)}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/talepler/${request.id}`}
-                      className="text-zinc-400 hover:text-white"
-                    >
-                      Detay
-                    </Link>
-                  </td>
+                  </div>
+                  <Link
+                    href={`/admin/talepler/${request.id}`}
+                    className="shrink-0 text-sm text-zinc-400 hover:text-white"
+                  >
+                    Detay →
+                  </Link>
+                </div>
+                <dl className="mt-4 space-y-2 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-zinc-500">Tarih</dt>
+                    <dd className="text-right text-zinc-300">
+                      {format(new Date(request.shootDate), "d MMM yyyy", {
+                        locale: tr,
+                      })}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-zinc-500">Şehir</dt>
+                    <dd className="text-right text-zinc-300">{request.city}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-zinc-500">Paketler</dt>
+                    <dd className="mt-1 text-zinc-400">{formatPackages(request)}</dd>
+                  </div>
+                </dl>
+                <div className="mt-4">
+                  <StatusSelect
+                    value={request.status}
+                    options={statusOptions}
+                    onChange={(status) => updateStatus(request.id, status)}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto rounded-2xl border border-white/10 md:block">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-[#0f0f0f] text-zinc-400">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Müşteri</th>
+                  <th className="px-4 py-3 font-medium">Tarih</th>
+                  <th className="px-4 py-3 font-medium">Şehir</th>
+                  <th className="px-4 py-3 font-medium">Paketler</th>
+                  <th className="px-4 py-3 font-medium">Durum</th>
+                  <th className="px-4 py-3 font-medium" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {requests.map((request) => (
+                  <tr key={request.id} className="border-t border-white/5">
+                    <td className="px-4 py-3 text-white">
+                      <p>{request.customerName}</p>
+                      <p className="text-xs text-zinc-500">{request.customerPhone}</p>
+                    </td>
+                    <td className="px-4 py-3 text-zinc-300">
+                      {format(new Date(request.shootDate), "d MMM yyyy", {
+                        locale: tr,
+                      })}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-300">{request.city}</td>
+                    <td className="max-w-xs px-4 py-3 text-zinc-400">
+                      {formatPackages(request)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusSelect
+                        value={request.status}
+                        options={statusOptions}
+                        onChange={(status) => updateStatus(request.id, status)}
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/talepler/${request.id}`}
+                        className="text-zinc-400 hover:text-white"
+                      >
+                        Detay
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

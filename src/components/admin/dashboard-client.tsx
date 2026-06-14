@@ -48,7 +48,7 @@ export function DashboardClient() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold text-white">Dashboard</h1>
+        <h1 className="text-xl font-semibold text-white sm:text-2xl">Dashboard</h1>
         <p className="mt-1 text-sm text-zinc-400">Genel özet ve uyarılar</p>
       </div>
 

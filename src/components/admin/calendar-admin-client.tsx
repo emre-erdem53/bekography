@@ -6,6 +6,7 @@ import {
   Calendar,
   dateFnsLocalizer,
   type Event as CalendarEvent,
+  type View,
 } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -29,11 +30,31 @@ type ReservationEvent = CalendarEvent & {
   };
 };
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
 export function CalendarAdminClient() {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [events, setEvents] = useState<ReservationEvent[]>([]);
   const [date, setDate] = useState(new Date());
+  const [view, setView] = useState<View>("month");
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setView(isMobile ? "agenda" : "month");
+  }, [isMobile]);
 
   const loadEvents = useCallback(async (currentDate: Date) => {
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -85,9 +106,9 @@ export function CalendarAdminClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Takvimim</h1>
+          <h1 className="text-xl font-semibold text-white sm:text-2xl">Takvimim</h1>
           <p className="mt-1 text-sm text-zinc-400">
             Rezervasyonları takvimde görüntüleyin
           </p>
@@ -95,7 +116,7 @@ export function CalendarAdminClient() {
         <button
           type="button"
           onClick={() => router.push("/admin/rezervasyonlar/yeni")}
-          className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black"
+          className="w-full rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
         >
           Yeni Rezervasyon
         </button>
@@ -104,31 +125,36 @@ export function CalendarAdminClient() {
       {loading ? (
         <p className="text-zinc-400">Yükleniyor...</p>
       ) : (
-        <div className="admin-calendar overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">
-          <Calendar
-            localizer={localizer}
-            culture="tr"
-            events={events}
-            startAccessor="start"
-            endAccessor="end"
-            style={{ height: 650 }}
-            date={date}
-            onNavigate={setDate}
-            messages={messages}
-            onSelectEvent={(event) =>
-              router.push(
-                `/admin/rezervasyonlar/${(event as ReservationEvent).resource.reservationId}`,
-              )
-            }
-            eventPropGetter={() => ({
-              style: {
-                backgroundColor: "#ffffff",
-                color: "#000000",
-                border: "none",
-                borderRadius: "8px",
-              },
-            })}
-          />
+        <div className="admin-calendar overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f0f] p-2 sm:p-4">
+          <div className="h-[min(70vh,650px)] min-h-[420px]">
+            <Calendar
+              localizer={localizer}
+              culture="tr"
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: "100%" }}
+              date={date}
+              view={view}
+              onView={setView}
+              onNavigate={setDate}
+              messages={messages}
+              views={isMobile ? ["agenda", "month"] : undefined}
+              onSelectEvent={(event) =>
+                router.push(
+                  `/admin/rezervasyonlar/${(event as ReservationEvent).resource.reservationId}`,
+                )
+              }
+              eventPropGetter={() => ({
+                style: {
+                  backgroundColor: "#ffffff",
+                  color: "#000000",
+                  border: "none",
+                  borderRadius: "8px",
+                },
+              })}
+            />
+          </div>
         </div>
       )}
     </div>

@@ -121,9 +121,9 @@ export function ReservationDetailClient({
           >
             ← Rezervasyonlar
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-white">{coupleName}</h1>
+          <h1 className="mt-2 text-xl font-semibold text-white sm:text-2xl">{coupleName}</h1>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
@@ -138,14 +138,14 @@ export function ReservationDetailClient({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">
-        <p className="flex-1 truncate text-sm text-zinc-400">
+      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 sm:flex-row sm:items-center">
+        <p className="min-w-0 flex-1 break-all text-sm text-zinc-400 sm:truncate">
           {reservation.trackingUrl}
         </p>
         <button
           type="button"
           onClick={copyLink}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black"
+          className="w-full shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black sm:w-auto"
         >
           {copied ? "Kopyalandı!" : "Takip Linkini Kopyala"}
         </button>

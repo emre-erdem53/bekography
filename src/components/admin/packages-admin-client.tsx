@@ -27,16 +27,16 @@ export function PackagesAdminClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Paketler</h1>
+          <h1 className="text-xl font-semibold text-white sm:text-2xl">Paketler</h1>
           <p className="mt-1 text-sm text-zinc-400">
             Paket kategorilerini yönetin
           </p>
         </div>
         <Link
           href="/admin/paketler/yeni"
-          className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
         >
           <Plus className="h-4 w-4" />
           Yeni Paket

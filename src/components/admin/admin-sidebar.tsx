@@ -9,10 +9,18 @@ import {
   LogOut,
   Package,
   CalendarCheck,
+  type LucideIcon,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
-const navItems = [
+export type AdminNavItem = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  exact?: boolean;
+};
+
+export const adminNavItems: AdminNavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/paketler", label: "Paketler", icon: Package },
   { href: "/admin/talepler", label: "Talepler", icon: ClipboardList },
@@ -20,11 +28,26 @@ const navItems = [
   { href: "/admin/rezervasyonlar", label: "Rezervasyonlar", icon: CalendarCheck },
 ];
 
-export function AdminSidebar() {
+export function getAdminPageTitle(pathname: string) {
+  if (pathname === "/admin") return "Dashboard";
+  if (pathname.startsWith("/admin/paketler/yeni")) return "Yeni Paket";
+  if (pathname.match(/^\/admin\/paketler\/[^/]+$/)) return "Paket Düzenle";
+  if (pathname.startsWith("/admin/paketler")) return "Paketler";
+  if (pathname.match(/^\/admin\/talepler\/[^/]+$/)) return "Talep Detayı";
+  if (pathname.startsWith("/admin/talepler")) return "Talepler";
+  if (pathname.startsWith("/admin/takvim")) return "Takvimim";
+  if (pathname.includes("/rezervasyonlar/yeni")) return "Yeni Rezervasyon";
+  if (pathname.includes("/duzenle")) return "Rezervasyon Düzenle";
+  if (pathname.match(/^\/admin\/rezervasyonlar\/[^/]+$/)) return "Rezervasyon";
+  if (pathname.startsWith("/admin/rezervasyonlar")) return "Rezervasyonlar";
+  return "Yönetim Paneli";
+}
+
+export function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-white/10 bg-[#0a0a0a]">
+    <>
       <div className="border-b border-white/10 px-5 py-6">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
           Bekography
@@ -32,8 +55,8 @@ export function AdminSidebar() {
         <h1 className="mt-1 text-lg font-semibold text-white">Yönetim Paneli</h1>
       </div>
 
-      <nav className="flex-1 space-y-1 p-3">
-        {navItems.map((item) => {
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+        {adminNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = item.exact
             ? pathname === item.href
@@ -43,13 +66,14 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                 isActive
                   ? "bg-white text-black"
                   : "text-zinc-400 hover:bg-white/5 hover:text-white"
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-4 w-4 shrink-0" />
               {item.label}
             </Link>
           );
@@ -62,10 +86,18 @@ export function AdminSidebar() {
           onClick={() => signOut({ callbackUrl: "/admin/login" })}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4 shrink-0" />
           Çıkış Yap
         </button>
       </div>
+    </>
+  );
+}
+
+export function AdminSidebar() {
+  return (
+    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/10 bg-[#0a0a0a] md:flex">
+      <AdminNav />
     </aside>
   );
 }
