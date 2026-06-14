@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 // import {
 //   BadgeCheck,
@@ -17,7 +16,7 @@ import type { PackageCategoryData } from "@/lib/package-types";
 import { getPackageIcon } from "@/components/packages/package-icon";
 import { PackageCartBar } from "@/components/packages/package-cart-bar";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
-import { getCategoryPriceLabel, packageMediaUrl } from "@/lib/package-media";
+import { getCategoryPriceLabel } from "@/lib/package-media";
 import { useCartStore } from "@/stores/cart-store";
 
 // type PackageFeature = {
@@ -112,7 +111,7 @@ export function PackagesHero({
 
   return (
     <main
-      className={`flex-1 bg-black text-white ${cartCount > 0 ? "pb-28" : "pb-10"}`}
+      className={`flex-1 bg-black pt-24 text-white ${cartCount > 0 ? "pb-28" : "pb-10"}`}
     >
       {/* Neden Bekography — geçici olarak gizlendi, konum daha sonra düşünülecek
       <section className="mx-auto max-w-6xl px-4 py-10 md:py-14">
@@ -141,7 +140,7 @@ export function PackagesHero({
       </section>
       */}
 
-      <section className="mx-auto max-w-2xl px-4 pb-16 pt-8 md:pt-10">
+      <section className="mx-auto max-w-2xl px-4 pb-16 pt-4">
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
             Paketler
@@ -154,14 +153,13 @@ export function PackagesHero({
         <div className="mt-8 space-y-2">
           {categories.map((category) => {
             const Icon = getPackageIcon(category.iconKey);
-            const backgroundImage = packageMediaUrl(category.backgroundImageUrl);
 
             return (
               <button
                 key={category.id}
                 type="button"
                 onClick={() => setSelectedCategory(category)}
-                className={`relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-4 py-4 text-left transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors ${
                   category.highlight
                     ? "border-amber-300/60 bg-amber-400/10 hover:bg-amber-400/15"
                     : "border-white/10 bg-[#0a0a0a] hover:bg-[#111]"
@@ -187,16 +185,6 @@ export function PackagesHero({
                     {getCategoryPriceLabel(category)}
                   </span>
                 </span>
-                {backgroundImage ? (
-                  <Image
-                    src={backgroundImage}
-                    alt=""
-                    width={72}
-                    height={48}
-                    className="h-12 w-16 shrink-0 rounded-lg object-cover opacity-40"
-                    aria-hidden
-                  />
-                ) : null}
               </button>
             );
           })}

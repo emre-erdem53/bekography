@@ -30,8 +30,13 @@ export function RequestModal({
   itemsOverride,
   clearCartOnSuccess = true,
 }: RequestModalProps) {
-  const cartItems = useCartStore((state) => state.getSelectedItems());
+  const cartItems = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
+
+  const selectedCartItems = useMemo(
+    () => cartItems.filter((item) => item.selected),
+    [cartItems],
+  );
 
   const items: CartItem[] = useMemo(() => {
     if (itemsOverride?.length) {
@@ -40,8 +45,13 @@ export function RequestModal({
         selected: item.selected ?? true,
       }));
     }
-    return cartItems;
-  }, [itemsOverride, cartItems]);
+    return selectedCartItems;
+  }, [itemsOverride, selectedCartItems]);
+
+  const itemIdsKey = useMemo(
+    () => items.map((item) => item.packageOptionId).join(","),
+    [items],
+  );
 
   const categories = useMemo(() => {
     const map = new Map<
@@ -71,15 +81,17 @@ export function RequestModal({
   useEffect(() => {
     if (!open) return;
     setPaymentFields((prev) => {
+      let changed = false;
       const next = { ...prev };
       for (const item of items) {
         if (!next[item.packageOptionId]) {
           next[item.packageOptionId] = "pesin";
+          changed = true;
         }
       }
-      return next;
+      return changed ? next : prev;
     });
-  }, [open, items]);
+  }, [open, itemIdsKey, items]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
