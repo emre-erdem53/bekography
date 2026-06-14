@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { formatCoupleName } from "@/lib/reservations";
 import { startOfDay, endOfDay } from "date-fns";
 
 export async function GET() {
@@ -15,37 +16,56 @@ export async function GET() {
     const [
       pendingRequests,
       activeReservations,
-      todayShoots,
-      upcomingShoots,
+      todayItems,
+      upcomingItems,
     ] = await Promise.all([
       prisma.request.count({ where: { status: "yeni" } }),
       prisma.reservation.count({
         where: { status: { notIn: ["iptal", "teslim_edildi"] } },
       }),
-      prisma.reservation.findMany({
+      prisma.reservationItem.findMany({
         where: {
           shootDate: { gte: todayStart, lte: todayEnd },
-          status: { not: "iptal" },
+          reservation: { status: { not: "iptal" } },
         },
         orderBy: { shootDate: "asc" },
+        include: {
+          packageOption: { include: { category: true } },
+          reservation: true,
+        },
       }),
-      prisma.reservation.findMany({
+      prisma.reservationItem.findMany({
         where: {
           shootDate: { gt: todayEnd },
-          status: { notIn: ["iptal", "teslim_edildi"] },
+          reservation: { status: { notIn: ["iptal", "teslim_edildi"] } },
         },
         orderBy: { shootDate: "asc" },
         take: 5,
+        include: {
+          packageOption: { include: { category: true } },
+          reservation: true,
+        },
       }),
     ]);
+
+    const mapShoot = (item: (typeof todayItems)[number]) => ({
+      id: item.reservationId,
+      itemId: item.id,
+      customerName: formatCoupleName(
+        item.reservation.brideName,
+        item.reservation.groomName,
+      ),
+      shootDate: item.shootDate,
+      packageTitle: item.packageOption.category.title,
+    });
 
     return NextResponse.json({
       stats: {
         pendingRequests,
         activeReservations,
       },
-      todayShoots,
-      upcomingShoots,
+      todayShoots: todayItems.map(mapShoot),
+      upcomingShoots: upcomingItems.map(mapShoot),
     });
   } catch (error) {
     console.error("GET /api/admin/dashboard", error);

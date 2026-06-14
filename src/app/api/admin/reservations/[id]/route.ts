@@ -4,13 +4,47 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
   addReservationStatusHistory,
-  isShootDateTaken,
+  findShootDateConflicts,
   getTrackingUrl,
 } from "@/lib/reservations";
 import {
   updateReservationSchema,
   updateReservationStatusSchema,
 } from "@/lib/validations";
+
+function mapItemCreate(
+  reservationId: string,
+  item: {
+    packageOptionId: string;
+    paymentType: "pesin" | "taksitli";
+    unitPrice: number;
+    shootDate: string;
+    shootContent: string;
+    readyTime?: string;
+    location?: string;
+    agreedUnitPrice: number;
+    departureTime?: string | null;
+    arrivalTime?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
+  },
+) {
+  return {
+    reservationId,
+    packageOptionId: item.packageOptionId,
+    paymentType: item.paymentType,
+    unitPrice: item.unitPrice,
+    shootDate: startOfDay(new Date(item.shootDate)),
+    shootContent: item.shootContent,
+    readyTime: item.readyTime ?? "",
+    location: item.location ?? "",
+    agreedUnitPrice: item.agreedUnitPrice,
+    departureTime: item.departureTime ?? null,
+    arrivalTime: item.arrivalTime ?? null,
+    startTime: item.startTime ?? null,
+    endTime: item.endTime ?? null,
+  };
+}
 
 export async function GET(
   _request: Request,
@@ -28,7 +62,9 @@ export async function GET(
           include: {
             packageOption: { include: { category: true } },
           },
+          orderBy: { shootDate: "asc" },
         },
+        installments: { orderBy: { sortOrder: "asc" } },
         request: {
           include: {
             items: {
@@ -117,29 +153,37 @@ export async function PATCH(
       );
     }
 
-    if (data.shootDate) {
-      const shootDate = startOfDay(new Date(data.shootDate));
-      if (await isShootDateTaken(shootDate, id)) {
+    if (data.items) {
+      const conflicts = await findShootDateConflicts(
+        data.items.map((item) => item.shootDate),
+        id,
+      );
+
+      if (conflicts.length > 0) {
         return NextResponse.json(
           {
-            error: "Bu tarih için zaten bir rezervasyon bulunmaktadır.",
+            error: "Seçilen tarihlerden biri veya birkaçı için zaten rezervasyon bulunmaktadır.",
             code: "DATE_CONFLICT",
+            conflicts,
           },
           { status: 409 },
         );
       }
     }
 
-    const updated = await prisma.reservation.update({
+    await prisma.reservation.update({
       where: { id },
       data: {
-        customerName: data.customerName,
-        customerPhone: data.customerPhone,
-        city: data.city,
-        shootDate: data.shootDate
-          ? startOfDay(new Date(data.shootDate))
-          : undefined,
-        agreedPrice: data.agreedPrice,
+        brideName: data.brideName,
+        brideTc: data.brideTc,
+        bridePhone: data.bridePhone,
+        groomName: data.groomName,
+        groomTc: data.groomTc,
+        groomPhone: data.groomPhone,
+        totalPrice: data.totalPrice,
+        cancellationFeeMax: data.cancellationFeeMax,
+        discountAmount: data.discountAmount,
+        postShoot: data.postShoot,
         notes: data.notes !== undefined ? data.notes : undefined,
         status: data.status,
       },
@@ -152,11 +196,20 @@ export async function PATCH(
     if (data.items) {
       await prisma.reservationItem.deleteMany({ where: { reservationId: id } });
       await prisma.reservationItem.createMany({
-        data: data.items.map((item) => ({
+        data: data.items.map((item) => mapItemCreate(id, item)),
+      });
+    }
+
+    if (data.installments) {
+      await prisma.reservationPaymentInstallment.deleteMany({
+        where: { reservationId: id },
+      });
+      await prisma.reservationPaymentInstallment.createMany({
+        data: data.installments.map((installment, index) => ({
           reservationId: id,
-          packageOptionId: item.packageOptionId,
-          paymentType: item.paymentType,
-          unitPrice: item.unitPrice,
+          amount: installment.amount,
+          dueDate: startOfDay(new Date(installment.dueDate)),
+          sortOrder: index,
         })),
       });
     }
@@ -168,7 +221,9 @@ export async function PATCH(
           include: {
             packageOption: { include: { category: true } },
           },
+          orderBy: { shootDate: "asc" },
         },
+        installments: { orderBy: { sortOrder: "asc" } },
       },
     });
 

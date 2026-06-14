@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { formatCoupleName } from "@/lib/reservations";
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -11,9 +12,9 @@ export async function GET(request: Request) {
     const start = searchParams.get("start");
     const end = searchParams.get("end");
 
-    const reservations = await prisma.reservation.findMany({
+    const items = await prisma.reservationItem.findMany({
       where: {
-        status: { not: "iptal" },
+        reservation: { status: { not: "iptal" } },
         ...(start && end
           ? {
               shootDate: {
@@ -25,20 +26,20 @@ export async function GET(request: Request) {
       },
       orderBy: { shootDate: "asc" },
       include: {
-        items: {
-          include: {
-            packageOption: { include: { category: true } },
-          },
-        },
+        packageOption: { include: { category: true } },
+        reservation: true,
       },
     });
 
-    const events = reservations.map((reservation) => ({
-      id: reservation.id,
-      title: `${reservation.customerName} — ${reservation.city}`,
-      start: reservation.shootDate,
-      end: reservation.shootDate,
-      resource: reservation,
+    const events = items.map((item) => ({
+      id: item.id,
+      title: `${formatCoupleName(item.reservation.brideName, item.reservation.groomName)} — ${item.packageOption.category.title}`,
+      start: item.shootDate,
+      end: item.shootDate,
+      resource: {
+        reservationId: item.reservationId,
+        item,
+      },
     }));
 
     return NextResponse.json(events);
@@ -61,13 +62,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Tarih gerekli" }, { status: 400 });
     }
 
-    const existing = await prisma.reservation.findFirst({
+    const existing = await prisma.reservationItem.findFirst({
       where: {
         shootDate: new Date(shootDate),
-        status: { not: "iptal" },
-        ...(excludeReservationId
-          ? { id: { not: excludeReservationId } }
-          : {}),
+        reservation: {
+          status: { not: "iptal" },
+          ...(excludeReservationId
+            ? { id: { not: excludeReservationId } }
+            : {}),
+        },
       },
     });
 

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Pencil } from "lucide-react";
 import type { ReservationStatus } from "@prisma/client";
 import { StatusSelect } from "@/components/admin/status-select";
 import {
@@ -12,26 +11,43 @@ import {
   PAYMENT_TYPE_LABELS,
   formatPrice,
 } from "@/lib/constants";
+import { formatCoupleName } from "@/lib/reservations";
+import { parsePostShootSnapshot } from "@/lib/post-shoot";
 
 type ReservationDetail = {
   id: string;
   trackingSlug: string;
   trackingUrl: string;
-  customerName: string;
-  customerPhone: string;
-  city: string;
-  shootDate: string;
-  agreedPrice: number;
+  brideName: string;
+  brideTc: string;
+  bridePhone: string;
+  groomName: string;
+  groomTc: string;
+  groomPhone: string;
+  totalPrice: number;
+  cancellationFeeMax: number;
+  discountAmount: number;
+  postShoot: unknown;
   status: ReservationStatus;
   notes: string | null;
   items: {
     paymentType: "pesin" | "taksitli";
     unitPrice: number;
+    shootDate: string;
+    shootContent: string;
+    readyTime: string;
+    location: string;
+    agreedUnitPrice: number;
+    departureTime: string | null;
+    arrivalTime: string | null;
+    startTime: string | null;
+    endTime: string | null;
     packageOption: {
       label: string;
-      category: { title: string };
+      category: { title: string; slug: string; accentColor: string };
     };
   }[];
+  installments: { amount: number; dueDate: string }[];
   statusHistory: { status: ReservationStatus; changedAt: string }[];
 };
 
@@ -92,8 +108,11 @@ export function ReservationDetailClient({
     }),
   );
 
+  const postShoot = parsePostShootSnapshot(reservation.postShoot);
+  const coupleName = formatCoupleName(reservation.brideName, reservation.groomName);
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <Link
@@ -102,16 +121,13 @@ export function ReservationDetailClient({
           >
             ← Rezervasyonlar
           </Link>
-          <h1 className="mt-2 text-2xl font-semibold text-white">
-            {reservation.customerName}
-          </h1>
+          <h1 className="mt-2 text-2xl font-semibold text-white">{coupleName}</h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
           >
-            <Pencil className="h-4 w-4" />
             Düzenle
           </Link>
           <StatusSelect
@@ -135,42 +151,113 @@ export function ReservationDetailClient({
         </button>
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
-        <Info label="Telefon" value={reservation.customerPhone} />
-        <Info label="Şehir" value={reservation.city} />
-        <Info
-          label="Çekim Tarihi"
-          value={format(new Date(reservation.shootDate), "d MMMM yyyy", {
-            locale: tr,
-          })}
-        />
-        <Info label="Anlaşılan Tutar" value={formatPrice(reservation.agreedPrice)} />
-        {reservation.notes ? (
-          <Info label="Notlar" value={reservation.notes} />
-        ) : null}
-      </div>
+      <Section title="Müşteri Bilgileri">
+        <div className="grid gap-4 md:grid-cols-2">
+          <Info label="Damat" value={reservation.groomName} />
+          <Info label="Damat TC" value={reservation.groomTc || "—"} />
+          <Info label="Damat Tel" value={reservation.groomPhone} />
+          <div />
+          <Info label="Gelin" value={reservation.brideName} />
+          <Info label="Gelin TC" value={reservation.brideTc || "—"} />
+          <Info label="Gelin Tel" value={reservation.bridePhone} />
+          {reservation.notes ? <Info label="Notlar" value={reservation.notes} /> : null}
+        </div>
+      </Section>
 
-      <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <h2 className="font-semibold text-white">Paketler</h2>
-        <ul className="mt-4 space-y-2">
+      <Section title="Çekim Hizmeti">
+        <div className="space-y-3">
           {reservation.items.map((item, index) => (
+            <div
+              key={index}
+              className="rounded-xl border border-white/10 p-4"
+              style={{ borderColor: `${item.packageOption.category.accentColor}55` }}
+            >
+              <h3
+                className="font-semibold"
+                style={{ color: item.packageOption.category.accentColor }}
+              >
+                {item.packageOption.category.title} — {item.shootContent}
+              </h3>
+              <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+                <p className="text-zinc-400">
+                  Çekim:{" "}
+                  <span className="text-white">
+                    {format(new Date(item.shootDate), "d MMMM yyyy", { locale: tr })}
+                  </span>
+                </p>
+                <p className="text-zinc-400">
+                  Fiyat:{" "}
+                  <span className="text-white">
+                    {formatPrice(item.agreedUnitPrice)} (
+                    {PAYMENT_TYPE_LABELS[item.paymentType]})
+                  </span>
+                </p>
+                {item.readyTime ? (
+                  <p className="text-zinc-400">
+                    Hazır: <span className="text-white">{item.readyTime}</span>
+                  </p>
+                ) : null}
+                {item.location ? (
+                  <p className="text-zinc-400">
+                    Lokasyon: <span className="text-white">{item.location}</span>
+                  </p>
+                ) : null}
+                {item.departureTime && item.arrivalTime ? (
+                  <p className="text-zinc-400">
+                    Rize:{" "}
+                    <span className="text-white">
+                      {item.departureTime} — {item.arrivalTime}
+                    </span>
+                  </p>
+                ) : null}
+                {item.startTime && item.endTime ? (
+                  <p className="text-zinc-400">
+                    Saat:{" "}
+                    <span className="text-white">
+                      {item.startTime} — {item.endTime}
+                    </span>
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Çekim Sonrası">
+        <PostShootReadOnly title="Dijital" section={postShoot.digital} />
+        <PostShootReadOnly title="Düzenleme" section={postShoot.editing} />
+        {postShoot.printing ? (
+          <PostShootReadOnly title="Baskı" section={postShoot.printing} />
+        ) : null}
+      </Section>
+
+      <Section title="Ödeme Planı">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Info label="Toplam Fiyat" value={formatPrice(reservation.totalPrice)} />
+          <Info
+            label="Cayma Bedeli Maks."
+            value={formatPrice(reservation.cancellationFeeMax)}
+          />
+          <Info label="İndirim" value={formatPrice(reservation.discountAmount)} />
+        </div>
+        <ul className="mt-4 space-y-2">
+          {reservation.installments.map((row, index) => (
             <li
               key={index}
               className="flex justify-between rounded-xl bg-white/5 px-4 py-3 text-sm"
             >
               <span className="text-zinc-300">
-                {item.packageOption.category.title} — {item.packageOption.label} (
-                {PAYMENT_TYPE_LABELS[item.paymentType]})
+                {format(new Date(row.dueDate), "d MMMM yyyy", { locale: tr })}
               </span>
-              <span className="text-white">{formatPrice(item.unitPrice)}</span>
+              <span className="text-white">{formatPrice(row.amount)}</span>
             </li>
           ))}
         </ul>
-      </div>
+      </Section>
 
-      <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <h2 className="font-semibold text-white">Durum Geçmişi</h2>
-        <ul className="mt-4 space-y-2">
+      <Section title="Durum Geçmişi">
+        <ul className="space-y-2">
           {reservation.statusHistory.map((entry, index) => (
             <li key={index} className="flex justify-between text-sm text-zinc-400">
               <span>{RESERVATION_STATUS_LABELS[entry.status]}</span>
@@ -182,7 +269,51 @@ export function ReservationDetailClient({
             </li>
           ))}
         </ul>
-      </div>
+      </Section>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
+      <h2 className="font-semibold text-white">{title}</h2>
+      <div className="mt-4">{children}</div>
+    </div>
+  );
+}
+
+function PostShootReadOnly({
+  title,
+  section,
+}: {
+  title: string;
+  section: { pills: string[]; description: string };
+}) {
+  return (
+    <div className="mb-4 rounded-xl bg-white/5 p-4">
+      <h3 className="text-sm font-medium text-white">{title}</h3>
+      {section.pills.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {section.pills.map((pill) => (
+            <span
+              key={pill}
+              className="rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-300"
+            >
+              {pill}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {section.description ? (
+        <p className="mt-2 text-sm text-zinc-400">{section.description}</p>
+      ) : null}
     </div>
   );
 }

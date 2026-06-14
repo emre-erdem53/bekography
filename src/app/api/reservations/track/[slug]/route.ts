@@ -5,6 +5,7 @@ import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ORDER,
 } from "@/lib/constants";
+import { formatCoupleName } from "@/lib/reservations";
 
 export async function GET(
   _request: Request,
@@ -20,6 +21,7 @@ export async function GET(
           include: {
             packageOption: { include: { category: true } },
           },
+          orderBy: { shootDate: "asc" },
         },
         statusHistory: { orderBy: { changedAt: "asc" } },
       },
@@ -45,10 +47,15 @@ export async function GET(
       isCurrent: status === reservation.status,
     }));
 
+    const earliestShoot = reservation.items[0]?.shootDate ?? new Date();
+
     return NextResponse.json({
-      customerName: reservation.customerName,
-      city: reservation.city,
-      shootDate: reservation.shootDate,
+      customerName: formatCoupleName(
+        reservation.brideName,
+        reservation.groomName,
+      ),
+      city: reservation.items[0]?.location ?? "",
+      shootDate: earliestShoot,
       status: reservation.status,
       statusLabel: RESERVATION_STATUS_LABELS[reservation.status],
       timeline,
@@ -56,6 +63,7 @@ export async function GET(
         categoryTitle: item.packageOption.category.title,
         optionLabel: item.packageOption.label,
         paymentType: PAYMENT_TYPE_LABELS[item.paymentType],
+        shootDate: item.shootDate,
       })),
     });
   } catch (error) {

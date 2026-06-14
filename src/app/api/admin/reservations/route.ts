@@ -5,14 +5,40 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
   addReservationStatusHistory,
-  isShootDateTaken,
+  findShootDateConflicts,
   getTrackingUrl,
 } from "@/lib/reservations";
-import {
-  createReservationSchema,
-  updateReservationStatusSchema,
-  updateReservationSchema,
-} from "@/lib/validations";
+import { createReservationSchema } from "@/lib/validations";
+
+function mapItemCreate(item: {
+  packageOptionId: string;
+  paymentType: "pesin" | "taksitli";
+  unitPrice: number;
+  shootDate: string;
+  shootContent: string;
+  readyTime?: string;
+  location?: string;
+  agreedUnitPrice: number;
+  departureTime?: string | null;
+  arrivalTime?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+}) {
+  return {
+    packageOptionId: item.packageOptionId,
+    paymentType: item.paymentType,
+    unitPrice: item.unitPrice,
+    shootDate: startOfDay(new Date(item.shootDate)),
+    shootContent: item.shootContent,
+    readyTime: item.readyTime ?? "",
+    location: item.location ?? "",
+    agreedUnitPrice: item.agreedUnitPrice,
+    departureTime: item.departureTime ?? null,
+    arrivalTime: item.arrivalTime ?? null,
+    startTime: item.startTime ?? null,
+    endTime: item.endTime ?? null,
+  };
+}
 
 export async function GET() {
   const authResult = await requireAdmin();
@@ -20,13 +46,15 @@ export async function GET() {
 
   try {
     const reservations = await prisma.reservation.findMany({
-      orderBy: { shootDate: "desc" },
+      orderBy: { createdAt: "desc" },
       include: {
         items: {
           include: {
             packageOption: { include: { category: true } },
           },
+          orderBy: { shootDate: "asc" },
         },
+        installments: { orderBy: { sortOrder: "asc" } },
         request: true,
       },
     });
@@ -57,13 +85,16 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
-    const shootDate = startOfDay(new Date(data.shootDate));
+    const conflicts = await findShootDateConflicts(
+      data.items.map((item) => item.shootDate),
+    );
 
-    if (await isShootDateTaken(shootDate)) {
+    if (conflicts.length > 0) {
       return NextResponse.json(
         {
-          error: "Bu tarih için zaten bir rezervasyon bulunmaktadır.",
+          error: "Seçilen tarihlerden biri veya birkaçı için zaten rezervasyon bulunmaktadır.",
           code: "DATE_CONFLICT",
+          conflicts,
         },
         { status: 409 },
       );
@@ -73,17 +104,25 @@ export async function POST(request: Request) {
       data: {
         trackingSlug: nanoid(12),
         requestId: data.requestId ?? null,
-        customerName: data.customerName,
-        customerPhone: data.customerPhone,
-        city: data.city,
-        shootDate,
-        agreedPrice: data.agreedPrice,
+        brideName: data.brideName,
+        brideTc: data.brideTc ?? "",
+        bridePhone: data.bridePhone,
+        groomName: data.groomName,
+        groomTc: data.groomTc ?? "",
+        groomPhone: data.groomPhone,
+        totalPrice: data.totalPrice,
+        cancellationFeeMax: data.cancellationFeeMax,
+        discountAmount: data.discountAmount,
+        postShoot: data.postShoot,
         notes: data.notes ?? null,
         items: {
-          create: data.items.map((item) => ({
-            packageOptionId: item.packageOptionId,
-            paymentType: item.paymentType,
-            unitPrice: item.unitPrice,
+          create: data.items.map(mapItemCreate),
+        },
+        installments: {
+          create: data.installments.map((installment, index) => ({
+            amount: installment.amount,
+            dueDate: startOfDay(new Date(installment.dueDate)),
+            sortOrder: index,
           })),
         },
         statusHistory: {
@@ -96,6 +135,7 @@ export async function POST(request: Request) {
             packageOption: { include: { category: true } },
           },
         },
+        installments: { orderBy: { sortOrder: "asc" } },
       },
     });
 

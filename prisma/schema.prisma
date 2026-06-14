@@ -92,23 +92,28 @@ model RequestItem {
 }
 
 model Reservation {
-  id             String                    @id @default(cuid())
-  trackingSlug   String                    @unique
-  requestId      String?                   @unique
-  customerName   String
-  customerPhone  String
-  city           String
-  shootDate      DateTime                  @db.Date
-  agreedPrice    Int
-  status         ReservationStatus         @default(planlandi)
-  notes          String?
-  createdAt      DateTime                  @default(now())
-  updatedAt      DateTime                  @updatedAt
-  request        Request?                  @relation(fields: [requestId], references: [id], onDelete: SetNull)
-  items          ReservationItem[]
-  statusHistory  ReservationStatusHistory[]
+  id                  String                       @id @default(cuid())
+  trackingSlug        String                       @unique
+  requestId           String?                      @unique
+  brideName           String
+  brideTc             String                       @default("")
+  bridePhone          String
+  groomName           String
+  groomTc             String                       @default("")
+  groomPhone          String
+  totalPrice          Int
+  cancellationFeeMax  Int                          @default(0)
+  discountAmount      Int                          @default(0)
+  postShoot           Json                         @default("{}")
+  status              ReservationStatus            @default(planlandi)
+  notes               String?
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  request             Request?                     @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  items               ReservationItem[]
+  installments        ReservationPaymentInstallment[]
+  statusHistory       ReservationStatusHistory[]
 
-  @@index([shootDate])
   @@index([status])
 }
 
@@ -118,8 +123,29 @@ model ReservationItem {
   packageOptionId String
   paymentType     PaymentType
   unitPrice       Int
+  shootDate       DateTime      @db.Date
+  shootContent    String
+  readyTime       String        @default("")
+  location        String        @default("")
+  agreedUnitPrice Int
+  departureTime   String?
+  arrivalTime     String?
+  startTime       String?
+  endTime         String?
   reservation     Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
+
+  @@index([reservationId])
+  @@index([shootDate])
+}
+
+model ReservationPaymentInstallment {
+  id            String      @id @default(cuid())
+  reservationId String
+  amount        Int
+  dueDate       DateTime    @db.Date
+  sortOrder     Int         @default(0)
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@index([reservationId])
 }

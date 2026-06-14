@@ -10,15 +10,35 @@ export async function isShootDateTaken(
     typeof shootDate === "string" ? new Date(shootDate) : shootDate,
   );
 
-  const existing = await prisma.reservation.findFirst({
+  const existing = await prisma.reservationItem.findFirst({
     where: {
       shootDate: date,
-      status: { not: "iptal" },
-      ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
+      reservation: {
+        status: { not: "iptal" },
+        ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
+      },
     },
   });
 
   return !!existing;
+}
+
+export async function findShootDateConflicts(
+  shootDates: (Date | string)[],
+  excludeReservationId?: string,
+) {
+  const conflicts: string[] = [];
+
+  for (const shootDate of shootDates) {
+    if (await isShootDateTaken(shootDate, excludeReservationId)) {
+      const date = startOfDay(
+        typeof shootDate === "string" ? new Date(shootDate) : shootDate,
+      );
+      conflicts.push(date.toISOString().split("T")[0]);
+    }
+  }
+
+  return conflicts;
 }
 
 export async function addReservationStatusHistory(
@@ -33,4 +53,11 @@ export async function addReservationStatusHistory(
 export function getTrackingUrl(slug: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   return `${base}/takip/${slug}`;
+}
+
+export function formatCoupleName(brideName: string, groomName: string) {
+  const bride = brideName.trim();
+  const groom = groomName.trim();
+  if (bride && groom) return `${bride} & ${groom}`;
+  return bride || groom || "Rezervasyon";
 }

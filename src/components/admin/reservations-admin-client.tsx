@@ -10,16 +10,38 @@ import {
   RESERVATION_STATUS_LABELS,
   formatPrice,
 } from "@/lib/constants";
+import { formatCoupleName } from "@/lib/reservations";
+
+type ReservationItem = {
+  shootDate: string;
+};
 
 type Reservation = {
   id: string;
   trackingSlug: string;
-  customerName: string;
-  city: string;
-  shootDate: string;
-  agreedPrice: number;
+  brideName: string;
+  groomName: string;
+  totalPrice: number;
   status: ReservationStatus;
+  items: ReservationItem[];
 };
+
+function formatShootDates(items: ReservationItem[]) {
+  if (items.length === 0) return "—";
+  const dates = [...items]
+    .map((item) => item.shootDate)
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
+  if (dates.length === 1) {
+    return format(new Date(dates[0]), "d MMM yyyy", { locale: tr });
+  }
+
+  const first = format(new Date(dates[0]), "d MMM", { locale: tr });
+  const last = format(new Date(dates[dates.length - 1]), "d MMM yyyy", {
+    locale: tr,
+  });
+  return `${first} — ${last}`;
+}
 
 export function ReservationsAdminClient() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -75,9 +97,8 @@ export function ReservationsAdminClient() {
           <table className="min-w-full text-left text-sm">
             <thead className="bg-[#0f0f0f] text-zinc-400">
               <tr>
-                <th className="px-4 py-3 font-medium">Müşteri</th>
-                <th className="px-4 py-3 font-medium">Tarih</th>
-                <th className="px-4 py-3 font-medium">Şehir</th>
+                <th className="px-4 py-3 font-medium">Çift</th>
+                <th className="px-4 py-3 font-medium">Çekim Tarihleri</th>
                 <th className="px-4 py-3 font-medium">Tutar</th>
                 <th className="px-4 py-3 font-medium">Durum</th>
                 <th className="px-4 py-3 font-medium" />
@@ -86,15 +107,17 @@ export function ReservationsAdminClient() {
             <tbody>
               {reservations.map((reservation) => (
                 <tr key={reservation.id} className="border-t border-white/5">
-                  <td className="px-4 py-3 text-white">{reservation.customerName}</td>
-                  <td className="px-4 py-3 text-zinc-300">
-                    {format(new Date(reservation.shootDate), "d MMM yyyy", {
-                      locale: tr,
-                    })}
+                  <td className="px-4 py-3 text-white">
+                    {formatCoupleName(
+                      reservation.brideName,
+                      reservation.groomName,
+                    )}
                   </td>
-                  <td className="px-4 py-3 text-zinc-300">{reservation.city}</td>
                   <td className="px-4 py-3 text-zinc-300">
-                    {formatPrice(reservation.agreedPrice)}
+                    {formatShootDates(reservation.items)}
+                  </td>
+                  <td className="px-4 py-3 text-zinc-300">
+                    {formatPrice(reservation.totalPrice)}
                   </td>
                   <td className="px-4 py-3">
                     <StatusSelect

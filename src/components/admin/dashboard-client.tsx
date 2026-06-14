@@ -12,15 +12,17 @@ type DashboardData = {
   };
   todayShoots: {
     id: string;
+    itemId: string;
     customerName: string;
-    city: string;
     shootDate: string;
+    packageTitle: string;
   }[];
   upcomingShoots: {
     id: string;
+    itemId: string;
     customerName: string;
-    city: string;
     shootDate: string;
+    packageTitle: string;
   }[];
 };
 
@@ -82,13 +84,13 @@ export function DashboardClient() {
           ) : (
             <ul className="mt-4 space-y-3">
               {data.todayShoots.map((shoot) => (
-                <li key={shoot.id}>
+                <li key={shoot.itemId}>
                   <Link
                     href={`/admin/rezervasyonlar/${shoot.id}`}
                     className="block rounded-xl border border-white/5 px-4 py-3 hover:bg-white/5"
                   >
                     <p className="font-medium text-white">{shoot.customerName}</p>
-                    <p className="text-sm text-zinc-400">{shoot.city}</p>
+                    <p className="text-sm text-zinc-400">{shoot.packageTitle}</p>
                   </Link>
                 </li>
               ))}
@@ -103,7 +105,7 @@ export function DashboardClient() {
           ) : (
             <ul className="mt-4 space-y-3">
               {data.upcomingShoots.map((shoot) => (
-                <li key={shoot.id}>
+                <li key={shoot.itemId}>
                   <Link
                     href={`/admin/rezervasyonlar/${shoot.id}`}
                     className="block rounded-xl border border-white/5 px-4 py-3 hover:bg-white/5"
@@ -113,7 +115,7 @@ export function DashboardClient() {
                       {format(new Date(shoot.shootDate), "d MMMM yyyy", {
                         locale: tr,
                       })}{" "}
-                      — {shoot.city}
+                      — {shoot.packageTitle}
                     </p>
                   </Link>
                 </li>

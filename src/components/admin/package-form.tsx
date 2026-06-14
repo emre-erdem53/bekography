@@ -4,6 +4,11 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import {
+  defaultIndoorPostShootTemplates,
+  defaultOutdoorPostShootTemplates,
+} from "@/lib/package-seed-data";
+import type { PostShootSection } from "@/lib/post-shoot";
 import { normalizeHexColor } from "@/lib/color-utils";
 import { HexColorInput } from "@/components/admin/hex-color-input";
 
@@ -17,6 +22,8 @@ const defaultContent: PackageCategoryContent = {
   shootDescription: "",
   afterShootTitle: "Çekim Sonrası",
   afterShootDescription: "",
+  scheduleType: "indoor",
+  postShootTemplates: defaultIndoorPostShootTemplates(),
 };
 
 type OptionForm = {
@@ -74,6 +81,12 @@ export function PackageForm({
           serviceSubTextColor:
             normalizeHexColor(loadedContent.serviceSubTextColor) ??
             loadedContent.serviceSubTextColor,
+          scheduleType: loadedContent.scheduleType ?? "indoor",
+          postShootTemplates:
+            loadedContent.postShootTemplates ??
+            (loadedContent.scheduleType === "outdoor"
+              ? defaultOutdoorPostShootTemplates()
+              : defaultIndoorPostShootTemplates()),
         });
         setOptions(
           data.options.map(
@@ -336,6 +349,80 @@ export function PackageForm({
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
+        <h2 className="font-semibold text-white">Çekim Sonrası Şablonları</h2>
+        <p className="text-sm text-zinc-400">
+          Rezervasyon formunda otomatik doldurulacak metinler. Her alt başlık için
+          pill etiketleri ve açıklama metni girin.
+        </p>
+        <Field label="Çekim Tipi">
+          <select
+            value={content.scheduleType ?? "indoor"}
+            onChange={(e) => {
+              const scheduleType = e.target.value as "outdoor" | "indoor";
+              setContent({
+                ...content,
+                scheduleType,
+                postShootTemplates:
+                  scheduleType === "outdoor"
+                    ? defaultOutdoorPostShootTemplates()
+                    : defaultIndoorPostShootTemplates(),
+              });
+            }}
+            className={inputClass}
+          >
+            <option value="indoor">Salon / İç Mekan</option>
+            <option value="outdoor">Dış Çekim</option>
+          </select>
+        </Field>
+        <PostShootSectionEditor
+          title="Dijital"
+          section={content.postShootTemplates?.digital ?? { pills: [], description: "" }}
+          onChange={(digital) =>
+            setContent({
+              ...content,
+              postShootTemplates: {
+                ...(content.postShootTemplates ??
+                  defaultIndoorPostShootTemplates()),
+                digital,
+              },
+            })
+          }
+        />
+        <PostShootSectionEditor
+          title="Düzenleme"
+          section={content.postShootTemplates?.editing ?? { pills: [], description: "" }}
+          onChange={(editing) =>
+            setContent({
+              ...content,
+              postShootTemplates: {
+                ...(content.postShootTemplates ??
+                  defaultIndoorPostShootTemplates()),
+                editing,
+              },
+            })
+          }
+        />
+        {content.scheduleType !== "outdoor" ? (
+          <PostShootSectionEditor
+            title="Baskı"
+            section={
+              content.postShootTemplates?.printing ?? { pills: [], description: "" }
+            }
+            onChange={(printing) =>
+              setContent({
+                ...content,
+                postShootTemplates: {
+                  ...(content.postShootTemplates ??
+                    defaultIndoorPostShootTemplates()),
+                  printing,
+                },
+              })
+            }
+          />
+        ) : null}
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-white">Fiyat Seçenekleri</h2>
           <button
@@ -405,6 +492,81 @@ export function PackageForm({
         {saving ? "Kaydediliyor..." : "Kaydet"}
       </button>
     </form>
+  );
+}
+
+function PostShootSectionEditor({
+  title,
+  section,
+  onChange,
+}: {
+  title: string;
+  section: PostShootSection;
+  onChange: (section: PostShootSection) => void;
+}) {
+  const [pillInput, setPillInput] = useState("");
+
+  function addPill() {
+    const value = pillInput.trim();
+    if (!value) return;
+    onChange({ ...section, pills: [...section.pills, value] });
+    setPillInput("");
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
+      <h3 className="text-sm font-medium text-white">{title}</h3>
+      <div className="flex flex-wrap gap-2">
+        {section.pills.map((pill, index) => (
+          <span
+            key={`${pill}-${index}`}
+            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-200"
+          >
+            {pill}
+            <button
+              type="button"
+              onClick={() =>
+                onChange({
+                  ...section,
+                  pills: section.pills.filter((_, i) => i !== index),
+                })
+              }
+              className="text-zinc-400 hover:text-white"
+            >
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={pillInput}
+          onChange={(e) => setPillInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addPill();
+            }
+          }}
+          placeholder="Pill ekle..."
+          className={inputClass}
+        />
+        <button
+          type="button"
+          onClick={addPill}
+          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white"
+        >
+          Ekle
+        </button>
+      </div>
+      <textarea
+        value={section.description}
+        onChange={(e) => onChange({ ...section, description: e.target.value })}
+        rows={3}
+        placeholder="Açıklama metni..."
+        className={inputClass}
+      />
+    </div>
   );
 }
 

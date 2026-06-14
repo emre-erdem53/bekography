@@ -24,9 +24,8 @@ const localizer = dateFnsLocalizer({
 type ReservationEvent = CalendarEvent & {
   id: string;
   resource: {
-    id: string;
-    customerName: string;
-    city: string;
+    reservationId: string;
+    item: unknown;
   };
 };
 
@@ -117,7 +116,9 @@ export function CalendarAdminClient() {
             onNavigate={setDate}
             messages={messages}
             onSelectEvent={(event) =>
-              router.push(`/admin/rezervasyonlar/${event.id}`)
+              router.push(
+                `/admin/rezervasyonlar/${(event as ReservationEvent).resource.reservationId}`,
+              )
             }
             eventPropGetter={() => ({
               style: {
