@@ -125,8 +125,8 @@ export function CalendarAdminClient() {
       {loading ? (
         <p className="text-zinc-400">Yükleniyor...</p>
       ) : (
-        <div className="admin-calendar overflow-hidden rounded-2xl border border-white/10 bg-[#0f0f0f] p-2 sm:p-4">
-          <div className="h-[min(70vh,650px)] min-h-[420px]">
+        <div className="admin-calendar overflow-hidden rounded-2xl border border-zinc-800 bg-[#0a0a0a] p-3 sm:p-5">
+          <div className="h-[min(72vh,680px)] min-h-[440px]">
             <Calendar
               localizer={localizer}
               culture="tr"
@@ -147,10 +147,13 @@ export function CalendarAdminClient() {
               }
               eventPropGetter={() => ({
                 style: {
-                  backgroundColor: "#ffffff",
-                  color: "#000000",
-                  border: "none",
-                  borderRadius: "8px",
+                  backgroundColor: "#f4f4f5",
+                  color: "#18181b",
+                  border: "1px solid #d4d4d8",
+                  borderRadius: "6px",
+                  fontSize: "0.75rem",
+                  fontWeight: 500,
+                  padding: "1px 6px",
                 },
               })}
             />

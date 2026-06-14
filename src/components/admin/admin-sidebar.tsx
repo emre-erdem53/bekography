@@ -37,6 +37,7 @@ export function getAdminPageTitle(pathname: string) {
   if (pathname.startsWith("/admin/talepler")) return "Talepler";
   if (pathname.startsWith("/admin/takvim")) return "Takvimim";
   if (pathname.includes("/rezervasyonlar/yeni")) return "Yeni Rezervasyon";
+  if (pathname.startsWith("/admin/rezervasyonlar/gecmis")) return "Geçmiş Rezervasyonlar";
   if (pathname.includes("/duzenle")) return "Rezervasyon Düzenle";
   if (pathname.match(/^\/admin\/rezervasyonlar\/[^/]+$/)) return "Rezervasyon";
   if (pathname.startsWith("/admin/rezervasyonlar")) return "Rezervasyonlar";

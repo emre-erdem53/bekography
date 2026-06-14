@@ -97,38 +97,236 @@ body {
   display: none;
 }
 
+/* Admin takvim — koyu tema, net hücre sınırları */
+.admin-calendar {
+  --cal-bg: #0a0a0a;
+  --cal-surface: #111111;
+  --cal-surface-muted: #0d0d0d;
+  --cal-header: #141414;
+  --cal-border: #2a2a2a;
+  --cal-border-strong: #3f3f46;
+  --cal-text: #fafafa;
+  --cal-text-muted: #a1a1aa;
+  --cal-text-faint: #52525b;
+  --cal-today: rgba(255, 154, 94, 0.12);
+  --cal-today-ring: rgba(255, 154, 94, 0.45);
+  --cal-event-bg: #f4f4f5;
+  --cal-event-text: #18181b;
+}
+
 .admin-calendar .rbc-calendar {
-  color: #fafafa;
+  color: var(--cal-text);
+  background: var(--cal-bg);
+}
+
+.admin-calendar .rbc-toolbar {
+  margin-bottom: 1rem;
+  gap: 0.5rem;
+}
+
+.admin-calendar .rbc-toolbar-label {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--cal-text);
 }
 
 .admin-calendar .rbc-toolbar button {
-  color: #fafafa;
-  border-color: rgba(255, 255, 255, 0.15);
+  color: var(--cal-text-muted);
+  background: var(--cal-header);
+  border: 1px solid var(--cal-border-strong) !important;
+  border-radius: 0.625rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  box-shadow: none;
 }
 
-.admin-calendar .rbc-toolbar button:hover,
+.admin-calendar .rbc-toolbar button:hover {
+  color: var(--cal-text);
+  background: #1c1c1c;
+  border-color: #52525b !important;
+}
+
 .admin-calendar .rbc-toolbar button.rbc-active {
-  background: rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff !important;
 }
 
-.admin-calendar .rbc-header,
-.admin-calendar .rbc-date-cell,
-.admin-calendar .rbc-off-range {
-  color: #a1a1aa;
+.admin-calendar .rbc-btn-group button + button {
+  border-left: 1px solid var(--cal-border-strong) !important;
 }
 
-.admin-calendar .rbc-today {
-  background: rgba(255, 255, 255, 0.05);
+.admin-calendar .rbc-btn-group button.rbc-active + button {
+  border-left-color: var(--cal-border-strong) !important;
 }
 
 .admin-calendar .rbc-month-view,
 .admin-calendar .rbc-time-view {
-  border-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--cal-border-strong) !important;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--cal-surface);
 }
 
-.admin-calendar .rbc-day-bg + .rbc-day-bg,
+.admin-calendar .rbc-header {
+  padding: 0.65rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--cal-text-muted);
+  background: var(--cal-header);
+  border-bottom: 1px solid var(--cal-border-strong) !important;
+}
+
+.admin-calendar .rbc-header + .rbc-header {
+  border-left: 1px solid var(--cal-border) !important;
+}
+
 .admin-calendar .rbc-month-row + .rbc-month-row {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--cal-border) !important;
+}
+
+.admin-calendar .rbc-day-bg {
+  background: var(--cal-surface);
+  border-left: 1px solid var(--cal-border) !important;
+}
+
+.admin-calendar .rbc-day-bg:first-child {
+  border-left: none !important;
+}
+
+.admin-calendar .rbc-off-range-bg {
+  background: var(--cal-surface-muted) !important;
+}
+
+.admin-calendar .rbc-today {
+  background: var(--cal-today) !important;
+  box-shadow: inset 0 0 0 1px var(--cal-today-ring);
+}
+
+.admin-calendar .rbc-date-cell {
+  padding: 0.4rem 0.55rem 0.25rem;
+  font-size: 0.8125rem;
+  color: var(--cal-text-muted);
+  text-align: right;
+}
+
+.admin-calendar .rbc-date-cell > a,
+.admin-calendar .rbc-date-cell > button {
+  color: inherit;
+}
+
+.admin-calendar .rbc-off-range {
+  color: var(--cal-text-faint);
+}
+
+.admin-calendar .rbc-now .rbc-button-link {
+  display: inline-flex;
+  height: 1.5rem;
+  min-width: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: rgba(255, 154, 94, 0.2);
+  color: #ffcba4;
+  font-weight: 600;
+}
+
+.admin-calendar .rbc-event {
+  border: 1px solid #d4d4d8 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.admin-calendar .rbc-event:focus {
+  outline: 2px solid rgba(255, 154, 94, 0.5);
+  outline-offset: 1px;
+}
+
+.admin-calendar .rbc-show-more {
+  color: #ffcba4;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: transparent;
+}
+
+.admin-calendar .rbc-overlay {
+  background: #141414;
+  border: 1px solid var(--cal-border-strong);
+  border-radius: 0.75rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 0.5rem;
+}
+
+.admin-calendar .rbc-overlay-header {
+  border-bottom: 1px solid var(--cal-border);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  color: var(--cal-text);
+}
+
+.admin-calendar .rbc-time-view .rbc-time-header,
+.admin-calendar .rbc-time-view .rbc-time-content {
+  border-color: var(--cal-border) !important;
+}
+
+.admin-calendar .rbc-time-header-content {
+  border-left: 1px solid var(--cal-border) !important;
+}
+
+.admin-calendar .rbc-time-content > * + * > * {
+  border-left: 1px solid var(--cal-border) !important;
+}
+
+.admin-calendar .rbc-timeslot-group {
+  border-bottom: 1px solid var(--cal-border) !important;
+}
+
+.admin-calendar .rbc-time-slot {
+  color: var(--cal-text-faint);
+}
+
+.admin-calendar .rbc-label {
+  color: var(--cal-text-muted);
+}
+
+.admin-calendar .rbc-current-time-indicator {
+  background-color: #ff9a5e;
+}
+
+.admin-calendar .rbc-agenda-view table.rbc-agenda-table {
+  border: 1px solid var(--cal-border-strong);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--cal-surface);
+}
+
+.admin-calendar .rbc-agenda-table thead > tr > th {
+  background: var(--cal-header);
+  color: var(--cal-text-muted);
+  border-bottom: 1px solid var(--cal-border-strong);
+  padding: 0.65rem 0.75rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-calendar .rbc-agenda-table tbody > tr > td {
+  border-top: 1px solid var(--cal-border);
+  padding: 0.65rem 0.75rem;
+  vertical-align: top;
+}
+
+.admin-calendar .rbc-agenda-date-cell,
+.admin-calendar .rbc-agenda-time-cell {
+  background: var(--cal-surface-muted);
+  color: var(--cal-text-muted);
+  white-space: nowrap;
+}
+
+.admin-calendar .rbc-agenda-event-cell {
+  background: var(--cal-surface);
+  color: var(--cal-text);
 }
 
 @media (max-width: 767px) {

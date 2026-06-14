@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ReservationStatus } from "@prisma/client";
 import { nanoid } from "nanoid";
 import { startOfDay } from "date-fns";
 import { requireAdmin } from "@/lib/admin-auth";
@@ -40,12 +41,23 @@ function mapItemCreate(item: {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const authResult = await requireAdmin();
   if (authResult.error) return authResult.error;
 
   try {
+    const { searchParams } = new URL(request.url);
+    const view = searchParams.get("view") ?? "active";
+
+    const inactiveStatuses: ReservationStatus[] = ["iptal", "teslim_edildi"];
+
+    const where =
+      view === "past"
+        ? { status: "teslim_edildi" as ReservationStatus }
+        : { status: { notIn: inactiveStatuses } };
+
     const reservations = await prisma.reservation.findMany({
+      where,
       orderBy: { createdAt: "desc" },
       include: {
         items: {

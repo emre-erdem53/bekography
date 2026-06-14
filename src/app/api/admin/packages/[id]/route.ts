@@ -125,13 +125,45 @@ export async function DELETE(
 
   try {
     const { id } = await params;
-    await prisma.packageCategory.update({
-      where: { id },
-      data: { isActive: false },
+
+    const options = await prisma.packageOption.findMany({
+      where: { categoryId: id },
+      select: { id: true },
     });
+    const optionIds = options.map((option) => option.id);
+
+    if (optionIds.length > 0) {
+      const [requestItemCount, reservationItemCount] = await Promise.all([
+        prisma.requestItem.count({
+          where: { packageOptionId: { in: optionIds } },
+        }),
+        prisma.reservationItem.count({
+          where: { packageOptionId: { in: optionIds } },
+        }),
+      ]);
+
+      if (requestItemCount + reservationItemCount > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Bu paket talep veya rezervasyonlarda kullanıldığı için silinemez.",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    await prisma.packageCategory.delete({ where: { id } });
     revalidatePath("/paketler");
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2025"
+    ) {
+      return NextResponse.json({ error: "Paket bulunamadı" }, { status: 404 });
+    }
+
     console.error("DELETE /api/admin/packages/[id]", error);
     return NextResponse.json(
       { error: "Paket silinemedi" },

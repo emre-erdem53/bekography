@@ -53,7 +53,6 @@ export function PackageForm({
   const [title, setTitle] = useState("");
   const [accentColor, setAccentColor] = useState("#ffffff");
   const [iconKey, setIconKey] = useState("Package");
-  const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
   const [heroImageUrl, setHeroImageUrl] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
@@ -74,7 +73,6 @@ export function PackageForm({
         setTitle(data.title);
         setAccentColor(normalizeHexColor(data.accentColor) ?? data.accentColor);
         setIconKey(data.iconKey);
-        setBackgroundImageUrl(data.backgroundImageUrl ?? "");
         setHeroImageUrl(data.heroImageUrl ?? "");
         setSortOrder(data.sortOrder);
         setIsActive(data.isActive);
@@ -195,7 +193,7 @@ export function PackageForm({
       accentColor: normalizedAccent,
       iconKey,
       highlight: false,
-      backgroundImageUrl: backgroundImageUrl || null,
+      backgroundImageUrl: null,
       heroImageUrl: heroImageUrl || null,
       sortOrder,
       isActive,
@@ -308,23 +306,6 @@ export function PackageForm({
             className={inputClass}
           />
         </Field>
-        <Field label="Arka Plan Görseli">
-          <p className="mb-2 text-xs leading-relaxed text-zinc-500">
-            Paket listesi kartlarında dekoratif arka plan için ayrılmış alan.
-            Şu an sitede gösterilmiyor; ilerideki tasarımlar için saklanır.
-          </p>
-          {backgroundImageUrl ? (
-            <p className="mb-2 truncate text-xs text-zinc-400">
-              {backgroundImageUrl}
-            </p>
-          ) : null}
-          <AdminFileUpload
-            accept="image/jpeg,image/webp,image/png"
-            label="Arka Plan Görseli Yükle"
-            fileLabel={backgroundImageUrl ? "Görseli Değiştir" : undefined}
-            onFileSelect={(file) => handleImageUpload(file, setBackgroundImageUrl)}
-          />
-        </Field>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <label className="flex items-center gap-2 text-sm text-zinc-300">
             <input
@@ -335,47 +316,6 @@ export function PackageForm({
             Aktif (sitede göster)
           </label>
         </div>
-      </div>
-
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <h2 className="font-semibold text-white">
-          İçerik{" "}
-          <span className="font-normal text-sm text-zinc-400">
-            (Bu alana girilecek olan metinler rezervasyon oluşturma formunda
-            kullanılmak üzere girilecektir.)
-          </span>
-        </h2>
-        <Field label="Çekim Açıklaması">
-          <textarea
-            value={content.shootDescription}
-            onChange={(e) =>
-              setContent({ ...content, shootDescription: e.target.value })
-            }
-            rows={4}
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Rezervasyon oluştururken «Çekim İçeriği» alanına varsayılan değer
-            olarak gelir. Sitede gösterilmez.
-          </p>
-        </Field>
-        <Field label="Çekim Sonrası Açıklaması">
-          <textarea
-            value={content.afterShootDescription}
-            onChange={(e) =>
-              setContent({
-                ...content,
-                afterShootDescription: e.target.value,
-              })
-            }
-            rows={3}
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Rezervasyon detayında referans metin olarak saklanır. Sitede
-            gösterilmez.
-          </p>
-        </Field>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
@@ -639,6 +579,47 @@ export function PackageForm({
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
+        <h2 className="font-semibold text-white">
+          İçerik{" "}
+          <span className="font-normal text-sm text-zinc-400">
+            (Bu alana girilecek olan metinler rezervasyon oluşturma formunda
+            kullanılmak üzere girilecektir.)
+          </span>
+        </h2>
+        <Field label="Çekim Açıklaması">
+          <textarea
+            value={content.shootDescription}
+            onChange={(e) =>
+              setContent({ ...content, shootDescription: e.target.value })
+            }
+            rows={4}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            Rezervasyon oluştururken «Çekim İçeriği» alanına varsayılan değer
+            olarak gelir. Sitede gösterilmez.
+          </p>
+        </Field>
+        <Field label="Çekim Sonrası Açıklaması">
+          <textarea
+            value={content.afterShootDescription}
+            onChange={(e) =>
+              setContent({
+                ...content,
+                afterShootDescription: e.target.value,
+              })
+            }
+            rows={3}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            Rezervasyon detayında referans metin olarak saklanır. Sitede
+            gösterilmez.
+          </p>
+        </Field>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">

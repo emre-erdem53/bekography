@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { ReservationStatus } from "@prisma/client";
 import { StatusSelect } from "@/components/admin/status-select";
+import { changeReservationStatus } from "@/components/admin/reservation-status-actions";
 import {
   RESERVATION_STATUS_LABELS,
   PAYMENT_TYPE_LABELS,
@@ -56,6 +58,7 @@ export function ReservationDetailClient({
 }: {
   reservationId: string;
 }) {
+  const router = useRouter();
   const [reservation, setReservation] = useState<ReservationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -68,27 +71,37 @@ export function ReservationDetailClient({
   }, [reservationId]);
 
   async function updateStatus(status: ReservationStatus) {
-    const response = await fetch(`/api/admin/reservations/${reservationId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+    if (!reservation) return;
 
-    if (response.ok) {
-      const updated = await response.json();
-      setReservation((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: updated.status,
-              statusHistory: [
-                ...prev.statusHistory,
-                { status: updated.status, changedAt: new Date().toISOString() },
-              ],
-            }
-          : prev,
-      );
+    const result = await changeReservationStatus(
+      reservationId,
+      status,
+      reservation.status,
+    );
+    if (!result) return;
+
+    if (result.kind === "delivered") {
+      router.push("/admin/rezervasyonlar/gecmis");
+      return;
     }
+
+    if (result.kind === "deleted") {
+      router.push("/admin/rezervasyonlar");
+      return;
+    }
+
+    setReservation((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: result.status,
+            statusHistory: [
+              ...prev.statusHistory,
+              { status: result.status, changedAt: new Date().toISOString() },
+            ],
+          }
+        : prev,
+    );
   }
 
   async function copyLink() {

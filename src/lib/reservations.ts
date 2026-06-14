@@ -14,7 +14,7 @@ export async function isShootDateTaken(
     where: {
       shootDate: date,
       reservation: {
-        status: { not: "iptal" },
+        status: { notIn: ["iptal", "teslim_edildi"] },
         ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
       },
     },

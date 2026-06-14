@@ -236,3 +236,33 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const authResult = await requireAdmin();
+  if (authResult.error) return authResult.error;
+
+  try {
+    const { id } = await params;
+
+    const existing = await prisma.reservation.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Rezervasyon bulunamadı" },
+        { status: 404 },
+      );
+    }
+
+    await prisma.reservation.delete({ where: { id } });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /api/admin/reservations/[id]", error);
+    return NextResponse.json(
+      { error: "Rezervasyon silinemedi" },
+      { status: 500 },
+    );
+  }
+}

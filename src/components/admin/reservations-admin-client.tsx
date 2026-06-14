@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { ReservationStatus } from "@prisma/client";
 import { StatusSelect } from "@/components/admin/status-select";
+import { changeReservationStatus } from "@/components/admin/reservation-status-actions";
 import {
   RESERVATION_STATUS_LABELS,
   formatPrice,
@@ -43,29 +44,42 @@ function formatShootDates(items: ReservationItem[]) {
   return `${first} — ${last}`;
 }
 
-export function ReservationsAdminClient() {
+type ReservationsAdminClientProps = {
+  view?: "active" | "past";
+};
+
+export function ReservationsAdminClient({
+  view = "active",
+}: ReservationsAdminClientProps) {
+  const isPast = view === "past";
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/reservations")
+    setLoading(true);
+    fetch(`/api/admin/reservations?view=${view}`)
       .then((res) => res.json())
       .then(setReservations)
       .finally(() => setLoading(false));
-  }, []);
+  }, [view]);
 
   async function updateStatus(id: string, status: ReservationStatus) {
-    const response = await fetch(`/api/admin/reservations/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
+    const current = reservations.find((item) => item.id === id)?.status;
+    if (!current) return;
 
-    if (response.ok) {
-      setReservations((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status } : item)),
-      );
+    const result = await changeReservationStatus(id, status, current);
+    if (!result) return;
+
+    if (result.kind === "delivered" || result.kind === "deleted") {
+      setReservations((prev) => prev.filter((item) => item.id !== id));
+      return;
     }
+
+    setReservations((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, status: result.status } : item,
+      ),
+    );
   }
 
   const statusOptions = Object.entries(RESERVATION_STATUS_LABELS).map(
@@ -79,21 +93,49 @@ export function ReservationsAdminClient() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-white sm:text-2xl">
-            Rezervasyonlar
+          {isPast ? (
+            <Link
+              href="/admin/rezervasyonlar"
+              className="text-sm text-zinc-400 hover:text-white"
+            >
+              ← Rezervasyonlar
+            </Link>
+          ) : null}
+          <h1 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
+            {isPast ? "Geçmiş Rezervasyonlar" : "Rezervasyonlar"}
           </h1>
-          <p className="mt-1 text-sm text-zinc-400">Aktif rezervasyonları yönetin</p>
+          <p className="mt-1 text-sm text-zinc-400">
+            {isPast
+              ? "Teslim edilmiş rezervasyonları görüntüleyin"
+              : "Aktif rezervasyonları yönetin"}
+          </p>
         </div>
-        <Link
-          href="/admin/rezervasyonlar/yeni"
-          className="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
-        >
-          Yeni Rezervasyon
-        </Link>
+        {!isPast ? (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Link
+              href="/admin/rezervasyonlar/gecmis"
+              className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/5 sm:w-auto"
+            >
+              Geçmiş Rezervasyonlar
+            </Link>
+            <Link
+              href="/admin/rezervasyonlar/yeni"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
+            >
+              Yeni Rezervasyon
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       {loading ? (
         <p className="text-zinc-400">Yükleniyor...</p>
+      ) : reservations.length === 0 ? (
+        <p className="text-zinc-400">
+          {isPast
+            ? "Henüz teslim edilmiş rezervasyon yok."
+            : "Aktif rezervasyon bulunmuyor."}
+        </p>
       ) : (
         <>
           <div className="space-y-3 md:hidden">
@@ -120,11 +162,17 @@ export function ReservationsAdminClient() {
                   </div>
                 </dl>
                 <div className="mt-4">
-                  <StatusSelect
-                    value={reservation.status}
-                    options={statusOptions}
-                    onChange={(status) => updateStatus(reservation.id, status)}
-                  />
+                  {isPast ? (
+                    <span className="inline-flex rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                      {RESERVATION_STATUS_LABELS.teslim_edildi}
+                    </span>
+                  ) : (
+                    <StatusSelect
+                      value={reservation.status}
+                      options={statusOptions}
+                      onChange={(status) => updateStatus(reservation.id, status)}
+                    />
+                  )}
                 </div>
                 <div className="mt-4 flex gap-4 border-t border-white/5 pt-4 text-sm">
                   <Link
@@ -133,12 +181,14 @@ export function ReservationsAdminClient() {
                   >
                     Detay
                   </Link>
-                  <Link
-                    href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
-                    className="text-zinc-400 hover:text-white"
-                  >
-                    Düzenle
-                  </Link>
+                  {!isPast ? (
+                    <Link
+                      href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
+                      className="text-zinc-400 hover:text-white"
+                    >
+                      Düzenle
+                    </Link>
+                  ) : null}
                 </div>
               </article>
             ))}
@@ -171,11 +221,19 @@ export function ReservationsAdminClient() {
                       {formatPrice(reservation.totalPrice)}
                     </td>
                     <td className="px-4 py-3">
-                      <StatusSelect
-                        value={reservation.status}
-                        options={statusOptions}
-                        onChange={(status) => updateStatus(reservation.id, status)}
-                      />
+                      {isPast ? (
+                        <span className="inline-flex rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
+                          {RESERVATION_STATUS_LABELS.teslim_edildi}
+                        </span>
+                      ) : (
+                        <StatusSelect
+                          value={reservation.status}
+                          options={statusOptions}
+                          onChange={(status) =>
+                            updateStatus(reservation.id, status)
+                          }
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -185,12 +243,14 @@ export function ReservationsAdminClient() {
                         >
                           Detay
                         </Link>
-                        <Link
-                          href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
-                          className="text-zinc-400 hover:text-white"
-                        >
-                          Düzenle
-                        </Link>
+                        {!isPast ? (
+                          <Link
+                            href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
+                            className="text-zinc-400 hover:text-white"
+                          >
+                            Düzenle
+                          </Link>
+                        ) : null}
                       </div>
                     </td>
                   </tr>

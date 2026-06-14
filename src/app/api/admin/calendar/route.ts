@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
     const items = await prisma.reservationItem.findMany({
       where: {
-        reservation: { status: { not: "iptal" } },
+        reservation: { status: { notIn: ["iptal", "teslim_edildi"] } },
         ...(start && end
           ? {
               shootDate: {
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
       where: {
         shootDate: new Date(shootDate),
         reservation: {
-          status: { not: "iptal" },
+          status: { notIn: ["iptal", "teslim_edildi"] },
           ...(excludeReservationId
             ? { id: { not: excludeReservationId } }
             : {}),

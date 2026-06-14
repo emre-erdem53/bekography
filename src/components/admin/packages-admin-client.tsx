@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { formatPrice } from "@/lib/constants";
 
 type PackageCategory = {
@@ -17,6 +17,7 @@ type PackageCategory = {
 export function PackagesAdminClient() {
   const [packages, setPackages] = useState<PackageCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/packages")
@@ -24,6 +25,29 @@ export function PackagesAdminClient() {
       .then(setPackages)
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleDelete(pkg: PackageCategory) {
+    const confirmed = window.confirm(
+      `"${pkg.title}" paketini kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(pkg.id);
+
+    const response = await fetch(`/api/admin/packages/${pkg.id}`, {
+      method: "DELETE",
+    });
+
+    setDeletingId(null);
+
+    if (!response.ok) {
+      const data = await response.json();
+      window.alert(data.error ?? "Paket silinemedi");
+      return;
+    }
+
+    setPackages((prev) => prev.filter((item) => item.id !== pkg.id));
+  }
 
   return (
     <div className="space-y-6">
@@ -77,13 +101,24 @@ export function PackagesAdminClient() {
                   ))}
                 </div>
               </div>
-              <Link
-                href={`/admin/paketler/${pkg.id}`}
-                className="inline-flex items-center gap-2 self-start rounded-xl border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/5 sm:self-center"
-              >
-                <Pencil className="h-4 w-4" />
-                Düzenle
-              </Link>
+              <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                <Link
+                  href={`/admin/paketler/${pkg.id}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/5"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Düzenle
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleDelete(pkg)}
+                  disabled={deletingId === pkg.id}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deletingId === pkg.id ? "Siliniyor..." : "Sil"}
+                </button>
+              </div>
             </div>
           ))}
         </div>
