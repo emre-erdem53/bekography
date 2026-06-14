@@ -104,12 +104,20 @@ export function ReservationsAdminClient() {
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <Link
-                      href={`/admin/rezervasyonlar/${reservation.id}`}
-                      className="text-zinc-400 hover:text-white"
-                    >
-                      Detay
-                    </Link>
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/admin/rezervasyonlar/${reservation.id}`}
+                        className="text-zinc-400 hover:text-white"
+                      >
+                        Detay
+                      </Link>
+                      <Link
+                        href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
+                        className="text-zinc-400 hover:text-white"
+                      >
+                        Düzenle
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

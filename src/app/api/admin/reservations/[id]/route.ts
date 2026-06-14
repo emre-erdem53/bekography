@@ -109,6 +109,14 @@ export async function PATCH(
 
     const data = parsed.data;
 
+    const existing = await prisma.reservation.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Rezervasyon bulunamadı" },
+        { status: 404 },
+      );
+    }
+
     if (data.shootDate) {
       const shootDate = startOfDay(new Date(data.shootDate));
       if (await isShootDateTaken(shootDate, id)) {
@@ -132,12 +140,12 @@ export async function PATCH(
           ? startOfDay(new Date(data.shootDate))
           : undefined,
         agreedPrice: data.agreedPrice,
-        notes: data.notes,
+        notes: data.notes !== undefined ? data.notes : undefined,
         status: data.status,
       },
     });
 
-    if (data.status) {
+    if (data.status && existing.status !== data.status) {
       await addReservationStatusHistory(id, data.status);
     }
 

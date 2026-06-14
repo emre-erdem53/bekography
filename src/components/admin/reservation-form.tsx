@@ -22,10 +22,15 @@ type SelectedItem = {
   categoryTitle: string;
 };
 
-function ReservationFormInner() {
+type ReservationFormProps = {
+  reservationId?: string;
+};
+
+export function ReservationForm({ reservationId }: ReservationFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId");
+  const isEditing = Boolean(reservationId);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -53,7 +58,37 @@ function ReservationFormInner() {
       );
       setAllOptions(options);
 
-      if (requestId) {
+      if (reservationId) {
+        const reservationRes = await fetch(
+          `/api/admin/reservations/${reservationId}`,
+        );
+        const reservation = await reservationRes.json();
+        setCustomerName(reservation.customerName);
+        setCustomerPhone(reservation.customerPhone);
+        setCity(reservation.city);
+        setShootDate(reservation.shootDate.split("T")[0]);
+        setAgreedPrice(reservation.agreedPrice);
+        setNotes(reservation.notes ?? "");
+        setItems(
+          reservation.items.map(
+            (item: {
+              packageOption: {
+                id: string;
+                label: string;
+                category: { title: string };
+              };
+              paymentType: "pesin" | "taksitli";
+              unitPrice: number;
+            }) => ({
+              packageOptionId: item.packageOption.id,
+              paymentType: item.paymentType,
+              unitPrice: item.unitPrice,
+              label: item.packageOption.label,
+              categoryTitle: item.packageOption.category.title,
+            }),
+          ),
+        );
+      } else if (requestId) {
         const requestRes = await fetch(`/api/admin/requests/${requestId}`);
         const request = await requestRes.json();
         setCustomerName(request.customerName);
@@ -62,7 +97,11 @@ function ReservationFormInner() {
         setShootDate(request.shootDate.split("T")[0]);
         const mapped = request.items.map(
           (item: {
-            packageOption: { id: string; label: string; category: { title: string } };
+            packageOption: {
+              id: string;
+              label: string;
+              category: { title: string };
+            };
             paymentType: "pesin" | "taksitli";
             unitPrice: number;
           }) => ({
@@ -74,14 +113,16 @@ function ReservationFormInner() {
           }),
         );
         setItems(mapped);
-        setAgreedPrice(mapped.reduce((sum: number, i: SelectedItem) => sum + i.unitPrice, 0));
+        setAgreedPrice(
+          mapped.reduce((sum: number, i: SelectedItem) => sum + i.unitPrice, 0),
+        );
       }
 
       setLoading(false);
     }
 
     load();
-  }, [requestId]);
+  }, [requestId, reservationId]);
 
   useEffect(() => {
     if (!shootDate) {
@@ -92,11 +133,14 @@ function ReservationFormInner() {
     fetch("/api/admin/calendar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shootDate }),
+      body: JSON.stringify({
+        shootDate,
+        excludeReservationId: reservationId,
+      }),
     })
       .then((res) => res.json())
       .then((data) => setDateConflict(!data.available));
-  }, [shootDate]);
+  }, [shootDate, reservationId]);
 
   function addItem(optionId: string) {
     const option = allOptions.find((o) => o.id === optionId);
@@ -129,51 +173,65 @@ function ReservationFormInner() {
     setSaving(true);
     setError("");
 
-    const response = await fetch("/api/admin/reservations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        requestId: requestId ?? undefined,
-        customerName,
-        customerPhone,
-        city,
-        shootDate,
-        agreedPrice,
-        notes: notes || undefined,
-        items: items.map((item) => ({
-          packageOptionId: item.packageOptionId,
-          paymentType: item.paymentType,
-          unitPrice: item.unitPrice,
-        })),
-      }),
-    });
+    const payload = {
+      customerName,
+      customerPhone,
+      city,
+      shootDate,
+      agreedPrice,
+      notes: notes,
+      items: items.map((item) => ({
+        packageOptionId: item.packageOptionId,
+        paymentType: item.paymentType,
+        unitPrice: item.unitPrice,
+      })),
+      ...(requestId && !isEditing ? { requestId } : {}),
+    };
+
+    const response = await fetch(
+      isEditing
+        ? `/api/admin/reservations/${reservationId}`
+        : "/api/admin/reservations",
+      {
+        method: isEditing ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      },
+    );
 
     setSaving(false);
 
     if (!response.ok) {
       const data = await response.json();
-      setError(data.error ?? "Rezervasyon oluşturulamadı");
+      setError(
+        data.error ??
+          (isEditing
+            ? "Rezervasyon güncellenemedi"
+            : "Rezervasyon oluşturulamadı"),
+      );
       if (data.code === "DATE_CONFLICT") setDateConflict(true);
       return;
     }
 
     const data = await response.json();
-    router.push(`/admin/rezervasyonlar/${data.id}`);
+    router.push(`/admin/rezervasyonlar/${isEditing ? reservationId : data.id}`);
+    router.refresh();
   }
 
   if (loading) return <p className="text-zinc-400">Yükleniyor...</p>;
 
+  const backHref = isEditing
+    ? `/admin/rezervasyonlar/${reservationId}`
+    : "/admin/rezervasyonlar";
+
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6">
       <div>
-        <Link
-          href="/admin/rezervasyonlar"
-          className="text-sm text-zinc-400 hover:text-white"
-        >
-          ← Rezervasyonlar
+        <Link href={backHref} className="text-sm text-zinc-400 hover:text-white">
+          ← {isEditing ? "Rezervasyon detayı" : "Rezervasyonlar"}
         </Link>
         <h1 className="mt-2 text-2xl font-semibold text-white">
-          Yeni Rezervasyon
+          {isEditing ? "Rezervasyon Düzenle" : "Yeni Rezervasyon"}
         </h1>
       </div>
 
@@ -260,7 +318,7 @@ function ReservationFormInner() {
 
         {items.map((item, index) => (
           <div
-            key={index}
+            key={`${item.packageOptionId}-${index}`}
             className="grid gap-3 rounded-xl bg-white/5 p-4 md:grid-cols-[1fr_auto_auto_auto]"
           >
             <span className="text-sm text-zinc-300">
@@ -270,7 +328,9 @@ function ReservationFormInner() {
               value={item.paymentType}
               onChange={(e) => {
                 const paymentType = e.target.value as "pesin" | "taksitli";
-                const option = allOptions.find((o) => o.id === item.packageOptionId);
+                const option = allOptions.find(
+                  (o) => o.id === item.packageOptionId,
+                );
                 const unitPrice =
                   paymentType === "pesin"
                     ? option!.cashPrice
@@ -325,14 +385,16 @@ function ReservationFormInner() {
         disabled={saving || dateConflict || items.length === 0}
         className="rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50"
       >
-        {saving ? "Oluşturuluyor..." : "Rezervasyon Oluştur"}
+        {saving
+          ? isEditing
+            ? "Kaydediliyor..."
+            : "Oluşturuluyor..."
+          : isEditing
+            ? "Değişiklikleri Kaydet"
+            : "Rezervasyon Oluştur"}
       </button>
     </form>
   );
-}
-
-export function ReservationForm() {
-  return <ReservationFormInner />;
 }
 
 function Field({

@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   if (authResult.error) return authResult.error;
 
   try {
-    const { shootDate } = await request.json();
+    const { shootDate, excludeReservationId } = await request.json();
     if (!shootDate) {
       return NextResponse.json({ error: "Tarih gerekli" }, { status: 400 });
     }
@@ -65,6 +65,9 @@ export async function POST(request: Request) {
       where: {
         shootDate: new Date(shootDate),
         status: { not: "iptal" },
+        ...(excludeReservationId
+          ? { id: { not: excludeReservationId } }
+          : {}),
       },
     });
 

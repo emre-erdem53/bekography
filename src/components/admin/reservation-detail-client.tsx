@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { Pencil } from "lucide-react";
 import type { ReservationStatus } from "@prisma/client";
 import { StatusSelect } from "@/components/admin/status-select";
 import {
@@ -105,11 +106,20 @@ export function ReservationDetailClient({
             {reservation.customerName}
           </h1>
         </div>
-        <StatusSelect
-          value={reservation.status}
-          options={statusOptions}
-          onChange={updateStatus}
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
+          >
+            <Pencil className="h-4 w-4" />
+            Düzenle
+          </Link>
+          <StatusSelect
+            value={reservation.status}
+            options={statusOptions}
+            onChange={updateStatus}
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">
