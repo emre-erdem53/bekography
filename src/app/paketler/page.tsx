@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: "Paket detayları ve hizmet farkları.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function PaketlerPage() {
   let categories: PackageCategoryData[] = [];
 

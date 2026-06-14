@@ -3,7 +3,10 @@ import { normalizeHexColor } from "@/lib/color-utils";
 
 export async function getActivePackages() {
   return prisma.packageCategory.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      options: { some: { isActive: true } },
+    },
     orderBy: { sortOrder: "asc" },
     include: {
       options: {

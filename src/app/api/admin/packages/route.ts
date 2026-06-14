@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getAllPackages } from "@/lib/packages";
@@ -66,6 +67,8 @@ export async function POST(request: Request) {
       },
       include: { options: true },
     });
+
+    revalidatePath("/paketler");
 
     return NextResponse.json(category, { status: 201 });
   } catch (error) {

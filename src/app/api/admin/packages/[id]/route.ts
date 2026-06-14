@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
@@ -103,6 +104,8 @@ export async function PATCH(
       include: { options: { orderBy: { sortOrder: "asc" } } },
     });
 
+    revalidatePath("/paketler");
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error("PATCH /api/admin/packages/[id]", error);
@@ -126,6 +129,7 @@ export async function DELETE(
       where: { id },
       data: { isActive: false },
     });
+    revalidatePath("/paketler");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/admin/packages/[id]", error);
