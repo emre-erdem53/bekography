@@ -7,6 +7,11 @@ import { EASE_OUT, duration } from "@/lib/motion";
 export default function Template({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
+  const isAdmin = pathname.startsWith("/admin");
+
+  if (isAdmin) {
+    return <div className="flex flex-1 flex-col">{children}</div>;
+  }
 
   return (
     <AnimatePresence mode="wait">
