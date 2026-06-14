@@ -4,13 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AlertBar } from "@/components/admin/alert-bar";
 
 type DashboardData = {
   stats: {
     pendingRequests: number;
     activeReservations: number;
-    approvedWithoutReservationCount: number;
   };
   todayShoots: {
     id: string;
@@ -24,7 +22,6 @@ type DashboardData = {
     city: string;
     shootDate: string;
   }[];
-  approvedWithoutReservation: { id: string; customerName: string }[];
 };
 
 export function DashboardClient() {
@@ -53,18 +50,7 @@ export function DashboardClient() {
         <p className="mt-1 text-sm text-zinc-400">Genel özet ve uyarılar</p>
       </div>
 
-      {data.stats.approvedWithoutReservationCount > 0 ? (
-        <AlertBar
-          message={`Rezervasyonu oluşturulmamış ${data.stats.approvedWithoutReservationCount} onaylı talebiniz bulunmaktadır.`}
-          href={
-            data.approvedWithoutReservation[0]
-              ? `/admin/talepler/${data.approvedWithoutReservation[0].id}`
-              : "/admin/talepler"
-          }
-        />
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {[
           {
             label: "Bekleyen Talepler",
@@ -75,11 +61,6 @@ export function DashboardClient() {
             label: "Aktif Rezervasyonlar",
             value: data.stats.activeReservations,
             href: "/admin/rezervasyonlar",
-          },
-          {
-            label: "Onaylı (Rezervasyonsuz)",
-            value: data.stats.approvedWithoutReservationCount,
-            href: "/admin/talepler",
           },
         ].map((card) => (
           <Link

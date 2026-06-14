@@ -20,7 +20,11 @@ export function AlertBar({ message, href }: AlertBarProps) {
       <span className="flex-1">{message}</span>
       <button
         type="button"
-        onClick={() => setVisible(false)}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setVisible(false);
+        }}
         className="rounded-lg p-1 hover:bg-red-500/20"
         aria-label="Kapat"
       >

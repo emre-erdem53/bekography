@@ -17,7 +17,6 @@ export async function GET() {
       activeReservations,
       todayShoots,
       upcomingShoots,
-      approvedWithoutReservation,
     ] = await Promise.all([
       prisma.request.count({ where: { status: "yeni" } }),
       prisma.reservation.count({
@@ -38,25 +37,15 @@ export async function GET() {
         orderBy: { shootDate: "asc" },
         take: 5,
       }),
-      prisma.request.findMany({
-        where: {
-          status: "onaylandi",
-          reservation: null,
-        },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-      }),
     ]);
 
     return NextResponse.json({
       stats: {
         pendingRequests,
         activeReservations,
-        approvedWithoutReservationCount: approvedWithoutReservation.length,
       },
       todayShoots,
       upcomingShoots,
-      approvedWithoutReservation,
     });
   } catch (error) {
     console.error("GET /api/admin/dashboard", error);
