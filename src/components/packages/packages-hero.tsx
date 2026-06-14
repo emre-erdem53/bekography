@@ -13,7 +13,7 @@ import { useState } from "react";
 //   UserRoundCheck,
 // } from "lucide-react";
 import type { PackageCategoryData } from "@/lib/package-types";
-import { getPackageIcon } from "@/components/packages/package-icon";
+import { PackageIconDisplay } from "@/components/packages/package-icon";
 import { PackageCartBar } from "@/components/packages/package-cart-bar";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { getCategoryPriceLabel } from "@/lib/package-media";
@@ -152,26 +152,24 @@ export function PackagesHero({
 
         <div className="mt-8 grid gap-2 sm:gap-3 lg:grid-cols-2 lg:gap-4">
           {categories.map((category) => {
-            const Icon = getPackageIcon(category.iconKey);
+            const iconKey = category.iconKey;
 
             return (
               <button
                 key={category.id}
                 type="button"
                 onClick={() => setSelectedCategory(category)}
-                className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-4 text-left transition-colors md:px-5 md:py-5 ${
-                  category.highlight
-                    ? "border-amber-300/60 bg-amber-400/10 hover:bg-amber-400/15"
-                    : "border-white/10 bg-[#0a0a0a] hover:bg-[#111]"
-                }`}
+                className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-4 text-left transition-colors hover:bg-[#111] md:px-5 md:py-5"
               >
                 <span
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl md:h-12 md:w-12"
                   style={{ backgroundColor: `${category.accentColor}22` }}
                 >
-                  <Icon
+                  <PackageIconDisplay
+                    iconKey={iconKey}
                     className="h-5 w-5 md:h-6 md:w-6"
                     style={{ color: category.accentColor }}
+                    imageSizes="(max-width: 768px) 20px, 24px"
                   />
                 </span>
                 <span className="min-w-0 flex-1">

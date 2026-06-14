@@ -4,6 +4,7 @@ import Image from "next/image";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import type { PackageCategoryData } from "@/lib/package-types";
 import { getPackageIcon } from "@/components/packages/package-icon";
+import { PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
 import { PackagePricingTable } from "@/components/packages/package-pricing-table";
 
 const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
@@ -52,7 +53,7 @@ export function PackageCategoryPanel({
       {content.services?.length > 0 ? (
         <div
           className="grid grid-cols-2 gap-[1px] overflow-hidden rounded-2xl md:grid-cols-4"
-          style={{ backgroundColor: content.serviceGridColor }}
+          style={{ backgroundColor: PACKAGE_SERVICE_THEME.serviceGridColor }}
         >
           {content.services.map((item) => {
             const Icon = getPackageIcon(item.iconKey);
@@ -61,8 +62,8 @@ export function PackageCategoryPanel({
                 key={item.title}
                 className="px-2 py-2 text-center"
                 style={{
-                  backgroundColor: content.serviceGridColor,
-                  color: content.serviceTextColor,
+                  backgroundColor: PACKAGE_SERVICE_THEME.serviceGridColor,
+                  color: PACKAGE_SERVICE_THEME.serviceTextColor,
                 }}
               >
                 <Icon className="mx-auto h-6 w-6 md:h-7 md:w-7" />
@@ -71,7 +72,7 @@ export function PackageCategoryPanel({
                 </p>
                 <div
                   className="mt-1 space-y-px text-[10px] leading-none md:text-[11px]"
-                  style={{ color: content.serviceSubTextColor }}
+                  style={{ color: PACKAGE_SERVICE_THEME.serviceSubTextColor }}
                 >
                   {item.subLines.map((line) => (
                     <p key={line}>{line}</p>

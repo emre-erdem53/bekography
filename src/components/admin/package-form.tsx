@@ -7,7 +7,6 @@ import type {
   PackageCategoryContent,
   PackageDetailSection,
   PackageGalleryImage,
-  PackageServiceItem,
 } from "@/lib/package-seed-data";
 import {
   defaultIndoorPostShootTemplates,
@@ -16,13 +15,15 @@ import {
 } from "@/lib/package-seed-data";
 import type { PostShootSection } from "@/lib/post-shoot";
 import { normalizeHexColor } from "@/lib/color-utils";
+import { applyPackageServiceTheme, PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
 import { HexColorInput } from "@/components/admin/hex-color-input";
+import { AdminFileUpload } from "@/components/admin/admin-file-upload";
+import { isCustomPackageIcon } from "@/components/packages/package-icon";
+import { packageMediaUrl } from "@/lib/package-media";
 
 const defaultContent: PackageCategoryContent = {
   tagline: "",
-  serviceGridColor: "#ffffff",
-  serviceTextColor: "#111111",
-  serviceSubTextColor: "#333333",
+  ...PACKAGE_SERVICE_THEME,
   services: [],
   shootTitle: "Çekim",
   shootDescription: "",
@@ -52,7 +53,6 @@ export function PackageForm({
   const [title, setTitle] = useState("");
   const [accentColor, setAccentColor] = useState("#ffffff");
   const [iconKey, setIconKey] = useState("Package");
-  const [highlight, setHighlight] = useState(false);
   const [backgroundImageUrl, setBackgroundImageUrl] = useState("");
   const [heroImageUrl, setHeroImageUrl] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
@@ -74,7 +74,6 @@ export function PackageForm({
         setTitle(data.title);
         setAccentColor(normalizeHexColor(data.accentColor) ?? data.accentColor);
         setIconKey(data.iconKey);
-        setHighlight(data.highlight);
         setBackgroundImageUrl(data.backgroundImageUrl ?? "");
         setHeroImageUrl(data.heroImageUrl ?? "");
         setSortOrder(data.sortOrder);
@@ -82,15 +81,7 @@ export function PackageForm({
         const loadedContent = (data.content as PackageCategoryContent) ?? defaultContent;
         setContent({
           ...loadedContent,
-          serviceGridColor:
-            normalizeHexColor(loadedContent.serviceGridColor) ??
-            loadedContent.serviceGridColor,
-          serviceTextColor:
-            normalizeHexColor(loadedContent.serviceTextColor) ??
-            loadedContent.serviceTextColor,
-          serviceSubTextColor:
-            normalizeHexColor(loadedContent.serviceSubTextColor) ??
-            loadedContent.serviceSubTextColor,
+          ...PACKAGE_SERVICE_THEME,
           scheduleType: loadedContent.scheduleType ?? "indoor",
           postShootTemplates:
             loadedContent.postShootTemplates ??
@@ -126,13 +117,7 @@ export function PackageForm({
       .finally(() => setLoading(false));
   }, [packageId]);
 
-  async function handleImageUpload(
-    event: React.ChangeEvent<HTMLInputElement>,
-    setter: (url: string) => void,
-  ) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
+  async function uploadFile(file: File) {
     const formData = new FormData();
     formData.append("file", file);
 
@@ -141,35 +126,46 @@ export function PackageForm({
       body: formData,
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      setter(data.url);
+    if (!response.ok) {
+      setError("Dosya yüklenemedi");
+      return null;
     }
+
+    const data = await response.json();
+    return data.url as string;
   }
 
-  async function handleGalleryUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function handleImageUpload(
+    file: File,
+    setter: (url: string) => void,
+  ) {
+    const url = await uploadFile(file);
+    if (url) setter(url);
+  }
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      setContent({
-        ...content,
-        galleryImages: [
-          ...(content.galleryImages ?? []),
-          { url: data.url, alt: title },
-        ],
-      });
+  async function handleIconUpload(file: File) {
+    const isSvg =
+      file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
+    if (!isSvg) {
+      setError("Paket ikonu yalnızca SVG formatında olabilir");
+      return;
     }
-    event.target.value = "";
+
+    const url = await uploadFile(file);
+    if (url) setIconKey(url);
+  }
+
+  async function handleGalleryUpload(file: File) {
+    const url = await uploadFile(file);
+    if (!url) return;
+
+    setContent({
+      ...content,
+      galleryImages: [
+        ...(content.galleryImages ?? []),
+        { url, alt: title },
+      ],
+    });
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -184,28 +180,21 @@ export function PackageForm({
       return;
     }
 
-    const normalizedContent: PackageCategoryContent = {
+    const normalizedContent: PackageCategoryContent = applyPackageServiceTheme({
       ...content,
-      serviceGridColor:
-        normalizeHexColor(content.serviceGridColor) ?? content.serviceGridColor,
-      serviceTextColor:
-        normalizeHexColor(content.serviceTextColor) ?? content.serviceTextColor,
-      serviceSubTextColor:
-        normalizeHexColor(content.serviceSubTextColor) ??
-        content.serviceSubTextColor,
       scheduleType: content.scheduleType ?? "indoor",
       postShootTemplates:
         content.postShootTemplates ??
         (content.scheduleType === "outdoor"
           ? defaultOutdoorPostShootTemplates()
           : defaultIndoorPostShootTemplates()),
-    };
+    });
 
     const payload = {
       title,
       accentColor: normalizedAccent,
       iconKey,
-      highlight,
+      highlight: false,
       backgroundImageUrl: backgroundImageUrl || null,
       heroImageUrl: heroImageUrl || null,
       sortOrder,
@@ -253,7 +242,7 @@ export function PackageForm({
           <h1 className="text-xl font-semibold text-white sm:text-2xl">
             {packageId ? "Paket Düzenle" : "Yeni Paket"}
           </h1>
-          <p className="mt-1 text-sm text-zinc-400">Temel bilgiler ve fiyatlar</p>
+          <p className="mt-1 text-sm text-zinc-400">Temel bilgiler</p>
         </div>
         <Link
           href="/admin/paketler"
@@ -275,11 +264,31 @@ export function PackageForm({
         <Field label="Accent Renk (#hex)">
           <HexColorInput value={accentColor} onChange={setAccentColor} />
         </Field>
-        <Field label="İkon (Lucide adı)">
-          <input
-            value={iconKey}
-            onChange={(e) => setIconKey(e.target.value)}
-            className={inputClass}
+        <Field label="Paket İkonu (SVG)">
+          <p className="mb-2 text-xs leading-relaxed text-zinc-500">
+            Paket listesinde 20×20 px (mobil) ve 24×24 px (masaüstü) ölçülerinde
+            görünür. Kare oranlı, sade SVG yükleyin.
+          </p>
+          {isCustomPackageIcon(iconKey) ? (
+            <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-3">
+              <img
+                src={packageMediaUrl(iconKey) ?? iconKey}
+                alt=""
+                className="h-6 w-6 object-contain"
+              />
+              <span className="truncate text-xs text-zinc-400">{iconKey}</span>
+            </div>
+          ) : (
+            <p className="mb-3 text-xs text-zinc-500">
+              Mevcut sistem ikonu: <span className="text-zinc-300">{iconKey}</span>
+            </p>
+          )}
+          <AdminFileUpload
+            accept=".svg,image/svg+xml"
+            label="SVG İkon Yükle"
+            fileLabel={isCustomPackageIcon(iconKey) ? "İkonu Değiştir" : undefined}
+            hint="Yalnızca .svg dosyaları kabul edilir."
+            onFileSelect={handleIconUpload}
           />
         </Field>
         <Field label="Sıra">
@@ -299,80 +308,43 @@ export function PackageForm({
             className={inputClass}
           />
         </Field>
-        <Field label="Hero Görsel URL">
-          <input
-            value={heroImageUrl}
-            onChange={(e) => setHeroImageUrl(e.target.value)}
-            className={inputClass}
-          />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleImageUpload(e, setHeroImageUrl)}
-            className="mt-2 text-sm text-zinc-400"
-          />
-        </Field>
-        <Field label="Arka Plan Görsel URL">
-          <input
-            value={backgroundImageUrl}
-            onChange={(e) => setBackgroundImageUrl(e.target.value)}
-            className={inputClass}
-          />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleImageUpload(e, setBackgroundImageUrl)}
-            className="mt-2 text-sm text-zinc-400"
+        <Field label="Arka Plan Görseli">
+          <p className="mb-2 text-xs leading-relaxed text-zinc-500">
+            Paket listesi kartlarında dekoratif arka plan için ayrılmış alan.
+            Şu an sitede gösterilmiyor; ilerideki tasarımlar için saklanır.
+          </p>
+          {backgroundImageUrl ? (
+            <p className="mb-2 truncate text-xs text-zinc-400">
+              {backgroundImageUrl}
+            </p>
+          ) : null}
+          <AdminFileUpload
+            accept="image/jpeg,image/webp,image/png"
+            label="Arka Plan Görseli Yükle"
+            fileLabel={backgroundImageUrl ? "Görseli Değiştir" : undefined}
+            onFileSelect={(file) => handleImageUpload(file, setBackgroundImageUrl)}
           />
         </Field>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <label className="flex items-center gap-2 text-sm text-zinc-300">
             <input
               type="checkbox"
-              checked={highlight}
-              onChange={(e) => setHighlight(e.target.checked)}
-            />
-            Öne çıkar
-          </label>
-          <label className="flex items-center gap-2 text-sm text-zinc-300">
-            <input
-              type="checkbox"
               checked={isActive}
               onChange={(e) => setIsActive(e.target.checked)}
             />
-            Aktif
+            Aktif (sitede göster)
           </label>
         </div>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <h2 className="font-semibold text-white">İçerik</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Hizmet Kutusu Rengi (#hex)">
-            <HexColorInput
-              value={content.serviceGridColor}
-              onChange={(value) =>
-                setContent({ ...content, serviceGridColor: value })
-              }
-            />
-          </Field>
-          <Field label="Hizmet Yazı Rengi (#hex)">
-            <HexColorInput
-              value={content.serviceTextColor}
-              onChange={(value) =>
-                setContent({ ...content, serviceTextColor: value })
-              }
-            />
-          </Field>
-          <Field label="Hizmet Alt Yazı Rengi (#hex)">
-            <HexColorInput
-              value={content.serviceSubTextColor}
-              onChange={(value) =>
-                setContent({ ...content, serviceSubTextColor: value })
-              }
-            />
-          </Field>
-        </div>
+        <h2 className="font-semibold text-white">
+          İçerik{" "}
+          <span className="font-normal text-sm text-zinc-400">
+            (Bu alana girilecek olan metinler rezervasyon oluşturma formunda
+            kullanılmak üzere girilecektir.)
+          </span>
+        </h2>
         <Field label="Çekim Açıklaması">
           <textarea
             value={content.shootDescription}
@@ -382,8 +354,12 @@ export function PackageForm({
             rows={4}
             className={inputClass}
           />
+          <p className="mt-1 text-xs text-zinc-500">
+            Rezervasyon oluştururken «Çekim İçeriği» alanına varsayılan değer
+            olarak gelir. Sitede gösterilmez.
+          </p>
         </Field>
-        <Field label="Çekim Sonrası Açıklaması (site)">
+        <Field label="Çekim Sonrası Açıklaması">
           <textarea
             value={content.afterShootDescription}
             onChange={(e) =>
@@ -396,57 +372,59 @@ export function PackageForm({
             className={inputClass}
           />
           <p className="mt-1 text-xs text-zinc-500">
-            Paketler sayfasında gösterilen genel metin. Rezervasyon formundaki
-            etiketler aşağıdaki şablonlardan gelir.
+            Rezervasyon detayında referans metin olarak saklanır. Sitede
+            gösterilmez.
           </p>
         </Field>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
         <div>
-          <h2 className="font-semibold text-white">Müşteri Deneyimi (Mobil)</h2>
+          <h2 className="font-semibold text-white">Paket Detayı</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Paket detay, İncele ekranı ve sepet/talep formlarında kullanılır.
+            Müşterinin paket detay penceresinde gördüğü içerik: başlık, görseller,
+            etiketler, fiyat satırları ve İncele ekranı.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field label="Görünen Başlık (opsiyonel)">
-            <input
-              value={content.displayTitle ?? ""}
-              onChange={(e) =>
-                setContent({ ...content, displayTitle: e.target.value })
-              }
-              placeholder={title || "Paket adı"}
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Çekim Bölüm Başlığı">
-            <input
-              value={content.shootTitle}
-              onChange={(e) =>
-                setContent({ ...content, shootTitle: e.target.value })
-              }
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Çekim Sonrası Bölüm Başlığı">
-            <input
-              value={content.afterShootTitle}
-              onChange={(e) =>
-                setContent({ ...content, afterShootTitle: e.target.value })
-              }
-              className={inputClass}
-            />
-          </Field>
-        </div>
+        <Field label="Görünen Başlık (opsiyonel)">
+          <input
+            value={content.displayTitle ?? ""}
+            onChange={(e) =>
+              setContent({ ...content, displayTitle: e.target.value })
+            }
+            placeholder={title || "Paket adı"}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            Boş bırakılırsa üstteki «Başlık» kullanılır. Detay penceresinin üst
+            başlığıdır.
+          </p>
+        </Field>
+
+        <Field label="Ana Görsel (Hero)">
+          <p className="mb-2 text-xs leading-relaxed text-zinc-500">
+            Galeri boşsa detay penceresindeki kaydırmalı alanda gösterilir.
+            Sepette küçük önizleme olarak da kullanılır.
+          </p>
+          {heroImageUrl ? (
+            <p className="mb-2 truncate text-xs text-zinc-400">{heroImageUrl}</p>
+          ) : null}
+          <AdminFileUpload
+            accept="image/jpeg,image/webp,image/png"
+            label="Ana Görsel Yükle"
+            fileLabel={heroImageUrl ? "Görseli Değiştir" : undefined}
+            hint="Önerilen: dikey 4:5 oran, JPEG veya WebP."
+            onFileSelect={(file) => handleImageUpload(file, setHeroImageUrl)}
+          />
+        </Field>
 
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90">
           <p className="font-medium text-amber-200">Galeri fotoğraf rehberi</p>
           <p className="mt-1">
             Önerilen boyut: 1080×1350 px (4:5 dikey), en fazla 2 MB, JPEG veya
-            WebP. Dikey odaklı görseller paket detayındaki kaydırmalı galeride
-            en iyi görünür.
+            WebP. Dikey odaklı görseller detay penceresindeki galeride en iyi
+            görünür.
           </p>
         </div>
 
@@ -486,11 +464,11 @@ export function PackageForm({
                 </button>
               </div>
             ))}
-            <input
-              type="file"
+            <AdminFileUpload
               accept="image/jpeg,image/webp,image/png"
-              onChange={handleGalleryUpload}
-              className="text-sm text-zinc-400"
+              label="Galeriye Görsel Ekle"
+              hint="Önerilen 1080×1350 px (4:5), max 2 MB, JPEG/WebP."
+              onFileSelect={handleGalleryUpload}
             />
           </div>
         </Field>
@@ -526,6 +504,9 @@ export function PackageForm({
               + Bölüm Ekle
             </button>
           </div>
+          <p className="text-xs text-zinc-500">
+            «İncele» butonuna basıldığında açılan ekrandaki başlık ve metinler.
+          </p>
           {(content.detailSections ?? [])
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((section, index) => (
@@ -570,45 +551,94 @@ export function PackageForm({
             ))}
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field label="Talep Tarih Alanı Etiketi">
-            <input
-              value={content.requestFieldLabels?.dateLabel ?? ""}
-              onChange={(e) =>
-                setContent({
-                  ...content,
-                  requestFieldLabels: {
-                    dateLabel: e.target.value,
-                    cityLabel:
-                      content.requestFieldLabels?.cityLabel ?? "Şehir",
-                  },
-                })
+        <div className="space-y-4 border-t border-white/10 pt-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-white">Fiyat Seçenekleri</h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                Detay penceresindeki satırlar (ör. Fotoğraf, Fotoğraf + Video).
+                Peşin ve taksitli fiyatlar buradan gelir.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setOptions([
+                  ...options,
+                  { label: "", cashPrice: 0, installmentPrice: 0 },
+                ])
               }
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Talep Şehir Alanı Etiketi">
-            <input
-              value={content.requestFieldLabels?.cityLabel ?? ""}
-              onChange={(e) =>
-                setContent({
-                  ...content,
-                  requestFieldLabels: {
-                    dateLabel:
-                      content.requestFieldLabels?.dateLabel ?? "Tarih",
-                    cityLabel: e.target.value,
-                  },
-                })
-              }
-              className={inputClass}
-            />
-          </Field>
+              className="text-sm text-zinc-400 hover:text-white"
+            >
+              + Seçenek Ekle
+            </button>
+          </div>
+          <div className="hidden gap-3 px-1 md:grid md:grid-cols-3">
+            <span className="text-xs font-medium text-zinc-500">Seçenek Etiketi</span>
+            <span className="text-xs font-medium text-zinc-500">Peşin (₺)</span>
+            <span className="text-xs font-medium text-zinc-500">Taksitli (₺)</span>
+          </div>
+          {options.map((option, index) => (
+            <div
+              key={index}
+              className="grid gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3 md:grid-cols-3 md:rounded-none md:border-0 md:bg-transparent md:p-0"
+            >
+              <div>
+                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
+                  Seçenek Etiketi
+                </span>
+                <input
+                  placeholder="örn. Fotoğraf"
+                  value={option.label}
+                  onChange={(e) => {
+                    const next = [...options];
+                    next[index] = { ...next[index], label: e.target.value };
+                    setOptions(next);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
+                  Peşin (₺)
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={option.cashPrice}
+                  onChange={(e) => {
+                    const next = [...options];
+                    next[index] = {
+                      ...next[index],
+                      cashPrice: Number(e.target.value),
+                    };
+                    setOptions(next);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
+                  Taksitli (₺)
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={option.installmentPrice}
+                  onChange={(e) => {
+                    const next = [...options];
+                    next[index] = {
+                      ...next[index],
+                      installmentPrice: Number(e.target.value),
+                    };
+                    setOptions(next);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          ))}
         </div>
-
-        <ServicesEditor
-          services={content.services}
-          onChange={(services) => setContent({ ...content, services })}
-        />
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
@@ -702,66 +732,6 @@ export function PackageForm({
         )}
       </div>
 
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="font-semibold text-white">Fiyat Seçenekleri</h2>
-          <button
-            type="button"
-            onClick={() =>
-              setOptions([
-                ...options,
-                { label: "", cashPrice: 0, installmentPrice: 0 },
-              ])
-            }
-            className="text-sm text-zinc-400 hover:text-white"
-          >
-            + Seçenek Ekle
-          </button>
-        </div>
-        {options.map((option, index) => (
-          <div key={index} className="grid gap-3 md:grid-cols-3">
-            <input
-              placeholder="Etiket"
-              value={option.label}
-              onChange={(e) => {
-                const next = [...options];
-                next[index] = { ...next[index], label: e.target.value };
-                setOptions(next);
-              }}
-              className={inputClass}
-            />
-            <input
-              type="number"
-              placeholder="Peşin"
-              value={option.cashPrice}
-              onChange={(e) => {
-                const next = [...options];
-                next[index] = {
-                  ...next[index],
-                  cashPrice: Number(e.target.value),
-                };
-                setOptions(next);
-              }}
-              className={inputClass}
-            />
-            <input
-              type="number"
-              placeholder="Taksitli"
-              value={option.installmentPrice}
-              onChange={(e) => {
-                const next = [...options];
-                next[index] = {
-                  ...next[index],
-                  installmentPrice: Number(e.target.value),
-                };
-                setOptions(next);
-              }}
-              className={inputClass}
-            />
-          </div>
-        ))}
-      </div>
-
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       <button
@@ -834,78 +804,6 @@ function TagsEditor({
           Ekle
         </button>
       </div>
-    </div>
-  );
-}
-
-function ServicesEditor({
-  services,
-  onChange,
-}: {
-  services: PackageServiceItem[];
-  onChange: (services: PackageServiceItem[]) => void;
-}) {
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h3 className="text-sm font-medium text-white">Hizmet Grid</h3>
-        <button
-          type="button"
-          onClick={() =>
-            onChange([
-              ...services,
-              { title: "", subLines: ["", ""], iconKey: "Camera" },
-            ])
-          }
-          className="text-sm text-zinc-400 hover:text-white"
-        >
-          + Hizmet Ekle
-        </button>
-      </div>
-      {services.map((service, index) => (
-        <div key={index} className="grid gap-2 rounded-xl bg-white/5 p-3 md:grid-cols-4">
-          <input
-            value={service.title}
-            onChange={(e) => {
-              const next = [...services];
-              next[index] = { ...next[index], title: e.target.value };
-              onChange(next);
-            }}
-            placeholder="Başlık"
-            className={inputClass}
-          />
-          <input
-            value={service.iconKey}
-            onChange={(e) => {
-              const next = [...services];
-              next[index] = { ...next[index], iconKey: e.target.value };
-              onChange(next);
-            }}
-            placeholder="Lucide ikon"
-            className={inputClass}
-          />
-          <input
-            value={service.subLines.join(", ")}
-            onChange={(e) => {
-              const next = [...services];
-              next[index] = {
-                ...next[index],
-                subLines: e.target.value.split(",").map((s) => s.trim()),
-              };
-              onChange(next);
-            }}
-            placeholder="Alt satırlar (virgülle)"
-            className={inputClass}
-          />
-          <button
-            type="button"
-            onClick={() => onChange(services.filter((_, i) => i !== index))}
-            className="text-sm text-red-400"
-          >
-            Sil
-          </button>
-        </div>
-      ))}
     </div>
   );
 }

@@ -244,7 +244,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               categorySlug: item.packageOption.category.slug,
               accentColor: item.packageOption.category.accentColor,
               shootDate: defaultDate,
-              shootContent: item.packageOption.label,
+              shootContent:
+                item.packageOption.category.content?.shootDescription?.trim() ||
+                item.packageOption.label,
               readyTime: "",
               location: request.city ?? "",
               agreedUnitPrice: item.unitPrice,
@@ -319,6 +321,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     const option = category?.options.find((o) => o.id === optionId);
     if (!category || !option) return;
 
+    const packageContent = category.content as PackageCategoryContent | undefined;
+
     const newItem: SelectedItem = {
       packageOptionId: option.id,
       categoryId: category.id,
@@ -329,7 +333,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       categorySlug: category.slug,
       accentColor: category.accentColor,
       shootDate: "",
-      shootContent: option.label,
+      shootContent:
+        packageContent?.shootDescription?.trim() || option.label,
       readyTime: "",
       location: "",
       agreedUnitPrice: option.cashPrice,
