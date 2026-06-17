@@ -9,6 +9,7 @@ import type { PackageCategoryContent } from "@/lib/package-seed-data";
 type PackageInspectSheetProps = {
   open: boolean;
   category: PackageCategoryData;
+  selectedOptionId: string | null;
   onClose: () => void;
   onBack: () => void;
 };
@@ -16,13 +17,21 @@ type PackageInspectSheetProps = {
 export function PackageInspectSheet({
   open,
   category,
+  selectedOptionId,
   onClose,
   onBack,
 }: PackageInspectSheetProps) {
   const content = category.content as PackageCategoryContent;
-  const sections = [...(content.detailSections ?? [])].sort(
-    (a, b) => a.sortOrder - b.sortOrder,
-  );
+  const selectedOption =
+    category.options.find((option) => option.id === selectedOptionId) ??
+    category.options[0];
+  const optionKey = selectedOption?.id ?? "";
+  const optionLabelKey = selectedOption?.label ?? "";
+  const scopedSections =
+    content.detailSectionsByOption?.[optionKey] ??
+    content.detailSectionsByOption?.[optionLabelKey] ??
+    content.detailSections;
+  const sections = [...(scopedSections ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
 
   useEffect(() => {
     if (!open) return;
@@ -77,6 +86,9 @@ export function PackageInspectSheet({
                 >
                   {content.displayTitle ?? category.title}
                 </h3>
+                {selectedOption ? (
+                  <p className="mt-1 text-sm text-zinc-400">{selectedOption.label}</p>
+                ) : null}
 
                 {sections.length === 0 ? (
                   <p className="mt-6 text-sm text-zinc-500">

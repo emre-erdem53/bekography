@@ -53,6 +53,17 @@ export function PackageDetailSheet({
   const selectedOption =
     category?.options.find((o) => o.id === selectedOptionId) ??
     category?.options[0];
+  const selectedOptionInspectEnabled = (() => {
+    if (!category || !selectedOption) return false;
+    const detailContent = category.content as PackageCategoryContent;
+    const optionKey = selectedOption.id;
+    const optionLabel = selectedOption.label;
+    return (
+      detailContent.inspectEnabledByOption?.[optionKey] ??
+      detailContent.inspectEnabledByOption?.[optionLabel] ??
+      true
+    );
+  })();
   const galleryUrls = category ? getCategoryGalleryUrls(category) : [];
   const tags = content?.highlightTags ?? [];
 
@@ -188,7 +199,8 @@ export function PackageDetailSheet({
                     <button
                       type="button"
                       onClick={() => setInspectOpen(true)}
-                      className="w-full rounded-2xl bg-[#222] py-3 text-sm font-semibold text-white md:py-3.5"
+                      disabled={!selectedOptionInspectEnabled}
+                      className="w-full rounded-2xl bg-[#222] py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 md:py-3.5"
                     >
                       İncele
                     </button>
@@ -220,6 +232,7 @@ export function PackageDetailSheet({
         <PackageInspectSheet
           open={inspectOpen}
           category={category}
+          selectedOptionId={selectedOption?.id ?? null}
           onClose={() => setInspectOpen(false)}
           onBack={() => setInspectOpen(false)}
         />

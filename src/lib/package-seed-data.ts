@@ -40,6 +40,8 @@ export type PackageCategoryContent = {
   highlightTags?: string[];
   galleryImages?: PackageGalleryImage[];
   detailSections?: PackageDetailSection[];
+  detailSectionsByOption?: Record<string, PackageDetailSection[]>;
+  inspectEnabledByOption?: Record<string, boolean>;
   requestFieldLabels?: PackageRequestFieldLabels;
 };
 

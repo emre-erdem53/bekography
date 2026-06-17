@@ -34,6 +34,8 @@ const defaultContent: PackageCategoryContent = {
   highlightTags: [],
   galleryImages: [],
   detailSections: [],
+  detailSectionsByOption: {},
+  inspectEnabledByOption: {},
   requestFieldLabels: defaultRequestFieldLabels("Paket", "indoor"),
 };
 
@@ -43,6 +45,12 @@ type OptionForm = {
   cashPrice: number;
   installmentPrice: number;
 };
+
+function getOptionDetailKey(option: OptionForm, index: number) {
+  if (option.id) return option.id;
+  const label = option.label.trim();
+  return label || `option-${index}`;
+}
 
 export function PackageForm({
   packageId,
@@ -89,6 +97,8 @@ export function PackageForm({
           highlightTags: loadedContent.highlightTags ?? [],
           galleryImages: loadedContent.galleryImages ?? [],
           detailSections: loadedContent.detailSections ?? [],
+          detailSectionsByOption: loadedContent.detailSectionsByOption ?? {},
+          inspectEnabledByOption: loadedContent.inspectEnabledByOption ?? {},
           requestFieldLabels:
             loadedContent.requestFieldLabels ??
             defaultRequestFieldLabels(
@@ -178,8 +188,34 @@ export function PackageForm({
       return;
     }
 
+    const detailSectionsByOption = {
+      ...(content.detailSectionsByOption ?? {}),
+    };
+    const optionLabelMap = Object.fromEntries(
+      options.map((option, index) => [option.label.trim(), getOptionDetailKey(option, index)]),
+    );
+    Object.entries(content.detailSectionsByOption ?? {}).forEach(
+      ([key, sections]) => {
+        const mappedKey = optionLabelMap[key];
+        if (mappedKey && !detailSectionsByOption[mappedKey]) {
+          detailSectionsByOption[mappedKey] = sections;
+        }
+      },
+    );
+    const inspectEnabledByOption = {
+      ...(content.inspectEnabledByOption ?? {}),
+    };
+    Object.entries(content.inspectEnabledByOption ?? {}).forEach(([key, enabled]) => {
+      const mappedKey = optionLabelMap[key];
+      if (mappedKey && inspectEnabledByOption[mappedKey] === undefined) {
+        inspectEnabledByOption[mappedKey] = enabled;
+      }
+    });
+
     const normalizedContent: PackageCategoryContent = applyPackageServiceTheme({
       ...content,
+      detailSectionsByOption,
+      inspectEnabledByOption,
       scheduleType: content.scheduleType ?? "indoor",
       postShootTemplates:
         content.postShootTemplates ??
@@ -419,76 +455,141 @@ export function PackageForm({
           onChange={(highlightTags) => setContent({ ...content, highlightTags })}
         />
 
-        <div className="space-y-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-sm font-medium text-white">İncele Bölümleri</h3>
-            <button
-              type="button"
-              onClick={() => {
-                const sections = content.detailSections ?? [];
-                setContent({
-                  ...content,
-                  detailSections: [
-                    ...sections,
-                    {
-                      id: crypto.randomUUID(),
-                      title: "",
-                      body: "",
-                      sortOrder: sections.length,
-                    },
-                  ],
-                });
-              }}
-              className="text-sm text-zinc-400 hover:text-white"
-            >
-              + Bölüm Ekle
-            </button>
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-white">
+              İncele Bölümleri (Seçenek Bazlı)
+            </h3>
+            <p className="mt-1 text-xs text-zinc-500">
+              Her fiyat seçeneği için farklı «İncele» metni girebilirsiniz.
+            </p>
           </div>
-          <p className="text-xs text-zinc-500">
-            «İncele» butonuna basıldığında açılan ekrandaki başlık ve metinler.
-          </p>
-          {(content.detailSections ?? [])
-            .sort((a, b) => a.sortOrder - b.sortOrder)
-            .map((section, index) => (
+          {options.map((option, optionIndex) => {
+            const optionLabel = option.label.trim() || `Seçenek ${optionIndex + 1}`;
+            const key = getOptionDetailKey(option, optionIndex);
+            const sections =
+              content.detailSectionsByOption?.[key] ??
+              content.detailSectionsByOption?.[option.label.trim()] ??
+              [];
+
+            return (
               <div
-                key={section.id}
-                className="space-y-2 rounded-xl border border-white/5 bg-white/5 p-4"
+                key={`${key}-${optionIndex}`}
+                className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4"
               >
-                <input
-                  value={section.title}
-                  onChange={(e) => {
-                    const next = [...(content.detailSections ?? [])];
-                    next[index] = { ...next[index], title: e.target.value };
-                    setContent({ ...content, detailSections: next });
-                  }}
-                  placeholder="Başlık"
-                  className={inputClass}
-                />
-                <textarea
-                  value={section.body}
-                  onChange={(e) => {
-                    const next = [...(content.detailSections ?? [])];
-                    next[index] = { ...next[index], body: e.target.value };
-                    setContent({ ...content, detailSections: next });
-                  }}
-                  rows={4}
-                  placeholder="Açıklama metni"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = (content.detailSections ?? []).filter(
-                      (_, i) => i !== index,
-                    );
-                    setContent({ ...content, detailSections: next });
-                  }}
-                  className="text-sm text-red-400"
-                >
-                  Bölümü Sil
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-white">{optionLabel}</p>
+                    <label className="mt-1 inline-flex items-center gap-2 text-xs text-zinc-400">
+                      <input
+                        type="checkbox"
+                        checked={content.inspectEnabledByOption?.[key] ?? true}
+                        onChange={(e) =>
+                          setContent({
+                            ...content,
+                            inspectEnabledByOption: {
+                              ...(content.inspectEnabledByOption ?? {}),
+                              [key]: e.target.checked,
+                            },
+                          })
+                        }
+                      />
+                      İncele aktif
+                    </label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextSections = [
+                        ...sections,
+                        {
+                          id: crypto.randomUUID(),
+                          title: "",
+                          body: "",
+                          sortOrder: sections.length,
+                        },
+                      ];
+                      setContent({
+                        ...content,
+                        detailSectionsByOption: {
+                          ...(content.detailSectionsByOption ?? {}),
+                          [key]: nextSections,
+                        },
+                      });
+                    }}
+                    className="text-sm text-zinc-400 hover:text-white"
+                  >
+                    + Bölüm Ekle
+                  </button>
+                </div>
+
+                {sections.length === 0 ? (
+                  <p className="text-xs text-zinc-500">
+                    Bu seçenek için henüz incele metni yok.
+                  </p>
+                ) : null}
+
+                {[...sections]
+                  .sort((a, b) => a.sortOrder - b.sortOrder)
+                  .map((section, sectionIndex) => (
+                    <div
+                      key={section.id}
+                      className="space-y-2 rounded-xl border border-white/5 bg-black/20 p-4"
+                    >
+                      <input
+                        value={section.title}
+                        onChange={(e) => {
+                          const next = [...sections];
+                          next[sectionIndex] = { ...next[sectionIndex], title: e.target.value };
+                          setContent({
+                            ...content,
+                            detailSectionsByOption: {
+                              ...(content.detailSectionsByOption ?? {}),
+                              [key]: next,
+                            },
+                          });
+                        }}
+                        placeholder="Başlık"
+                        className={inputClass}
+                      />
+                      <textarea
+                        value={section.body}
+                        onChange={(e) => {
+                          const next = [...sections];
+                          next[sectionIndex] = { ...next[sectionIndex], body: e.target.value };
+                          setContent({
+                            ...content,
+                            detailSectionsByOption: {
+                              ...(content.detailSectionsByOption ?? {}),
+                              [key]: next,
+                            },
+                          });
+                        }}
+                        rows={4}
+                        placeholder="Açıklama metni"
+                        className={inputClass}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = sections.filter((_, i) => i !== sectionIndex);
+                          setContent({
+                            ...content,
+                            detailSectionsByOption: {
+                              ...(content.detailSectionsByOption ?? {}),
+                              [key]: next,
+                            },
+                          });
+                        }}
+                        className="text-sm text-red-400"
+                      >
+                        Bölümü Sil
+                      </button>
+                    </div>
+                  ))}
               </div>
-            ))}
+            );
+          })}
         </div>
 
         <div className="space-y-4 border-t border-white/10 pt-5">
