@@ -9,17 +9,22 @@ import {
   useRef,
   useState,
 } from "react";
+import { Loader2 } from "lucide-react";
 import { GridMediaTile } from "@/components/home/grid-media-tile";
+import {
+  getExploreLoadMoreCount,
+  getInitialExploreVisibleCount,
+} from "@/lib/explore-grid-viewport";
 import type {
   DisplayPattern,
   ExploreCarouselSlide,
   ExploreMediaItem,
 } from "@/lib/explore-media-types";
 
-const INITIAL_VISIBLE_COUNT = 12;
-const LOAD_MORE_STEP = 9;
-/** Above-fold grid tiles: erken mount + öncelikli görsel yükleme. */
-const EAGER_TILE_COUNT = 6;
+/** Üst sıradaki karolara ağ önceliği; geri kalan ilk ekran normal lazy yüklenir. */
+const PRIORITY_TILE_COUNT = 3;
+/** Kullanıcı scroll etmeden «daha fazla yükle» tetiklenmesin. */
+const SCROLL_GATE_PX = 40;
 
 // `displayPattern` is computed in `lib/explore-media.ts`. The pattern is
 // orientation-aware (wide slots host landscape, narrow slots host portrait)
@@ -50,7 +55,10 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
   const [carouselSlideByIndex, setCarouselSlideByIndex] = useState<
     Record<number, number>
   >({});
-  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_COUNT);
+  const [visibleCount, setVisibleCount] = useState(() =>
+    getInitialExploreVisibleCount(items),
+  );
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   // True while any modal image is being pinch-zoomed; we use this to
   // freeze both the vertical scroller and any active inner carousel so
   // the user can pan within the zoomed image without the page snapping.
@@ -61,6 +69,10 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
   const [userMuted, setUserMuted] = useState(false);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const visibleCountRef = useRef(visibleCount);
+  const isLoadingMoreRef = useRef(isLoadingMore);
+  const hasUserScrolledRef = useRef(false);
+  const loadBatchStartRef = useRef(visibleCount);
   const tilesRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const gridVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const gridVideoObserverRef = useRef<IntersectionObserver | null>(null);
@@ -71,6 +83,33 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
   // tile N in the grid is index N in the swipe stream. There is no separate
   // ordering, no shuffle, no dedupe step that could drift.
   const media = items;
+
+  useEffect(() => {
+    const next = getInitialExploreVisibleCount(items);
+    setVisibleCount(next);
+    loadBatchStartRef.current = next;
+    setIsLoadingMore(false);
+    hasUserScrolledRef.current = false;
+  }, [items]);
+
+  useEffect(() => {
+    visibleCountRef.current = visibleCount;
+  }, [visibleCount]);
+
+  useEffect(() => {
+    isLoadingMoreRef.current = isLoadingMore;
+  }, [isLoadingMore]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      if (window.scrollY >= SCROLL_GATE_PX) {
+        hasUserScrolledRef.current = true;
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const arrangedFeedItems = useMemo(
     () => media.slice(0, Math.min(visibleCount, media.length)),
     [media, visibleCount],
@@ -82,22 +121,101 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
 
   // ----------------------------- GRID ------------------------------------
 
-  // "Load more" sentinel
+  // "Load more" — yalnızca kullanıcı scroll ettikten sonra, bir Pro Max ekranı kadar.
   useEffect(() => {
     const target = loadMoreRef.current;
-    if (!target) return;
+    if (!target || visibleCount >= media.length) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting) return;
-        setVisibleCount((current) =>
-          Math.min(current + LOAD_MORE_STEP, media.length),
-        );
+        if (!hasUserScrolledRef.current) return;
+        if (isLoadingMoreRef.current) return;
+
+        const current = visibleCountRef.current;
+        const step = getExploreLoadMoreCount(media, current);
+        if (step <= 0) return;
+
+        loadBatchStartRef.current = current;
+        setIsLoadingMore(true);
+        setVisibleCount(Math.min(current + step, media.length));
       },
-      { rootMargin: "320px 0px 320px 0px" },
+      { rootMargin: "160px 0px 0px 0px" },
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [media.length]);
+  }, [media, visibleCount, media.length]);
+
+  // Yeni batch DOM'a girdikten sonra medya indirmesini bekle; spinner gerçek yükleme süresini yansıtsın.
+  useEffect(() => {
+    if (!isLoadingMore) return;
+
+    let cancelled = false;
+    const addedFrom = loadBatchStartRef.current;
+    const addedTo = visibleCount;
+
+    if (addedTo <= addedFrom) {
+      setIsLoadingMore(false);
+      return;
+    }
+
+    async function waitForNewTiles() {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      if (cancelled) return;
+
+      const waiters: Promise<void>[] = [];
+      for (let i = addedFrom; i < addedTo; i++) {
+        const id = media[i]?.id;
+        if (!id) continue;
+        const tile = document.querySelector(`[data-media-id="${id}"]`);
+        if (!tile) continue;
+
+        const img = tile.querySelector("img");
+        if (img && !img.complete) {
+          waiters.push(
+            new Promise<void>((resolve) => {
+              img.addEventListener("load", () => resolve(), { once: true });
+              img.addEventListener("error", () => resolve(), { once: true });
+            }),
+          );
+        }
+
+        const video = tile.querySelector("video");
+        if (video && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+          waiters.push(
+            new Promise<void>((resolve) => {
+              video.addEventListener("loadeddata", () => resolve(), {
+                once: true,
+              });
+              video.addEventListener("error", () => resolve(), { once: true });
+            }),
+          );
+        }
+      }
+
+      const minDisplay = new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 350);
+      });
+      const timeout = new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 8000);
+      });
+      await Promise.race([
+        Promise.all([Promise.all(waiters), minDisplay]),
+        timeout,
+      ]);
+
+      if (!cancelled) {
+        setIsLoadingMore(false);
+      }
+    }
+
+    void waitForNewTiles();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoadingMore, visibleCount, media]);
 
   // Grid videoları: görünürken loop oynat, çıkınca duraklat — React state güncellemesi yok.
   useEffect(() => {
@@ -284,7 +402,7 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
                 >
                   <GridMediaTile
                     item={item}
-                    eager={tileIndex < EAGER_TILE_COUNT}
+                    priority={tileIndex < PRIORITY_TILE_COUNT}
                     videoRef={(node) => {
                       gridVideoRefs.current[item.id] = node;
                     }}
@@ -295,7 +413,19 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
             })}
           </div>
           {visibleCount < media.length ? (
-            <div ref={loadMoreRef} className="h-20 w-full" aria-hidden />
+            <div
+              ref={loadMoreRef}
+              className="flex h-24 w-full items-center justify-center"
+              aria-live="polite"
+              aria-busy={isLoadingMore}
+            >
+              {isLoadingMore ? (
+                <Loader2
+                  className="h-7 w-7 animate-spin text-zinc-500"
+                  aria-label="İçerik yükleniyor"
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
       </section>

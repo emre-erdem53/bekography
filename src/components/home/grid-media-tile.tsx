@@ -6,14 +6,15 @@ import type { ExploreMediaItem } from "@/lib/explore-media-types";
 
 type GridMediaTileProps = {
   item: ExploreMediaItem;
-  eager?: boolean;
+  /** İlk ekranda öncelikli indirme (yalnızca üst birkaç karo). */
+  priority?: boolean;
   videoRef: (node: HTMLVideoElement | null) => void;
 };
 
 /** Viewport yakınında mount; Blob görselleri doğrudan CDN'den (`unoptimized`). */
-export function GridMediaTile({ item, eager, videoRef }: GridMediaTileProps) {
+export function GridMediaTile({ item, priority, videoRef }: GridMediaTileProps) {
   const { ref, inView } = useInViewOnce({
-    rootMargin: eager ? "520px 0px" : "280px 0px",
+    rootMargin: priority ? "0px 0px 80px 0px" : "0px 0px 120px 0px",
   });
 
   return (
@@ -37,8 +38,8 @@ export function GridMediaTile({ item, eager, videoRef }: GridMediaTileProps) {
           src={item.src}
           alt={item.title}
           fill
-          priority={eager}
-          loading={eager ? "eager" : "lazy"}
+          priority={priority}
+          loading={priority ? "eager" : "lazy"}
           decoding="async"
           unoptimized
           className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
