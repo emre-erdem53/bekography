@@ -36,7 +36,6 @@ type CartState = {
 export function buildCartItemFromCategory(
   category: PackageCategoryData,
   option: PackageCategoryData["options"][number],
-  imageUrl?: string | null,
 ): CartItemInput {
   const content = category.content as PackageCategoryContent;
   const labels =
@@ -45,8 +44,6 @@ export function buildCartItemFromCategory(
       category.title,
       content.scheduleType ?? "indoor",
     );
-
-  const galleryFirst = content.galleryImages?.[0]?.url ?? null;
 
   return {
     packageOptionId: option.id,
@@ -57,7 +54,7 @@ export function buildCartItemFromCategory(
     cashPrice: option.cashPrice,
     installmentPrice: option.installmentPrice,
     accentColor: category.accentColor,
-    imageUrl: imageUrl ?? galleryFirst ?? category.heroImageUrl,
+    imageUrl: null,
     dateLabel: labels.dateLabel,
     cityLabel: labels.cityLabel,
   };

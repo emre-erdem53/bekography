@@ -107,7 +107,7 @@ export function PackageDetailSheet({
                       className="truncate text-xl font-semibold md:text-2xl"
                       style={{ color: category.accentColor }}
                     >
-                      {content?.displayTitle ?? category.title}
+                      {category.title}
                     </h2>
                     {selectedOption ? (
                       <p className="truncate text-sm text-zinc-400">

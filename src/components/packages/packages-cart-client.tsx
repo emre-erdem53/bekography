@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import { formatPrice } from "@/lib/constants";
-import { packageMediaUrl } from "@/lib/package-media";
 import { useCartStore } from "@/stores/cart-store";
 import { PackageCartBar } from "@/components/packages/package-cart-bar";
 import { RequestModal } from "@/components/packages/request-modal";
@@ -60,32 +58,19 @@ export function PackagesCartClient() {
           </div>
         ) : (
           <ul className="mt-8 space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-            {items.map((item) => {
-              const thumb = packageMediaUrl(item.imageUrl);
-              return (
-                <li
-                  key={item.packageOptionId}
-                  className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 md:p-5"
-                >
-                  <div className="flex gap-3">
-                    <input
-                      type="checkbox"
-                      checked={item.selected}
-                      onChange={() => toggleSelected(item.packageOptionId)}
-                      className="mt-1 h-4 w-4 shrink-0 accent-[#93f8b6]"
-                    />
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-[#111] md:h-20 md:w-20">
-                      {thumb ? (
-                        <Image
-                          src={thumb}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
+            {items.map((item) => (
+              <li
+                key={item.packageOptionId}
+                className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 md:p-5"
+              >
+                <div className="flex gap-3">
+                  <input
+                    type="checkbox"
+                    checked={item.selected}
+                    onChange={() => toggleSelected(item.packageOptionId)}
+                    className="mt-1 h-4 w-4 shrink-0 accent-[#93f8b6]"
+                  />
+                  <div className="min-w-0 flex-1">
                       <p
                         className="font-semibold md:text-lg"
                         style={{ color: item.accentColor }}
@@ -118,8 +103,7 @@ export function PackagesCartClient() {
                     </div>
                   </div>
                 </li>
-              );
-            })}
+            ))}
           </ul>
         )}
       </section>

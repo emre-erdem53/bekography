@@ -84,7 +84,7 @@ export function PackageInspectSheet({
                   className="text-xl font-semibold md:text-2xl"
                   style={{ color: category.accentColor }}
                 >
-                  {content.displayTitle ?? category.title}
+                  {category.title}
                 </h3>
                 {selectedOption ? (
                   <p className="mt-1 text-sm text-zinc-400">{selectedOption.label}</p>

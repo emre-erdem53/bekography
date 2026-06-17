@@ -6,13 +6,7 @@ import type { PackageCategoryData } from "@/lib/package-types";
 import { getPackageIcon } from "@/components/packages/package-icon";
 import { PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
 import { PackagePricingTable } from "@/components/packages/package-pricing-table";
-
-const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
-
-function packageMedia(fileName: string) {
-  if (fileName.startsWith("http")) return fileName;
-  return blobBaseUrl ? `${blobBaseUrl}/${fileName}` : `/reels/${fileName}`;
-}
+import { packageMediaUrl } from "@/lib/package-media";
 
 export function PackageCategoryPanel({
   category,
@@ -20,17 +14,14 @@ export function PackageCategoryPanel({
   category: PackageCategoryData;
 }) {
   const content = category.content as PackageCategoryContent;
-  const heroImage = category.heroImageUrl
-    ? packageMedia(category.heroImageUrl)
-    : null;
-  const displayTitle = content.displayTitle ?? category.title;
+  const coverImage = packageMediaUrl(content.galleryImages?.[0]?.url);
 
   return (
     <div className="space-y-2.5 px-3 py-3 md:space-y-4 md:px-5 md:py-5">
-      {heroImage ? (
+      {coverImage ? (
         <div className="relative overflow-hidden rounded-2xl">
           <Image
-            src={heroImage}
+            src={coverImage}
             alt={`${category.title} detayları`}
             width={1600}
             height={700}
@@ -39,11 +30,8 @@ export function PackageCategoryPanel({
           <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/60" />
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center" style={{ color: category.accentColor }}>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.13em]">
-                {content.tagline}
-              </p>
-              <h4 className="mt-1 text-5xl font-semibold leading-none md:text-7xl">
-                {displayTitle}
+              <h4 className="text-5xl font-semibold leading-none md:text-7xl">
+                {category.title}
               </h4>
             </div>
           </div>

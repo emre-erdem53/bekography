@@ -88,7 +88,6 @@ export const packageCategorySchema = z.object({
       detailSections: z.array(packageDetailSectionSchema).optional(),
       requestFieldLabels: packageRequestFieldLabelsSchema.optional(),
       services: z.array(packageServiceItemSchema).optional(),
-      displayTitle: z.string().optional(),
       shootTitle: z.string().optional(),
       afterShootTitle: z.string().optional(),
     })

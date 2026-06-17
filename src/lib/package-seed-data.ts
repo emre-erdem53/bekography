@@ -24,8 +24,6 @@ export type PackageRequestFieldLabels = {
 };
 
 export type PackageCategoryContent = {
-  tagline: string;
-  displayTitle?: string;
   serviceGridColor: string;
   serviceTextColor: string;
   serviceSubTextColor: string;
@@ -136,7 +134,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "dis-cekim.png",
     sortOrder: 0,
     content: {
-      tagline: "Stres yok, kahkaha ve güven çok.",
       serviceGridColor: "#ff8a45",
       serviceTextColor: "#111",
       serviceSubTextColor: "#3a2314",
@@ -185,7 +182,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "dugun.png",
     sortOrder: 1,
     content: {
-      tagline: "Asalet, romantizm ve bol coşku.",
       serviceGridColor: "#93f8b6",
       serviceTextColor: "#0d2d17",
       serviceSubTextColor: "#234c30",
@@ -213,7 +209,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "gelin-cikisi.png",
     sortOrder: 2,
     content: {
-      tagline: "Tüm ailemiz bir arada.",
       serviceGridColor: "#f3d46b",
       serviceTextColor: "#2e2510",
       serviceSubTextColor: "#574829",
@@ -242,8 +237,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "2.jpg",
     sortOrder: 3,
     content: {
-      tagline: "Büyük günün özel başlangıcı.",
-      displayTitle: "Hazırlık",
       serviceGridColor: "#f6b8c2",
       serviceTextColor: "#2d1a1f",
       serviceSubTextColor: "#5a3640",
@@ -295,7 +288,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "full-hikaye.png",
     sortOrder: 4,
     content: {
-      tagline: "Hazırlık, Dış Çekim, Gelin Çıkışı, Düğün",
       serviceGridColor: "#ffb200",
       serviceTextColor: "#231604",
       serviceSubTextColor: "#5a3a0b",
@@ -341,7 +333,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "soz-isteme.png",
     sortOrder: 5,
     content: {
-      tagline: "Hayatının sözü bu akşamda verilir.",
       serviceGridColor: "#c8b5f0",
       serviceTextColor: "#2b1f44",
       serviceSubTextColor: "#4b3f66",
@@ -369,7 +360,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "kina.png",
     sortOrder: 6,
     content: {
-      tagline: "Hüzün ve eğlence bir arada.",
       serviceGridColor: "#ff2b47",
       serviceTextColor: "#24070b",
       serviceSubTextColor: "#4c151d",
@@ -397,7 +387,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     heroImage: "nisan.png",
     sortOrder: 7,
     content: {
-      tagline: "Evliliğe atılan ilk adım.",
       serviceGridColor: "#9beefe",
       serviceTextColor: "#0b2630",
       serviceSubTextColor: "#2d5060",

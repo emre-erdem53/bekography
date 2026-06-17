@@ -11,15 +11,11 @@ export function packageMediaUrl(fileName: string | null | undefined): string | n
 
 export function getCategoryGalleryUrls(category: PackageCategoryData): string[] {
   const content = category.content as PackageCategoryContent;
-  const fromGallery =
+  return (
     content.galleryImages
       ?.map((image) => packageMediaUrl(image.url))
-      .filter((url): url is string => Boolean(url)) ?? [];
-
-  if (fromGallery.length > 0) return fromGallery;
-
-  const hero = packageMediaUrl(category.heroImageUrl);
-  return hero ? [hero] : [];
+      .filter((url): url is string => Boolean(url)) ?? []
+  );
 }
 
 export function getCategoryPriceLabel(category: PackageCategoryData) {

@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type {
   PackageCategoryContent,
   PackageDetailSection,
@@ -22,7 +23,6 @@ import { isCustomPackageIcon } from "@/components/packages/package-icon";
 import { packageMediaUrl } from "@/lib/package-media";
 
 const defaultContent: PackageCategoryContent = {
-  tagline: "",
   ...PACKAGE_SERVICE_THEME,
   services: [],
   shootTitle: "Çekim",
@@ -52,6 +52,42 @@ function getOptionDetailKey(option: OptionForm, index: number) {
   return label || `option-${index}`;
 }
 
+function removeOptionContentKeys(
+  content: PackageCategoryContent,
+  option: OptionForm,
+  index: number,
+) {
+  const key = getOptionDetailKey(option, index);
+  const labelKey = option.label.trim();
+  const nextDetailSections = { ...(content.detailSectionsByOption ?? {}) };
+  const nextInspectEnabled = { ...(content.inspectEnabledByOption ?? {}) };
+
+  delete nextDetailSections[key];
+  delete nextInspectEnabled[key];
+  if (labelKey) {
+    delete nextDetailSections[labelKey];
+    delete nextInspectEnabled[labelKey];
+  }
+
+  return {
+    ...content,
+    detailSectionsByOption: nextDetailSections,
+    inspectEnabledByOption: nextInspectEnabled,
+  };
+}
+
+function moveGalleryImage(
+  images: PackageGalleryImage[],
+  index: number,
+  direction: -1 | 1,
+): PackageGalleryImage[] {
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= images.length) return images;
+  const next = [...images];
+  [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
+  return next;
+}
+
 export function PackageForm({
   packageId,
 }: {
@@ -61,7 +97,6 @@ export function PackageForm({
   const [title, setTitle] = useState("");
   const [accentColor, setAccentColor] = useState("#ffffff");
   const [iconKey, setIconKey] = useState("Package");
-  const [heroImageUrl, setHeroImageUrl] = useState("");
   const [sortOrder, setSortOrder] = useState(0);
   const [isActive, setIsActive] = useState(true);
   const [content, setContent] = useState<PackageCategoryContent>(defaultContent);
@@ -81,10 +116,18 @@ export function PackageForm({
         setTitle(data.title);
         setAccentColor(normalizeHexColor(data.accentColor) ?? data.accentColor);
         setIconKey(data.iconKey);
-        setHeroImageUrl(data.heroImageUrl ?? "");
         setSortOrder(data.sortOrder);
         setIsActive(data.isActive);
-        const loadedContent = (data.content as PackageCategoryContent) ?? defaultContent;
+        const rawContent =
+          (data.content as PackageCategoryContent & {
+            tagline?: string;
+            displayTitle?: string;
+          }) ?? defaultContent;
+        const {
+          tagline: _legacyTagline,
+          displayTitle: _legacyDisplayTitle,
+          ...loadedContent
+        } = rawContent;
         setContent({
           ...loadedContent,
           ...PACKAGE_SERVICE_THEME,
@@ -141,14 +184,6 @@ export function PackageForm({
 
     const data = await response.json();
     return data.url as string;
-  }
-
-  async function handleImageUpload(
-    file: File,
-    setter: (url: string) => void,
-  ) {
-    const url = await uploadFile(file);
-    if (url) setter(url);
   }
 
   async function handleIconUpload(file: File) {
@@ -212,8 +247,17 @@ export function PackageForm({
       }
     });
 
+    const {
+      tagline: _legacyTagline,
+      displayTitle: _legacyDisplayTitle,
+      ...contentWithoutLegacy
+    } = content as PackageCategoryContent & {
+      tagline?: string;
+      displayTitle?: string;
+    };
+
     const normalizedContent: PackageCategoryContent = applyPackageServiceTheme({
-      ...content,
+      ...contentWithoutLegacy,
       detailSectionsByOption,
       inspectEnabledByOption,
       scheduleType: content.scheduleType ?? "indoor",
@@ -230,7 +274,7 @@ export function PackageForm({
       iconKey,
       highlight: false,
       backgroundImageUrl: null,
-      heroImageUrl: heroImageUrl || null,
+      heroImageUrl: null,
       sortOrder,
       isActive,
       content: normalizedContent,
@@ -333,15 +377,6 @@ export function PackageForm({
             className={inputClass}
           />
         </Field>
-        <Field label="Tagline">
-          <input
-            value={content.tagline}
-            onChange={(e) =>
-              setContent({ ...content, tagline: e.target.value })
-            }
-            className={inputClass}
-          />
-        </Field>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           <label className="flex items-center gap-2 text-sm text-zinc-300">
             <input
@@ -358,42 +393,10 @@ export function PackageForm({
         <div>
           <h2 className="font-semibold text-white">Paket Detayı</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Müşterinin paket detay penceresinde gördüğü içerik: başlık, görseller,
+            Müşterinin paket detay penceresinde gördüğü içerik: görseller,
             etiketler, fiyat satırları ve İncele ekranı.
           </p>
         </div>
-
-        <Field label="Görünen Başlık (opsiyonel)">
-          <input
-            value={content.displayTitle ?? ""}
-            onChange={(e) =>
-              setContent({ ...content, displayTitle: e.target.value })
-            }
-            placeholder={title || "Paket adı"}
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Boş bırakılırsa üstteki «Başlık» kullanılır. Detay penceresinin üst
-            başlığıdır.
-          </p>
-        </Field>
-
-        <Field label="Ana Görsel (Hero)">
-          <p className="mb-2 text-xs leading-relaxed text-zinc-500">
-            Galeri boşsa detay penceresindeki kaydırmalı alanda gösterilir.
-            Sepette küçük önizleme olarak da kullanılır.
-          </p>
-          {heroImageUrl ? (
-            <p className="mb-2 truncate text-xs text-zinc-400">{heroImageUrl}</p>
-          ) : null}
-          <AdminFileUpload
-            accept="image/jpeg,image/webp,image/png"
-            label="Ana Görsel Yükle"
-            fileLabel={heroImageUrl ? "Görseli Değiştir" : undefined}
-            hint="Önerilen: dikey 4:5 oran, JPEG veya WebP."
-            onFileSelect={(file) => handleImageUpload(file, setHeroImageUrl)}
-          />
-        </Field>
 
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90">
           <p className="font-medium text-amber-200">Galeri fotoğraf rehberi</p>
@@ -405,41 +408,96 @@ export function PackageForm({
         </div>
 
         <Field label="Galeri Görselleri">
+          <p className="mb-3 text-xs text-zinc-500">
+            Sıra, detay penceresindeki kaydırma sırasını belirler. İlk görsel
+            ilk sırada gösterilir.
+          </p>
           <div className="space-y-3">
-            {(content.galleryImages ?? []).map((image, index) => (
-              <div
-                key={`${image.url}-${index}`}
-                className="flex flex-col gap-3 rounded-xl bg-white/5 p-3 sm:flex-row sm:items-center"
-              >
-                <img
-                  src={image.url}
-                  alt={image.alt ?? ""}
-                  className="h-16 w-12 rounded-lg object-cover"
-                />
-                <input
-                  value={image.alt ?? ""}
-                  onChange={(e) => {
-                    const next = [...(content.galleryImages ?? [])];
-                    next[index] = { ...next[index], alt: e.target.value };
-                    setContent({ ...content, galleryImages: next });
-                  }}
-                  placeholder="Alt metin (opsiyonel)"
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = (content.galleryImages ?? []).filter(
-                      (_, i) => i !== index,
-                    );
-                    setContent({ ...content, galleryImages: next });
-                  }}
-                  className="shrink-0 text-sm text-red-400"
+            {(content.galleryImages ?? []).map((image, index) => {
+              const previewUrl = packageMediaUrl(image.url) ?? image.url;
+              const total = content.galleryImages?.length ?? 0;
+              return (
+                <div
+                  key={`${image.url}-${index}`}
+                  className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
                 >
-                  Sil
-                </button>
-              </div>
-            ))}
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                    <div className="relative mx-auto shrink-0 sm:mx-0">
+                      <img
+                        src={previewUrl}
+                        alt={image.alt ?? `Görsel ${index + 1}`}
+                        className="h-44 w-[8.75rem] rounded-xl object-cover shadow-lg"
+                      />
+                      <span className="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-0.5 text-xs font-medium text-white">
+                        {index + 1}
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-3">
+                      <input
+                        value={image.alt ?? ""}
+                        onChange={(e) => {
+                          const next = [...(content.galleryImages ?? [])];
+                          next[index] = { ...next[index], alt: e.target.value };
+                          setContent({ ...content, galleryImages: next });
+                        }}
+                        placeholder="Alt metin (opsiyonel)"
+                        className={inputClass}
+                      />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={() =>
+                            setContent({
+                              ...content,
+                              galleryImages: moveGalleryImage(
+                                content.galleryImages ?? [],
+                                index,
+                                -1,
+                              ),
+                            })
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <ChevronUp className="h-3.5 w-3.5" />
+                          Yukarı
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === total - 1}
+                          onClick={() =>
+                            setContent({
+                              ...content,
+                              galleryImages: moveGalleryImage(
+                                content.galleryImages ?? [],
+                                index,
+                                1,
+                              ),
+                            })
+                          }
+                          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                          Aşağı
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = (content.galleryImages ?? []).filter(
+                              (_, i) => i !== index,
+                            );
+                            setContent({ ...content, galleryImages: next });
+                          }}
+                          className="ml-auto text-sm text-red-400 hover:text-red-300"
+                        >
+                          Sil
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
             <AdminFileUpload
               accept="image/jpeg,image/webp,image/png"
               label="Galeriye Görsel Ekle"
@@ -456,6 +514,110 @@ export function PackageForm({
         />
 
         <div className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-white">Fiyat Seçenekleri</h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                Detay penceresindeki satırlar (ör. Fotoğraf, Fotoğraf + Video).
+                Peşin ve taksitli fiyatlar buradan gelir.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setOptions([
+                  ...options,
+                  { label: "", cashPrice: 0, installmentPrice: 0 },
+                ])
+              }
+              className="text-sm text-zinc-400 hover:text-white"
+            >
+              + Seçenek Ekle
+            </button>
+          </div>
+          <div className="hidden gap-3 px-1 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem]">
+            <span className="text-xs font-medium text-zinc-500">Seçenek Etiketi</span>
+            <span className="text-xs font-medium text-zinc-500">Peşin (₺)</span>
+            <span className="text-xs font-medium text-zinc-500">Taksitli (₺)</span>
+            <span />
+          </div>
+          {options.map((option, index) => (
+            <div
+              key={option.id ?? `option-${index}`}
+              className="grid gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem] md:rounded-none md:border-0 md:bg-transparent md:p-0"
+            >
+              <div>
+                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
+                  Seçenek Etiketi
+                </span>
+                <input
+                  placeholder="örn. Fotoğraf"
+                  value={option.label}
+                  onChange={(e) => {
+                    const next = [...options];
+                    next[index] = { ...next[index], label: e.target.value };
+                    setOptions(next);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
+                  Peşin (₺)
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={option.cashPrice}
+                  onChange={(e) => {
+                    const next = [...options];
+                    next[index] = {
+                      ...next[index],
+                      cashPrice: Number(e.target.value),
+                    };
+                    setOptions(next);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
+                  Taksitli (₺)
+                </span>
+                <input
+                  type="number"
+                  min={0}
+                  value={option.installmentPrice}
+                  onChange={(e) => {
+                    const next = [...options];
+                    next[index] = {
+                      ...next[index],
+                      installmentPrice: Number(e.target.value),
+                    };
+                    setOptions(next);
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (options.length <= 1) return;
+                    setContent(removeOptionContentKeys(content, option, index));
+                    setOptions(options.filter((_, i) => i !== index));
+                  }}
+                  disabled={options.length <= 1}
+                  className="w-full rounded-xl border border-red-500/30 px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Kaldır
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-4 border-t border-white/10 pt-5">
           <div>
             <h3 className="text-sm font-medium text-white">
               İncele Bölümleri (Seçenek Bazlı)
@@ -591,105 +753,19 @@ export function PackageForm({
             );
           })}
         </div>
-
-        <div className="space-y-4 border-t border-white/10 pt-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h3 className="text-sm font-medium text-white">Fiyat Seçenekleri</h3>
-              <p className="mt-1 text-xs text-zinc-500">
-                Detay penceresindeki satırlar (ör. Fotoğraf, Fotoğraf + Video).
-                Peşin ve taksitli fiyatlar buradan gelir.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() =>
-                setOptions([
-                  ...options,
-                  { label: "", cashPrice: 0, installmentPrice: 0 },
-                ])
-              }
-              className="text-sm text-zinc-400 hover:text-white"
-            >
-              + Seçenek Ekle
-            </button>
-          </div>
-          <div className="hidden gap-3 px-1 md:grid md:grid-cols-3">
-            <span className="text-xs font-medium text-zinc-500">Seçenek Etiketi</span>
-            <span className="text-xs font-medium text-zinc-500">Peşin (₺)</span>
-            <span className="text-xs font-medium text-zinc-500">Taksitli (₺)</span>
-          </div>
-          {options.map((option, index) => (
-            <div
-              key={index}
-              className="grid gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3 md:grid-cols-3 md:rounded-none md:border-0 md:bg-transparent md:p-0"
-            >
-              <div>
-                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
-                  Seçenek Etiketi
-                </span>
-                <input
-                  placeholder="örn. Fotoğraf"
-                  value={option.label}
-                  onChange={(e) => {
-                    const next = [...options];
-                    next[index] = { ...next[index], label: e.target.value };
-                    setOptions(next);
-                  }}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
-                  Peşin (₺)
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={option.cashPrice}
-                  onChange={(e) => {
-                    const next = [...options];
-                    next[index] = {
-                      ...next[index],
-                      cashPrice: Number(e.target.value),
-                    };
-                    setOptions(next);
-                  }}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
-                  Taksitli (₺)
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={option.installmentPrice}
-                  onChange={(e) => {
-                    const next = [...options];
-                    next[index] = {
-                      ...next[index],
-                      installmentPrice: Number(e.target.value),
-                    };
-                    setOptions(next);
-                  }}
-                  className={inputClass}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <h2 className="font-semibold text-white">
-          İçerik{" "}
-          <span className="font-normal text-sm text-zinc-400">
-            (Bu alana girilecek olan metinler rezervasyon oluşturma formunda
-            kullanılmak üzere girilecektir.)
-          </span>
-        </h2>
+        <div>
+          <h2 className="font-semibold text-white">İçerik</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Rezervasyon oluşturma formunda kullanılacak metinler. Çekim
+            açıklamaları sitede gösterilmez; çekim sonrası etiket ve
+            açıklamalar rezervasyon formunun 3. bölümüne seçilen paketlere göre
+            otomatik doldurulur.
+          </p>
+        </div>
+
         <Field label="Çekim Açıklaması">
           <textarea
             value={content.shootDescription}
@@ -701,9 +777,10 @@ export function PackageForm({
           />
           <p className="mt-1 text-xs text-zinc-500">
             Rezervasyon oluştururken «Çekim İçeriği» alanına varsayılan değer
-            olarak gelir. Sitede gösterilmez.
+            olarak gelir.
           </p>
         </Field>
+
         <Field label="Çekim Sonrası Açıklaması">
           <textarea
             value={content.afterShootDescription}
@@ -717,80 +794,49 @@ export function PackageForm({
             className={inputClass}
           />
           <p className="mt-1 text-xs text-zinc-500">
-            Rezervasyon detayında referans metin olarak saklanır. Sitede
-            gösterilmez.
+            Rezervasyon detayında referans metin olarak saklanır.
           </p>
         </Field>
-      </div>
 
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <div>
-          <h2 className="font-semibold text-white">Çekim Sonrası</h2>
-          <p className="mt-1 text-sm text-zinc-400">
-            Rezervasyon formunun 3. bölümünde görünecek etiketler ve açıklamalar.
-            Her paket için Dijital, Düzenleme ve (salon paketlerinde) Baskı alt
-            başlıklarını buradan belirleyin; rezervasyon oluşturulurken seçilen
-            paketlere göre otomatik doldurulur.
-          </p>
-        </div>
-        <Field label="Çekim Tipi">
-          <select
-            value={content.scheduleType ?? "indoor"}
-            onChange={(e) => {
-              const scheduleType = e.target.value as "outdoor" | "indoor";
-              const current =
-                content.postShootTemplates ?? defaultIndoorPostShootTemplates();
+        <div className="space-y-4 border-t border-white/10 pt-5">
+          <div>
+            <h3 className="text-sm font-medium text-white">
+              Çekim Sonrası Şablonları
+            </h3>
+            <p className="mt-1 text-xs text-zinc-500">
+              Dijital, Düzenleme ve Baskı alt başlıkları için etiket ve
+              açıklamalar.
+            </p>
+          </div>
+
+          <PostShootSectionEditor
+            title="Dijital"
+            section={content.postShootTemplates?.digital ?? { pills: [], description: "" }}
+            onChange={(digital) =>
               setContent({
                 ...content,
-                scheduleType,
                 postShootTemplates: {
-                  digital: current.digital,
-                  editing: current.editing,
-                  ...(scheduleType === "indoor"
-                    ? {
-                        printing:
-                          current.printing ??
-                          defaultIndoorPostShootTemplates().printing,
-                      }
-                    : {}),
+                  ...(content.postShootTemplates ??
+                    defaultIndoorPostShootTemplates()),
+                  digital,
                 },
-              });
-            }}
-            className={inputClass}
-          >
-            <option value="indoor">Salon / İç Mekan</option>
-            <option value="outdoor">Dış Çekim</option>
-          </select>
-        </Field>
-        <PostShootSectionEditor
-          title="Dijital"
-          section={content.postShootTemplates?.digital ?? { pills: [], description: "" }}
-          onChange={(digital) =>
-            setContent({
-              ...content,
-              postShootTemplates: {
-                ...(content.postShootTemplates ??
-                  defaultIndoorPostShootTemplates()),
-                digital,
-              },
-            })
-          }
-        />
-        <PostShootSectionEditor
-          title="Düzenleme"
-          section={content.postShootTemplates?.editing ?? { pills: [], description: "" }}
-          onChange={(editing) =>
-            setContent({
-              ...content,
-              postShootTemplates: {
-                ...(content.postShootTemplates ??
-                  defaultIndoorPostShootTemplates()),
-                editing,
-              },
-            })
-          }
-        />
-        {content.scheduleType !== "outdoor" ? (
+              })
+            }
+          />
+          <PostShootSectionEditor
+            title="Düzenleme"
+            section={content.postShootTemplates?.editing ?? { pills: [], description: "" }}
+            onChange={(editing) =>
+              setContent({
+                ...content,
+                postShootTemplates: {
+                  ...(content.postShootTemplates ??
+                    defaultIndoorPostShootTemplates()),
+                  editing,
+                },
+              })
+            }
+          />
           <PostShootSectionEditor
             title="Baskı"
             section={
@@ -807,11 +853,7 @@ export function PackageForm({
               })
             }
           />
-        ) : (
-          <p className="text-sm text-zinc-500">
-            Dış çekim paketlerinde Baskı şablonu kullanılmaz.
-          </p>
-        )}
+        </div>
       </div>
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
