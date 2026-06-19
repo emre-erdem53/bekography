@@ -8,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function FotograflarPage() {
-  return <HomeExploreCarousel items={photoMediaItems} />;
+  return (
+    <main className="flex-1">
+      <HomeExploreCarousel feedKey="fotograflar" items={photoMediaItems} />
+    </main>
+  );
 }

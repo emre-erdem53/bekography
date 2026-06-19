@@ -8,5 +8,9 @@ export const metadata: Metadata = {
 };
 
 export default function VideolarPage() {
-  return <HomeExploreCarousel items={videoMediaItems} />;
+  return (
+    <main className="flex-1">
+      <HomeExploreCarousel feedKey="videolar" items={videoMediaItems} />
+    </main>
+  );
 }

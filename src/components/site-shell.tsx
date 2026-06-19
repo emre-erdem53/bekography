@@ -2,7 +2,6 @@
 
 import { usePathname } from "next/navigation";
 import { FooterDark } from "@/components/footer-dark";
-import { FloatingContactButtons } from "@/components/floating-contact-buttons";
 import { SiteHeader } from "@/components/site-header";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
@@ -19,7 +18,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       <SiteHeader />
       {children}
       {!isTracking && <FooterDark />}
-      {!isTracking && <FloatingContactButtons />}
     </>
   );
 }

@@ -32,6 +32,7 @@ const defaultContent: PackageCategoryContent = {
   scheduleType: "indoor",
   postShootTemplates: defaultIndoorPostShootTemplates(),
   highlightTags: [],
+  highlightTagsByOption: {},
   galleryImages: [],
   detailSections: [],
   detailSectionsByOption: {},
@@ -61,18 +62,22 @@ function removeOptionContentKeys(
   const labelKey = option.label.trim();
   const nextDetailSections = { ...(content.detailSectionsByOption ?? {}) };
   const nextInspectEnabled = { ...(content.inspectEnabledByOption ?? {}) };
+  const nextHighlightTags = { ...(content.highlightTagsByOption ?? {}) };
 
   delete nextDetailSections[key];
   delete nextInspectEnabled[key];
+  delete nextHighlightTags[key];
   if (labelKey) {
     delete nextDetailSections[labelKey];
     delete nextInspectEnabled[labelKey];
+    delete nextHighlightTags[labelKey];
   }
 
   return {
     ...content,
     detailSectionsByOption: nextDetailSections,
     inspectEnabledByOption: nextInspectEnabled,
+    highlightTagsByOption: nextHighlightTags,
   };
 }
 
@@ -138,6 +143,7 @@ export function PackageForm({
               ? defaultOutdoorPostShootTemplates()
               : defaultIndoorPostShootTemplates()),
           highlightTags: loadedContent.highlightTags ?? [],
+          highlightTagsByOption: loadedContent.highlightTagsByOption ?? {},
           galleryImages: loadedContent.galleryImages ?? [],
           detailSections: loadedContent.detailSections ?? [],
           detailSectionsByOption: loadedContent.detailSectionsByOption ?? {},
@@ -246,6 +252,15 @@ export function PackageForm({
         inspectEnabledByOption[mappedKey] = enabled;
       }
     });
+    const highlightTagsByOption = {
+      ...(content.highlightTagsByOption ?? {}),
+    };
+    Object.entries(content.highlightTagsByOption ?? {}).forEach(([key, tags]) => {
+      const mappedKey = optionLabelMap[key];
+      if (mappedKey && !highlightTagsByOption[mappedKey]) {
+        highlightTagsByOption[mappedKey] = tags;
+      }
+    });
 
     const {
       tagline: _legacyTagline,
@@ -260,6 +275,7 @@ export function PackageForm({
       ...contentWithoutLegacy,
       detailSectionsByOption,
       inspectEnabledByOption,
+      highlightTagsByOption,
       scheduleType: content.scheduleType ?? "indoor",
       postShootTemplates:
         content.postShootTemplates ??
@@ -507,19 +523,14 @@ export function PackageForm({
           </div>
         </Field>
 
-        <TagsEditor
-          title="Detay Etiketleri"
-          tags={content.highlightTags ?? []}
-          onChange={(highlightTags) => setContent({ ...content, highlightTags })}
-        />
-
         <div className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-medium text-white">Fiyat Seçenekleri</h3>
               <p className="mt-1 text-xs text-zinc-500">
                 Detay penceresindeki satırlar (ör. Fotoğraf, Fotoğraf + Video).
-                Peşin ve taksitli fiyatlar buradan gelir.
+                Peşin ve taksitli fiyatlar buradan gelir. Her seçeneğe ayrı
+                detay etiketi ekleyebilirsiniz.
               </p>
             </div>
             <button
@@ -541,11 +552,19 @@ export function PackageForm({
             <span className="text-xs font-medium text-zinc-500">Taksitli (₺)</span>
             <span />
           </div>
-          {options.map((option, index) => (
+          {options.map((option, index) => {
+            const key = getOptionDetailKey(option, index);
+            const optionTags =
+              content.highlightTagsByOption?.[key] ??
+              content.highlightTagsByOption?.[option.label.trim()] ??
+              [];
+
+            return (
             <div
               key={option.id ?? `option-${index}`}
-              className="grid gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem] md:rounded-none md:border-0 md:bg-transparent md:p-0"
+              className="space-y-3 rounded-xl border border-white/5 bg-white/[0.02] p-3"
             >
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem]">
               <div>
                 <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
                   Seçenek Etiketi
@@ -613,8 +632,23 @@ export function PackageForm({
                   Kaldır
                 </button>
               </div>
+              </div>
+              <TagsEditor
+                title="Detay Etiketleri"
+                tags={optionTags}
+                onChange={(tags) =>
+                  setContent({
+                    ...content,
+                    highlightTagsByOption: {
+                      ...(content.highlightTagsByOption ?? {}),
+                      [key]: tags,
+                    },
+                  })
+                }
+              />
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="space-y-4 border-t border-white/10 pt-5">

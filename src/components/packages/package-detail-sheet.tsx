@@ -65,7 +65,14 @@ export function PackageDetailSheet({
     );
   })();
   const galleryUrls = category ? getCategoryGalleryUrls(category) : [];
-  const tags = content?.highlightTags ?? [];
+
+  function getOptionTags(option: { id: string; label: string }) {
+    return (
+      content?.highlightTagsByOption?.[option.id] ??
+      content?.highlightTagsByOption?.[option.label] ??
+      []
+    );
+  }
 
   function handleAddToCart() {
     if (!category || !selectedOption) return;
@@ -126,19 +133,6 @@ export function PackageDetailSheet({
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 md:px-6 md:py-5">
-                  {tags.length > 0 ? (
-                    <div className="mb-4 flex flex-wrap gap-2">
-                      {tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full border border-white/20 px-3 py-1 text-xs text-zinc-200"
-                        >
-                          • {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-
                   <PackageGalleryCarousel images={galleryUrls} variant="detail" />
 
                   <div className="mt-5 space-y-2 md:mt-6">
@@ -146,24 +140,39 @@ export function PackageDetailSheet({
                       const active =
                         (selectedOptionId ?? category.options[0]?.id) ===
                         option.id;
+                      const optionTags = getOptionTags(option);
                       return (
                         <button
                           key={option.id}
                           type="button"
                           onClick={() => setSelectedOptionId(option.id)}
-                          className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition-colors md:px-5 md:py-3.5 ${
+                          className={`flex w-full items-start justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition-colors md:px-5 md:py-3.5 ${
                             active
                               ? "border-white/30 bg-white/10"
                               : "border-white/10 bg-[#111]"
                           }`}
                         >
-                          <span
-                            className="text-sm font-semibold md:text-base"
-                            style={{ color: category.accentColor }}
-                          >
-                            {option.label}
-                          </span>
-                          <div className="text-right text-xs md:text-sm">
+                          <div className="min-w-0 flex-1">
+                            <span
+                              className="text-sm font-semibold md:text-base"
+                              style={{ color: category.accentColor }}
+                            >
+                              {option.label}
+                            </span>
+                            {optionTags.length > 0 ? (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {optionTags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="rounded-full border border-white/20 px-2.5 py-0.5 text-[10px] text-zinc-300 md:text-xs"
+                                  >
+                                    • {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="shrink-0 text-right text-xs md:text-sm">
                             <p className="font-bold text-white">
                               {formatPrice(option.cashPrice)}
                             </p>

@@ -84,6 +84,7 @@ export const packageCategorySchema = z.object({
       scheduleType: z.enum(["outdoor", "indoor"]).optional(),
       postShootTemplates: postShootTemplatesSchema.optional(),
       highlightTags: z.array(z.string()).optional(),
+      highlightTagsByOption: z.record(z.string(), z.array(z.string())).optional(),
       galleryImages: z.array(packageGalleryImageSchema).optional(),
       detailSections: z.array(packageDetailSectionSchema).optional(),
       requestFieldLabels: packageRequestFieldLabelsSchema.optional(),

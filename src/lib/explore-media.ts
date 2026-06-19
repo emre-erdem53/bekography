@@ -677,6 +677,31 @@ function fixPhoto18Row(items: ExploreMediaItem[]): ExploreMediaItem[] {
   }));
 }
 
+/** Görseller dışı akışlar (videolar vb.): her öğeye grid konumu ata. */
+function packMediaGrid(items: ExploreMediaItem[]): ExploreMediaItem[] {
+  const packer = new ExploreGridPacker();
+  const output: GridPlacement[] = [];
+
+  for (const item of items) {
+    if (packer.isPlaced(item)) continue;
+
+    const base = getBasePattern(item);
+    const slot = packer.findFirst(base.colSpan, base.rowSpan);
+    output.push(
+      packer.place(item, {
+        ...base,
+        colStart: slot.col,
+        rowStart: slot.row,
+      }),
+    );
+  }
+
+  return packer.getResultsSorted().map((placement) => ({
+    ...placement.item,
+    displayPattern: placement.pattern,
+  }));
+}
+
 /** Sadece görseller: video yerleşim kuralları ve boş video hücreleri yok. */
 function packImageOnlyGrid(items: ExploreMediaItem[]): ExploreMediaItem[] {
   const packer = new ExploreGridPacker();
@@ -1212,6 +1237,8 @@ export const photoMediaItems = packImageOnlyGrid(
   ),
 );
 
-export const videoMediaItems = buildAsymmetricLayout(
-  manuallyOrderedMediaItems.filter((item) => item.type === "video"),
+export const videoMediaItems = packMediaGrid(
+  buildAsymmetricLayout(
+    manuallyOrderedMediaItems.filter((item) => item.type === "video"),
+  ),
 );

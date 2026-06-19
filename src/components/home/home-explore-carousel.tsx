@@ -15,13 +15,14 @@ import {
   getExploreLoadMoreCount,
   getInitialExploreVisibleCount,
 } from "@/lib/explore-grid-viewport";
+import { preloadExploreBatch } from "@/lib/explore-media-preload";
 import type {
   DisplayPattern,
   ExploreCarouselSlide,
   ExploreMediaItem,
 } from "@/lib/explore-media-types";
 
-/** Üst sıradaki karolara ağ önceliği; geri kalan ilk ekran normal lazy yüklenir. */
+/** Üst sıradaki görsellere LCP önceliği. */
 const PRIORITY_TILE_COUNT = 3;
 /** Kullanıcı scroll etmeden «daha fazla yükle» tetiklenmesin. */
 const SCROLL_GATE_PX = 40;
@@ -46,19 +47,22 @@ const ROW_SPAN_CLASS: Record<DisplayPattern["rowSpan"], string> = {
 
 type HomeExploreCarouselProps = {
   items: ExploreMediaItem[];
+  /** Sayfa bazlı feed kimliği — geçişlerde ön yükleme döngüsünü sıfırlar. */
+  feedKey?: string;
 };
 
-export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
+export function HomeExploreCarousel({
+  items,
+  feedKey = "home",
+}: HomeExploreCarouselProps) {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
   // Per-post horizontal slide index (only relevant for carousel posts).
   const [carouselSlideByIndex, setCarouselSlideByIndex] = useState<
     Record<number, number>
   >({});
-  const [visibleCount, setVisibleCount] = useState(() =>
-    getInitialExploreVisibleCount(items),
-  );
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [readyCount, setReadyCount] = useState(0);
+  const [isFeedLoading, setIsFeedLoading] = useState(true);
   // True while any modal image is being pinch-zoomed; we use this to
   // freeze both the vertical scroller and any active inner carousel so
   // the user can pan within the zoomed image without the page snapping.
@@ -69,10 +73,11 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
   const [userMuted, setUserMuted] = useState(false);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const visibleCountRef = useRef(visibleCount);
-  const isLoadingMoreRef = useRef(isLoadingMore);
+  const readyCountRef = useRef(readyCount);
+  const isFeedLoadingRef = useRef(isFeedLoading);
   const hasUserScrolledRef = useRef(false);
-  const loadBatchStartRef = useRef(visibleCount);
+  const canLoadMoreRef = useRef(false);
+  const lastScrollYRef = useRef(0);
   const tilesRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const gridVideoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const gridVideoObserverRef = useRef<IntersectionObserver | null>(null);
@@ -85,34 +90,102 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
   const media = items;
 
   useEffect(() => {
-    const next = getInitialExploreVisibleCount(items);
-    setVisibleCount(next);
-    loadBatchStartRef.current = next;
-    setIsLoadingMore(false);
+    let cancelled = false;
     hasUserScrolledRef.current = false;
-  }, [items]);
+    canLoadMoreRef.current = false;
+    lastScrollYRef.current = 0;
+
+    async function bootstrapFeed() {
+      isFeedLoadingRef.current = true;
+      setIsFeedLoading(true);
+      setReadyCount(0);
+
+      const target = getInitialExploreVisibleCount(items);
+      await preloadExploreBatch(items, 0, target);
+
+      if (cancelled) return;
+      setReadyCount(target);
+      isFeedLoadingRef.current = false;
+      setIsFeedLoading(false);
+    }
+
+    void bootstrapFeed();
+    return () => {
+      cancelled = true;
+    };
+  }, [items, feedKey]);
 
   useEffect(() => {
-    visibleCountRef.current = visibleCount;
-  }, [visibleCount]);
+    readyCountRef.current = readyCount;
+  }, [readyCount]);
 
   useEffect(() => {
-    isLoadingMoreRef.current = isLoadingMore;
-  }, [isLoadingMore]);
+    isFeedLoadingRef.current = isFeedLoading;
+  }, [isFeedLoading]);
 
   useEffect(() => {
     const onScroll = () => {
-      if (window.scrollY >= SCROLL_GATE_PX) {
+      const y = window.scrollY;
+      if (y >= SCROLL_GATE_PX) {
         hasUserScrolledRef.current = true;
       }
+      if (y > lastScrollYRef.current + 12) {
+        canLoadMoreRef.current = true;
+      }
+      lastScrollYRef.current = y;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Yükleme bitene kadar sayfa scroll'unu kilitle.
+  useEffect(() => {
+    if (!isFeedLoading) return;
+
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    style.position = "fixed";
+    style.top = `-${scrollY}px`;
+    style.left = "0";
+    style.right = "0";
+    style.width = "100%";
+    style.overflow = "hidden";
+
+    return () => {
+      style.position = "";
+      style.top = "";
+      style.left = "";
+      style.right = "";
+      style.width = "";
+      style.overflow = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [isFeedLoading]);
+
+  const loadNextBatch = useCallback(async () => {
+    if (isFeedLoadingRef.current) return;
+
+    const current = readyCountRef.current;
+    if (current >= media.length) return;
+
+    const step = getExploreLoadMoreCount(media, current);
+    const next = Math.min(current + step, media.length);
+    if (next <= current) return;
+
+    isFeedLoadingRef.current = true;
+    setIsFeedLoading(true);
+    try {
+      await preloadExploreBatch(media, current, next);
+      setReadyCount(next);
+    } finally {
+      isFeedLoadingRef.current = false;
+      setIsFeedLoading(false);
+    }
+  }, [media]);
+
   const arrangedFeedItems = useMemo(
-    () => media.slice(0, Math.min(visibleCount, media.length)),
-    [media, visibleCount],
+    () => media.slice(0, Math.min(readyCount, media.length)),
+    [media, readyCount],
   );
 
   // Lazy-render only a window around the active modal post, so dozens of
@@ -121,101 +194,25 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
 
   // ----------------------------- GRID ------------------------------------
 
-  // "Load more" — yalnızca kullanıcı scroll ettikten sonra, bir Pro Max ekranı kadar.
+  // "Load more" — scroll sonrası; medya önce indirilir, sonra DOM'a eklenir.
   useEffect(() => {
     const target = loadMoreRef.current;
-    if (!target || visibleCount >= media.length) return;
+    if (!target || readyCount >= media.length || isFeedLoading) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting) return;
         if (!hasUserScrolledRef.current) return;
-        if (isLoadingMoreRef.current) return;
-
-        const current = visibleCountRef.current;
-        const step = getExploreLoadMoreCount(media, current);
-        if (step <= 0) return;
-
-        loadBatchStartRef.current = current;
-        setIsLoadingMore(true);
-        setVisibleCount(Math.min(current + step, media.length));
+        if (!canLoadMoreRef.current) return;
+        if (isFeedLoadingRef.current) return;
+        canLoadMoreRef.current = false;
+        void loadNextBatch();
       },
-      { rootMargin: "160px 0px 0px 0px" },
+      { rootMargin: "80px 0px 0px 0px" },
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [media, visibleCount, media.length]);
-
-  // Yeni batch DOM'a girdikten sonra medya indirmesini bekle; spinner gerçek yükleme süresini yansıtsın.
-  useEffect(() => {
-    if (!isLoadingMore) return;
-
-    let cancelled = false;
-    const addedFrom = loadBatchStartRef.current;
-    const addedTo = visibleCount;
-
-    if (addedTo <= addedFrom) {
-      setIsLoadingMore(false);
-      return;
-    }
-
-    async function waitForNewTiles() {
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-      if (cancelled) return;
-
-      const waiters: Promise<void>[] = [];
-      for (let i = addedFrom; i < addedTo; i++) {
-        const id = media[i]?.id;
-        if (!id) continue;
-        const tile = document.querySelector(`[data-media-id="${id}"]`);
-        if (!tile) continue;
-
-        const img = tile.querySelector("img");
-        if (img && !img.complete) {
-          waiters.push(
-            new Promise<void>((resolve) => {
-              img.addEventListener("load", () => resolve(), { once: true });
-              img.addEventListener("error", () => resolve(), { once: true });
-            }),
-          );
-        }
-
-        const video = tile.querySelector("video");
-        if (video && video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
-          waiters.push(
-            new Promise<void>((resolve) => {
-              video.addEventListener("loadeddata", () => resolve(), {
-                once: true,
-              });
-              video.addEventListener("error", () => resolve(), { once: true });
-            }),
-          );
-        }
-      }
-
-      const minDisplay = new Promise<void>((resolve) => {
-        window.setTimeout(resolve, 350);
-      });
-      const timeout = new Promise<void>((resolve) => {
-        window.setTimeout(resolve, 8000);
-      });
-      await Promise.race([
-        Promise.all([Promise.all(waiters), minDisplay]),
-        timeout,
-      ]);
-
-      if (!cancelled) {
-        setIsLoadingMore(false);
-      }
-    }
-
-    void waitForNewTiles();
-    return () => {
-      cancelled = true;
-    };
-  }, [isLoadingMore, visibleCount, media]);
+  }, [media, readyCount, media.length, isFeedLoading, loadNextBatch]);
 
   // Grid videoları: görünürken loop oynat, çıkınca duraklat — React state güncellemesi yok.
   useEffect(() => {
@@ -366,6 +363,19 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
 
   return (
     <>
+      {isFeedLoading ? (
+        <div
+          className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <Loader2
+            className="h-10 w-10 animate-spin text-white"
+            aria-label="İçerik yükleniyor"
+          />
+        </div>
+      ) : null}
+
       <section className="relative w-full bg-black pt-24">
         <div className="relative z-10 w-full">
           <div
@@ -397,7 +407,7 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
                   data-media-type={item.type}
                   onClick={() => openModal(tileIndex)}
                   style={gridPlacementStyle}
-                  className={`group relative overflow-hidden bg-zinc-900 text-left ${colClass} ${rowClass}`}
+                  className={`group relative overflow-hidden bg-black text-left ${colClass} ${rowClass}`}
                   aria-label={`Open ${item.title}`}
                 >
                   <GridMediaTile
@@ -412,20 +422,8 @@ export function HomeExploreCarousel({ items }: HomeExploreCarouselProps) {
               );
             })}
           </div>
-          {visibleCount < media.length ? (
-            <div
-              ref={loadMoreRef}
-              className="flex h-24 w-full items-center justify-center"
-              aria-live="polite"
-              aria-busy={isLoadingMore}
-            >
-              {isLoadingMore ? (
-                <Loader2
-                  className="h-7 w-7 animate-spin text-zinc-500"
-                  aria-label="İçerik yükleniyor"
-                />
-              ) : null}
-            </div>
+          {readyCount < media.length ? (
+            <div ref={loadMoreRef} className="h-px w-full" aria-hidden />
           ) : null}
         </div>
       </section>

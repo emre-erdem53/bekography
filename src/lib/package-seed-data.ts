@@ -36,6 +36,7 @@ export type PackageCategoryContent = {
   scheduleType?: "outdoor" | "indoor";
   postShootTemplates?: PostShootTemplates;
   highlightTags?: string[];
+  highlightTagsByOption?: Record<string, string[]>;
   galleryImages?: PackageGalleryImage[];
   detailSections?: PackageDetailSection[];
   detailSectionsByOption?: Record<string, PackageDetailSection[]>;
