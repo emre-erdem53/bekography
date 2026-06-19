@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import {
   BadgeCheck,
@@ -16,8 +17,12 @@ import type { PackageCategoryData } from "@/lib/package-types";
 import { PackageIconDisplay } from "@/components/packages/package-icon";
 import { PackageCartBar } from "@/components/packages/package-cart-bar";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
-import { getCategoryPriceLabel } from "@/lib/package-media";
+import { getCategoryPriceLabel, packageMediaUrl } from "@/lib/package-media";
 import { useCartStore } from "@/stores/cart-store";
+
+const ACCENT = "#93f8b6";
+const WHY_HERO_IMAGE =
+  packageMediaUrl("neden-bekography.png") ?? "/reels/neden-bekography.png";
 
 type PackageFeature = {
   title: string;
@@ -85,15 +90,35 @@ const bottomFeatures: PackageFeature[] = [
   },
 ];
 
-function FeatureCard({ feature }: { feature: PackageFeature }) {
+function FeatureItem({
+  feature,
+  variant = "default",
+}: {
+  feature: PackageFeature;
+  variant?: "default" | "highlight";
+}) {
   const Icon = feature.icon;
+  const highlighted = variant === "highlight";
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 md:p-5">
-      <Icon className="h-6 w-6 text-white md:h-7 md:w-7" />
-      <h3 className="mt-3 text-base font-semibold text-white md:text-lg">
+    <div className="px-2 py-4 md:px-4 md:py-5">
+      <Icon
+        className={`h-5 w-5 md:h-6 md:w-6 ${
+          highlighted ? "text-black" : "text-[#93f8b6]"
+        }`}
+      />
+      <h3
+        className={`mt-3 text-base font-semibold md:text-lg ${
+          highlighted ? "text-black" : "text-[#93f8b6]"
+        }`}
+      >
         {feature.title}
       </h3>
-      <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+      <p
+        className={`mt-2 text-sm leading-relaxed ${
+          highlighted ? "text-black/80" : "text-white"
+        }`}
+      >
         {feature.description}
       </p>
     </div>
@@ -163,26 +188,58 @@ export function PackagesHero({
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-16 md:pb-20">
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            Neden?
-          </p>
-          <h2 className="mt-3 text-4xl font-semibold md:text-6xl">Bekography</h2>
+        <div className="relative overflow-hidden rounded-3xl">
+          <div className="relative aspect-[16/7] min-h-[180px] w-full sm:aspect-[16/6] md:min-h-[220px]">
+            <Image
+              src={WHY_HERO_IMAGE}
+              alt=""
+              fill
+              className="object-cover object-center"
+              sizes="(max-width: 768px) 100vw, 1152px"
+              priority={false}
+            />
+            <div className="absolute inset-0 bg-black/45" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+              <h2
+                className="text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl"
+                style={{ color: ACCENT }}
+              >
+                Neden?
+              </h2>
+              <p
+                className="font-brand mt-2 text-xl lowercase tracking-[0.18em] md:text-2xl lg:text-3xl"
+                style={{ color: ACCENT }}
+              >
+                bekography
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-10 grid gap-3 md:grid-cols-3">
+        <div className="mt-8 grid md:grid-cols-3 md:gap-x-4">
           {topFeatures.map((feature) => (
-            <FeatureCard key={feature.title} feature={feature} />
+            <FeatureItem key={feature.title} feature={feature} />
           ))}
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          {middleFeatures.map((feature) => (
-            <FeatureCard key={feature.title} feature={feature} />
-          ))}
+
+        <div
+          className="mt-4 rounded-3xl md:mt-6"
+          style={{ backgroundColor: ACCENT }}
+        >
+          <div className="grid md:grid-cols-3 md:gap-x-2">
+            {middleFeatures.map((feature) => (
+              <FeatureItem
+                key={feature.title}
+                feature={feature}
+                variant="highlight"
+              />
+            ))}
+          </div>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
+
+        <div className="mt-4 grid md:grid-cols-3 md:gap-x-4 md:mt-6">
           {bottomFeatures.map((feature) => (
-            <FeatureCard key={feature.title} feature={feature} />
+            <FeatureItem key={feature.title} feature={feature} />
           ))}
         </div>
       </section>
