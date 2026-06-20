@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import { formatPrice } from "@/lib/constants";
 import { useCartStore } from "@/stores/cart-store";
+import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PackageCartBar } from "@/components/packages/package-cart-bar";
 import { RequestModal } from "@/components/packages/request-modal";
 
@@ -88,19 +88,17 @@ export function PackagesCartClient() {
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/5 pt-3 text-sm md:mt-4">
-                    <div>
-                      <p className="text-xs text-zinc-500">Peşin</p>
-                      <p className="font-semibold text-white">
-                        {formatPrice(item.cashPrice)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-500">Parçalı</p>
-                      <p className="font-semibold text-zinc-400">
-                        {formatPrice(item.installmentPrice)}
-                      </p>
-                    </div>
+                  <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/5 pt-3 md:mt-4">
+                    <PaymentTypePrice
+                      type="pesin"
+                      price={item.cashPrice}
+                      variant="stacked"
+                    />
+                    <PaymentTypePrice
+                      type="taksitli"
+                      price={item.installmentPrice}
+                      variant="stacked"
+                    />
                   </div>
                 </li>
             ))}

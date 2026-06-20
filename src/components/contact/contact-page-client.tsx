@@ -3,21 +3,22 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { MapPin, Phone } from "lucide-react";
 import Image from "next/image";
+import { BekographyMap } from "@/components/maps/bekography-map";
 import { ABOUT_TEAM_PORTRAIT_FILES, getAboutTeamPortraitSrc } from "@/lib/about-team-media";
 import { EASE_OUT } from "@/lib/motion";
+import {
+  BEKOGRAPHY_ADDRESS,
+  BEKOGRAPHY_INSTAGRAM_URL,
+  BEKOGRAPHY_MAPS_SHORT_URL,
+  BEKOGRAPHY_PHONE_DISPLAY,
+  BEKOGRAPHY_PHONE_TEL,
+} from "@/lib/site-location";
 import { turkishUppercase } from "@/lib/turkish-text";
 
 export function ContactPageClient() {
   const reduce = useReducedMotion();
-  const phoneDisplay = "0546 937 04 64";
-  const phoneTel = "+905469370464";
   const whatsappNumber = "905469370464";
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=Merhaba%20Bekography%2C%20bilgi%20almak%20istiyorum.`;
-  const address =
-    "Yavuz Plaza, Eminettin, Menderes Blv. No:170-172 Kat:9 801, 53020 Rize Merkez/Rize";
-  const mapsQuery = encodeURIComponent(address);
-  const mapsLink = `https://maps.google.com/?q=${mapsQuery}`;
-  const mapsEmbedSrc = `https://maps.google.com/maps?q=${mapsQuery}&z=16&output=embed`;
   const contactImage = getAboutTeamPortraitSrc(
     ABOUT_TEAM_PORTRAIT_FILES.bekirContact,
   );
@@ -144,7 +145,7 @@ export function ContactPageClient() {
                 }}
               >
                 <a
-                  href={`tel:${phoneTel}`}
+                  href={`tel:${BEKOGRAPHY_PHONE_TEL}`}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#141414] px-5 py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 dark:bg-white dark:text-black"
                 >
                   <Phone className="h-6 w-6" strokeWidth={1.75} />
@@ -162,7 +163,35 @@ export function ContactPageClient() {
                 }}
               >
                 <a
-                  href={mapsLink}
+                  href={BEKOGRAPHY_INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#f58529] via-[#dd2a7b] to-[#8134af] px-5 py-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  <Image
+                    src="/instagram.svg"
+                    alt=""
+                    width={24}
+                    height={24}
+                    loading="eager"
+                    className="h-6 w-6"
+                    aria-hidden
+                  />
+                  Instagram
+                </a>
+              </motion.div>
+              <motion.div
+                variants={{
+                  hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 14 },
+                  show: {
+                    opacity: 1,
+                    y: 0,
+                    transition: { duration: 0.45, ease: EASE_OUT },
+                  },
+                }}
+              >
+                <a
+                  href={BEKOGRAPHY_MAPS_SHORT_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#141414]/20 bg-white px-5 py-4 text-sm font-semibold text-[#141414] transition-colors hover:bg-zinc-100 dark:border-white/20 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-800"
@@ -184,48 +213,30 @@ export function ContactPageClient() {
                     {turkishUppercase("Telefon")}
                   </p>
                   <a
-                    href={`tel:${phoneTel}`}
+                    href={`tel:${BEKOGRAPHY_PHONE_TEL}`}
                     className="text-sm font-medium tracking-wide text-zinc-900 hover:underline dark:text-zinc-100"
                   >
-                    {phoneDisplay}
+                    {BEKOGRAPHY_PHONE_DISPLAY}
                   </a>
                 </div>
                 <div>
                   <p className="mb-2 text-[10px] font-bold tracking-[0.22em] text-zinc-500 dark:text-zinc-400">
                     {turkishUppercase("Açık Adres")}
                   </p>
-                  <p>{address}</p>
+                  <a
+                    href={BEKOGRAPHY_MAPS_SHORT_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="transition-opacity hover:opacity-80"
+                  >
+                    {BEKOGRAPHY_ADDRESS}
+                  </a>
                 </div>
               </div>
               <div className="aspect-[16/10] w-full border-t border-black/10 dark:border-white/10">
-                <iframe
-                  title="bekography ofis konumu"
-                  src={mapsEmbedSrc}
-                  className="h-full w-full border-0"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                />
+                <BekographyMap className="h-full w-full" />
               </div>
             </motion.div>
-            <motion.footer
-              className="mt-16 border-t border-[#141414]/5 pt-10 dark:border-white/10"
-              initial={reduce ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: reduce ? 0 : 0.55, duration: 0.5 }}
-            >
-              <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#141414]/40 dark:text-zinc-500">
-                {turkishUppercase("Sosyal")}
-              </p>
-              <a
-                className="text-xs font-medium tracking-wider text-zinc-900 transition-opacity hover:opacity-50 dark:text-zinc-200"
-                href="https://www.instagram.com/bekography/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                INSTAGRAM
-              </a>
-            </motion.footer>
           </div>
         </motion.section>
       </main>

@@ -15,6 +15,7 @@ export type PackageDetailSection = {
   id: string;
   title: string;
   body: string;
+  tags?: string[];
   sortOrder: number;
 };
 
@@ -37,6 +38,7 @@ export type PackageCategoryContent = {
   postShootTemplates?: PostShootTemplates;
   highlightTags?: string[];
   highlightTagsByOption?: Record<string, string[]>;
+  optionIconKeys?: Record<string, string>;
   galleryImages?: PackageGalleryImage[];
   detailSections?: PackageDetailSection[];
   detailSectionsByOption?: Record<string, PackageDetailSection[]>;

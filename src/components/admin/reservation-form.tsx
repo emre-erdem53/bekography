@@ -680,8 +680,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       }}
                       className={inputClass}
                     >
-                      <option value="pesin">Peşin</option>
-                      <option value="taksitli">Taksitli</option>
+                      <option value="pesin">Hemen Ödeme</option>
+                      <option value="taksitli">Parçalı Ödeme</option>
                     </select>
                   </Field>
 

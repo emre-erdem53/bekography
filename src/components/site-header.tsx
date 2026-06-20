@@ -9,11 +9,9 @@ import {
 } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { EASE_OUT, duration } from "@/lib/motion";
-import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
   { href: "/", label: "Anasayfa" },
@@ -46,16 +44,9 @@ export function SiteHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const reduce = useReducedMotion();
-  const { resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const headerY = useMotionValue(0);
   const hideOffsetRef = useRef(0);
   const lastScrollYRef = useRef(0);
-
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
 
   useEffect(() => {
     lastScrollYRef.current = window.scrollY;
@@ -88,15 +79,9 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [headerY, open, reduce]);
 
-  const isDark = mounted && resolvedTheme === "dark";
-
   return (
     <motion.header
-      className={`fixed top-0 z-50 w-full border-b backdrop-blur-md transition-colors duration-300 ${
-        isDark
-          ? "border-white/10 bg-zinc-950/90"
-          : "border-black/5 bg-white/85"
-      }`}
+      className="fixed top-0 z-50 w-full border-b border-white/10 bg-zinc-950/90 backdrop-blur-md"
       style={{ y: headerY }}
       initial={reduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -119,18 +104,14 @@ export function SiteHeader() {
             aria-label="bekography Ana Sayfa"
           >
             <Image
-              src={isDark ? "/logo/logo-white.svg" : "/logo/logo-black.svg"}
+              src="/logo/logo-white.svg"
               alt=""
               width={260}
               height={58}
               className="h-7 w-auto shrink-0 md:h-9"
               priority
             />
-            <span
-              className={`font-brand flex h-7 items-center text-[1.75rem] leading-none lowercase tracking-wide md:h-9 md:text-[2.25rem] ${
-                isDark ? "text-white" : "text-black"
-              }`}
-            >
+            <span className="font-brand flex h-7 items-center text-[1.75rem] leading-none lowercase tracking-wide text-white md:h-9 md:text-[2.25rem]">
               bekography
             </span>
           </Link>
@@ -154,13 +135,9 @@ export function SiteHeader() {
                   href={href}
                   data-active={active ? "true" : undefined}
                   className={`nav-link text-[10px] font-bold uppercase tracking-[0.3em] transition-colors ${
-                    isDark
-                      ? active
-                        ? "text-white"
-                        : "text-white/60 hover:text-white"
-                      : active
-                        ? "text-black"
-                        : "text-black/50 hover:text-black"
+                    active
+                      ? "text-white"
+                      : "text-white/60 hover:text-white"
                   }`}
                 >
                   {label}
@@ -168,15 +145,11 @@ export function SiteHeader() {
               </motion.div>
             );
           })}
-          <ThemeToggle />
         </nav>
-        <div className="flex items-center gap-2 md:hidden">
-          <ThemeToggle />
+        <div className="flex items-center md:hidden">
           <motion.button
             type="button"
-            className={`flex h-10 w-10 items-center justify-center ${
-              isDark ? "text-white" : "text-black"
-            }`}
+            className="flex h-10 w-10 items-center justify-center text-white"
             aria-expanded={open}
             aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
             onClick={() => setOpen((v) => !v)}
@@ -195,11 +168,7 @@ export function SiteHeader() {
       <AnimatePresence>
         {open ? (
           <motion.div
-            className={`overflow-hidden border-t md:hidden ${
-              isDark
-                ? "border-white/10 bg-zinc-950"
-                : "border-black/10 bg-white"
-            }`}
+            className="overflow-hidden border-t border-white/10 bg-zinc-950 md:hidden"
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "78dvh", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -231,9 +200,7 @@ export function SiteHeader() {
                 >
                   <Link
                     href={href}
-                    className={`block text-lg font-extrabold uppercase tracking-[0.22em] ${
-                      isDark ? "text-white" : "text-black"
-                    }`}
+                    className="block text-lg font-extrabold uppercase tracking-[0.22em] text-white"
                     onClick={() => setOpen(false)}
                   >
                     {label}
@@ -242,7 +209,7 @@ export function SiteHeader() {
               ))}
               <div className="pointer-events-none absolute bottom-6 left-8">
                 <Image
-                  src={isDark ? "/logo/logo-white.svg" : "/logo/logo-black.svg"}
+                  src="/logo/logo-white.svg"
                   alt="bekography"
                   width={80}
                   height={20}

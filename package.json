@@ -12,12 +12,15 @@
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
     "hash-password": "npx tsx scripts/hash-password.ts",
+    "sync-reviews": "npx tsx scripts/sync-google-reviews.ts",
+    "migrate-inspect-tags": "npx tsx scripts/migrate-inspect-section-tags.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.1.1",
     "@prisma/client": "^6.19.3",
     "@vercel/blob": "^2.4.0",
     "bcryptjs": "^3.0.3",
@@ -27,7 +30,6 @@
     "nanoid": "^5.1.11",
     "next": "16.2.1",
     "next-auth": "^5.0.0-beta.31",
-    "next-themes": "^0.4.6",
     "prisma": "^6.19.3",
     "react": "19.2.4",
     "react-big-calendar": "^1.20.0",
@@ -38,6 +40,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
+    "@types/google.maps": "^3.65.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-big-calendar": "^1.16.3",

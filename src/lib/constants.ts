@@ -29,9 +29,16 @@ export const RESERVATION_STATUS_ORDER: ReservationStatus[] = [
 ];
 
 export const PAYMENT_TYPE_LABELS = {
-  pesin: "Peşin",
-  taksitli: "Taksitli",
+  pesin: "Hemen Ödeme",
+  taksitli: "Parçalı Ödeme",
 } as const;
+
+export type PaymentType = keyof typeof PAYMENT_TYPE_LABELS;
+
+export const PAYMENT_TYPE_DESCRIPTIONS: Record<PaymentType, string> = {
+  pesin: "Tüm ödemenin rezervasyondan önce yapılacağı fiyat",
+  taksitli: "Çekime kadar parça parça tamamlanacak ödeme fiyatıdır.",
+};
 
 export const WHATSAPP_NUMBER =
   process.env.WHATSAPP_NUMBER ?? "905469370464";

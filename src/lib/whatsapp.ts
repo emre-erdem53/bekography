@@ -1,24 +1,36 @@
-import { PAYMENT_TYPE_LABELS, WHATSAPP_NUMBER } from "@/lib/constants";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import { WHATSAPP_NUMBER } from "@/lib/constants";
+
+const WHATSAPP_GREETING_NAME = "Bekir Bey";
 
 type CartItemForMessage = {
   categoryTitle: string;
   optionLabel: string;
-  paymentType: "pesin" | "taksitli";
+  shootDate: string;
 };
 
+function formatShootDate(shootDate: string) {
+  return format(new Date(shootDate), "d MMMM yyyy", { locale: tr });
+}
+
+function formatContactRole(contactRole: "gelin" | "damat") {
+  return contactRole === "gelin" ? "Gelin" : "Damat";
+}
+
 export function buildRequestWhatsAppMessage(
-  brideName: string,
-  groomName: string,
+  contactName: string,
+  contactRole: "gelin" | "damat",
   items: CartItemForMessage[],
 ) {
-  const packageList = items
+  const packageLines = items
     .map(
       (item) =>
-        `${item.categoryTitle} - ${item.optionLabel} (${PAYMENT_TYPE_LABELS[item.paymentType]})`,
+        `•${item.categoryTitle} - ${item.optionLabel} (${formatShootDate(item.shootDate)})`,
     )
-    .join(", ");
+    .join("\n");
 
-  return `Merhabalar, ben ${brideName} (gelin) ve ${groomName} (damat). ${packageList} için sizden bilgi almak ve iletişime geçmek istiyorum.`;
+  return `Merhaba ${WHATSAPP_GREETING_NAME}. 😊 Ben ${contactName} (${formatContactRole(contactRole)}). Aşağıdaki bilgilerle çekim talep ediyorum.\n\n${packageLines}`;
 }
 
 export function buildWhatsAppUrl(message: string) {

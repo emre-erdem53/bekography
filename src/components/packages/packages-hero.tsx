@@ -1,144 +1,49 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
-import {
-  BadgeCheck,
-  Camera,
-  CalendarDays,
-  Handshake,
-  Leaf,
-  Mountain,
-  Package,
-  Truck,
-  UserRoundCheck,
-} from "lucide-react";
-import type { PackageCategoryData } from "@/lib/package-types";
-import { PackageIconDisplay } from "@/components/packages/package-icon";
+import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
 import { PackageCartBar } from "@/components/packages/package-cart-bar";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
-import { getCategoryPriceLabel, packageMediaUrl } from "@/lib/package-media";
+import { PackagesCategoryAccordion } from "@/components/packages/packages-category-accordion";
 import { useCartStore } from "@/stores/cart-store";
-
-const ACCENT = "#93f8b6";
-const WHY_HERO_IMAGE =
-  packageMediaUrl("neden-bekography.png") ?? "/reels/neden-bekography.png";
-
-type PackageFeature = {
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-};
-
-const topFeatures: PackageFeature[] = [
-  {
-    title: "Rehberlik Hizmeti",
-    description:
-      "Süreç boyunca size özel tavsiye ve deneyimlerimizle yanınızdayız.",
-    icon: Leaf,
-  },
-  {
-    title: "Birebir İletişim",
-    description:
-      "Sadece Bekography ile birebir, kesintisiz ve dostça iletişim kurarsınız.",
-    icon: Handshake,
-  },
-  {
-    title: "Onaylı Süreç",
-    description:
-      "Her adım karşılıklı onay ve sözleşme ile kayıt altına alınarak güveninizi koruruz.",
-    icon: BadgeCheck,
-  },
-];
-
-const middleFeatures: PackageFeature[] = [
-  {
-    title: "Tam Teslimat",
-    description:
-      "Tüm çekilen ve düzenlenen görüntüler yüksek kalitede size teslim edilir.",
-    icon: Package,
-  },
-  {
-    title: "Şeffaf Çekim",
-    description:
-      "Çekimleri size göstererek sürece hakim olmanızı ve rahat hissetmenizi sağlıyoruz.",
-    icon: Camera,
-  },
-  {
-    title: "Sınırsız Mekan",
-    description:
-      "Belirlenen süre zarfında, vakit yettiği farklı mekanlarda özgünce çekim yaparız.",
-    icon: Mountain,
-  },
-];
-
-const bottomFeatures: PackageFeature[] = [
-  {
-    title: "Erteleme Rahatlığı",
-    description: "Yıl sonuna kadar çekimi erteleme hakkınız olur.",
-    icon: CalendarDays,
-  },
-  {
-    title: "Ücretsiz Kargo",
-    description: "Baskılı ürünler direkt adresinize ücretsiz kargolanır.",
-    icon: Truck,
-  },
-  {
-    title: "Profesyonel Ekipman",
-    description: "Yüksek çözünürlükte görüntülere sahip olursunuz.",
-    icon: UserRoundCheck,
-  },
-];
-
-function FeatureItem({
-  feature,
-  variant = "default",
-}: {
-  feature: PackageFeature;
-  variant?: "default" | "highlight";
-}) {
-  const Icon = feature.icon;
-  const highlighted = variant === "highlight";
-
-  return (
-    <div className="px-2 py-4 md:px-4 md:py-5">
-      <Icon
-        className={`h-5 w-5 md:h-6 md:w-6 ${
-          highlighted ? "text-black" : "text-[#93f8b6]"
-        }`}
-      />
-      <h3
-        className={`mt-3 text-base font-semibold md:text-lg ${
-          highlighted ? "text-black" : "text-[#93f8b6]"
-        }`}
-      >
-        {feature.title}
-      </h3>
-      <p
-        className={`mt-2 text-sm leading-relaxed ${
-          highlighted ? "text-black/80" : "text-white"
-        }`}
-      >
-        {feature.description}
-      </p>
-    </div>
-  );
-}
 
 export function PackagesHero({
   categories,
 }: {
   categories: PackageCategoryData[];
 }) {
-  const [selectedCategory, setSelectedCategory] =
+  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [detailCategory, setDetailCategory] =
     useState<PackageCategoryData | null>(null);
+  const [detailOptionId, setDetailOptionId] = useState<string | null>(null);
   const cartCount = useCartStore((state) => state.items.length);
+
+  function handleToggleCategory(categoryId: string) {
+    setExpandedCategoryId((current) =>
+      current === categoryId ? null : categoryId,
+    );
+  }
+
+  function handleSelectOption(
+    category: PackageCategoryData,
+    option: PackageOptionData,
+  ) {
+    setDetailCategory(category);
+    setDetailOptionId(option.id);
+  }
+
+  function handleCloseDetail() {
+    setDetailCategory(null);
+    setDetailOptionId(null);
+  }
 
   return (
     <main
       className={`flex-1 bg-black pt-24 text-white ${cartCount > 0 ? "pb-28" : "pb-10"}`}
     >
-      <section className="mx-auto w-full max-w-2xl px-4 pb-16 pt-4 sm:max-w-3xl sm:px-6 lg:max-w-4xl xl:max-w-5xl">
+      <section className="mx-auto w-full max-w-2xl px-4 pb-16 pt-4 sm:max-w-3xl sm:px-6 lg:max-w-3xl">
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
             Paketler
@@ -146,107 +51,23 @@ export function PackagesHero({
           <h1 className="mt-3 text-3xl font-semibold md:text-4xl lg:text-5xl">
             Paket Oluştur
           </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm text-zinc-400">
+            Çekim paketine tıklayın, türünü seçin ve detayları inceleyin.
+          </p>
         </div>
 
-        <div className="mt-8 grid gap-2 sm:gap-3 lg:grid-cols-2 lg:gap-4">
-          {categories.map((category) => {
-            const iconKey = category.iconKey;
-
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setSelectedCategory(category)}
-                className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-4 text-left transition-colors hover:bg-[#111] md:px-5 md:py-5"
-              >
-                <span
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl md:h-12 md:w-12"
-                  style={{ backgroundColor: `${category.accentColor}22` }}
-                >
-                  <PackageIconDisplay
-                    iconKey={iconKey}
-                    className="h-5 w-5 md:h-6 md:w-6"
-                    style={{ color: category.accentColor }}
-                    imageSizes="(max-width: 768px) 20px, 24px"
-                  />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span
-                    className="block text-base font-semibold md:text-lg"
-                    style={{ color: category.accentColor }}
-                  >
-                    {category.title}
-                  </span>
-                  <span className="block text-sm text-zinc-400 md:text-base">
-                    {getCategoryPriceLabel(category)}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16 md:pb-20">
-        <div className="relative overflow-hidden rounded-3xl">
-          <div className="relative aspect-[16/7] min-h-[180px] w-full sm:aspect-[16/6] md:min-h-[220px]">
-            <Image
-              src={WHY_HERO_IMAGE}
-              alt=""
-              fill
-              className="object-cover object-center"
-              sizes="(max-width: 768px) 100vw, 1152px"
-              priority={false}
-            />
-            <div className="absolute inset-0 bg-black/45" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-              <h2
-                className="text-4xl font-semibold tracking-tight md:text-6xl lg:text-7xl"
-                style={{ color: ACCENT }}
-              >
-                Neden?
-              </h2>
-              <p
-                className="font-brand mt-2 text-xl lowercase tracking-[0.18em] md:text-2xl lg:text-3xl"
-                style={{ color: ACCENT }}
-              >
-                bekography
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 grid md:grid-cols-3 md:gap-x-4">
-          {topFeatures.map((feature) => (
-            <FeatureItem key={feature.title} feature={feature} />
-          ))}
-        </div>
-
-        <div
-          className="mt-4 rounded-3xl md:mt-6"
-          style={{ backgroundColor: ACCENT }}
-        >
-          <div className="grid md:grid-cols-3 md:gap-x-2">
-            {middleFeatures.map((feature) => (
-              <FeatureItem
-                key={feature.title}
-                feature={feature}
-                variant="highlight"
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-4 grid md:grid-cols-3 md:gap-x-4 md:mt-6">
-          {bottomFeatures.map((feature) => (
-            <FeatureItem key={feature.title} feature={feature} />
-          ))}
-        </div>
+        <PackagesCategoryAccordion
+          categories={categories}
+          expandedCategoryId={expandedCategoryId}
+          onToggleCategory={handleToggleCategory}
+          onSelectOption={handleSelectOption}
+        />
       </section>
 
       <PackageDetailSheet
-        category={selectedCategory}
-        onClose={() => setSelectedCategory(null)}
+        category={detailCategory}
+        initialOptionId={detailOptionId}
+        onClose={handleCloseDetail}
       />
 
       <PackageCartBar />

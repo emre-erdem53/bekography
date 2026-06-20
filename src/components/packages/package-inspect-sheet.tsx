@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, X } from "lucide-react";
 import type { PackageCategoryData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import { normalizeDetailSections } from "@/lib/package-detail-section";
 
 type PackageInspectSheetProps = {
   open: boolean;
@@ -31,7 +32,9 @@ export function PackageInspectSheet({
     content.detailSectionsByOption?.[optionKey] ??
     content.detailSectionsByOption?.[optionLabelKey] ??
     content.detailSections;
-  const sections = [...(scopedSections ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+  const sections = normalizeDetailSections(scopedSections).sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -95,13 +98,25 @@ export function PackageInspectSheet({
                     Bu paket için detay bilgisi yakında eklenecek.
                   </p>
                 ) : (
-                  <div className="mt-6 space-y-6">
+                  <div className="mt-6 space-y-5">
                     {sections.map((section) => (
                       <section key={section.id}>
-                        <h4 className="text-lg font-semibold text-white">
+                        <h4 className="text-sm font-semibold uppercase tracking-wide text-white">
                           {section.title}
                         </h4>
-                        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-zinc-400 md:text-base">
+                        {section.tags && section.tags.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {section.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="rounded-full border border-white/80 px-2.5 py-0.5 text-[11px] text-white"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+                        <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-zinc-400">
                           {section.body}
                         </p>
                       </section>

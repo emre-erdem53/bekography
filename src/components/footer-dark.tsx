@@ -4,6 +4,12 @@ import { motion, useReducedMotion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { EASE_OUT } from "@/lib/motion";
+import {
+  BEKOGRAPHY_ADDRESS,
+  BEKOGRAPHY_MAPS_SHORT_URL,
+  BEKOGRAPHY_PHONE_DISPLAY,
+  BEKOGRAPHY_PHONE_TEL,
+} from "@/lib/site-location";
 
 function InstagramIcon() {
   return (
@@ -121,11 +127,20 @@ export function FooterDark() {
             <span className="mb-6 block text-[10px] font-bold uppercase tracking-[0.4em] text-white/40">
               İletişim
             </span>
-            <p className="text-sm text-gray-400">0546 937 04 64</p>
-            <p className="mt-3 max-w-xs text-xs leading-relaxed text-gray-400">
-              Yavuz Plaza, Eminettin, Menderes Blv. No:170-172 Kat:9 801,
-              53020 Rize Merkez/Rize
-            </p>
+            <a
+              href={`tel:${BEKOGRAPHY_PHONE_TEL}`}
+              className="text-sm text-gray-400 transition-colors hover:text-white"
+            >
+              {BEKOGRAPHY_PHONE_DISPLAY}
+            </a>
+            <a
+              href={BEKOGRAPHY_MAPS_SHORT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 block max-w-xs text-xs leading-relaxed text-gray-400 transition-colors hover:text-white"
+            >
+              {BEKOGRAPHY_ADDRESS}
+            </a>
           </motion.div>
         </div>
         <motion.div

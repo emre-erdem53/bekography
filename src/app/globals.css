@@ -3,11 +3,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --theme-transition-duration: 0.5s;
-  --theme-transition-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  color-scheme: light;
+  --background: #09090b;
+  --foreground: #fafafa;
+  color-scheme: dark;
 }
 
 .dark {
@@ -30,31 +28,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   scroll-behavior: smooth;
-  transition:
-    background-color var(--theme-transition-duration) var(--theme-transition-ease),
-    color var(--theme-transition-duration) var(--theme-transition-ease);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  :where(*, *::before, *::after) {
-    transition-property: background-color, border-color, color, fill, stroke,
-      box-shadow, text-decoration-color, outline-color;
-    transition-duration: var(--theme-transition-duration);
-    transition-timing-function: var(--theme-transition-ease);
-  }
-
-  :where(img, video, canvas, iframe, picture) {
-    transition-property: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
-  }
-
-  body {
-    transition: none;
   }
 }
 

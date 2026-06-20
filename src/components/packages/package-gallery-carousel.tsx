@@ -5,7 +5,7 @@ import Image from "next/image";
 
 type PackageGalleryCarouselProps = {
   images: string[];
-  variant?: "detail" | "default";
+  variant?: "detail" | "default" | "scroll";
 };
 
 export function PackageGalleryCarousel({
@@ -15,17 +15,21 @@ export function PackageGalleryCarousel({
   const [index, setIndex] = useState(0);
 
   const frameClass =
-    variant === "detail"
+    variant === "scroll"
+      ? "relative h-full min-h-0 w-full overflow-hidden rounded-2xl bg-[#111] sm:rounded-3xl"
+      : variant === "detail"
       ? "relative aspect-[4/5] max-h-[38vh] w-full overflow-hidden rounded-3xl bg-[#111] md:aspect-[16/10] md:max-h-[280px] lg:max-h-[320px]"
       : "relative aspect-[4/5] overflow-hidden rounded-3xl bg-[#111]";
 
   if (images.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center rounded-3xl bg-[#1a1a1a] text-sm text-zinc-500 ${
-          variant === "detail"
-            ? "aspect-[4/5] max-h-[38vh] md:aspect-[16/10] md:max-h-[280px]"
-            : "aspect-[4/5]"
+        className={`flex items-center justify-center bg-[#1a1a1a] text-xs text-zinc-500 sm:text-sm ${
+          variant === "scroll"
+            ? "h-full min-h-0 w-full rounded-2xl sm:rounded-3xl"
+            : variant === "detail"
+            ? "aspect-[4/5] max-h-[38vh] rounded-3xl md:aspect-[16/10] md:max-h-[280px]"
+            : "aspect-[4/5] rounded-3xl"
         }`}
       >
         Görsel yakında eklenecek
@@ -36,7 +40,11 @@ export function PackageGalleryCarousel({
   const current = images[index] ?? images[0];
 
   return (
-    <div className="space-y-3">
+    <div
+      className={
+        variant === "scroll" ? "flex h-full min-h-0 flex-col" : "space-y-3"
+      }
+    >
       <div className={frameClass}>
         <Image
           src={current}
@@ -72,7 +80,11 @@ export function PackageGalleryCarousel({
         ) : null}
       </div>
       {images.length > 1 ? (
-        <div className="flex justify-center gap-2">
+        <div
+          className={`flex justify-center gap-2 ${
+            variant === "scroll" ? "mt-1.5 shrink-0 sm:mt-2" : ""
+          }`}
+        >
           {images.map((_, dotIndex) => (
             <button
               key={dotIndex}

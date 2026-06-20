@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
 import { SiteShell } from "@/components/site-shell";
-import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 const gilroy = localFont({
@@ -17,7 +16,10 @@ const andes = localFont({
   display: "swap",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bekography.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "bekography | Monochrome Studio",
     template: "%s | bekography",
@@ -27,10 +29,12 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-48.png", type: "image/png", sizes: "48x48" },
       { url: "/icon.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
     ],
     shortcut: "/favicon.ico",
-    apple: "/apple-icon.png",
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
@@ -42,15 +46,13 @@ export default function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${gilroy.variable} ${andes.variable} h-full antialiased`}
+      className={`${gilroy.variable} ${andes.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
-        <ThemeProvider>
-          <AuthSessionProvider>
-            <SiteShell>{children}</SiteShell>
-          </AuthSessionProvider>
-        </ThemeProvider>
+        <AuthSessionProvider>
+          <SiteShell>{children}</SiteShell>
+        </AuthSessionProvider>
       </body>
     </html>
   );

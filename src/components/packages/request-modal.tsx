@@ -8,7 +8,8 @@ import {
   type CartItem,
   type CartItemInput,
 } from "@/stores/cart-store";
-import { PAYMENT_TYPE_LABELS, formatPrice } from "@/lib/constants";
+import { formatPrice } from "@/lib/constants";
+import { PaymentTypeOptionButton } from "@/components/packages/payment-type-price";
 import {
   buildRequestWhatsAppMessage,
   buildWhatsAppUrl,
@@ -22,13 +23,11 @@ type RequestModalProps = {
 };
 
 type CategoryFields = Record<string, { shootDate: string; city: string }>;
-type PaymentFields = Record<string, "pesin" | "taksitli">;
 
 const emptyForm = {
-  brideName: "",
-  bridePhone: "",
-  groomName: "",
-  groomPhone: "",
+  contactName: "",
+  contactPhone: "",
+  contactRole: null as "gelin" | "damat" | null,
 };
 
 export function RequestModal({
@@ -78,12 +77,13 @@ export function RequestModal({
     return [...map.values()];
   }, [items]);
 
-  const [brideName, setBrideName] = useState("");
-  const [bridePhone, setBridePhone] = useState("");
-  const [groomName, setGroomName] = useState("");
-  const [groomPhone, setGroomPhone] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactRole, setContactRole] = useState<"gelin" | "damat" | null>(
+    null,
+  );
   const [categoryFields, setCategoryFields] = useState<CategoryFields>({});
-  const [paymentFields, setPaymentFields] = useState<PaymentFields>({});
+  const [paymentType, setPaymentType] = useState<"pesin" | "taksitli">("pesin");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -99,26 +99,15 @@ export function RequestModal({
 
   useEffect(() => {
     if (!open) return;
-    setPaymentFields((prev) => {
-      let changed = false;
-      const next = { ...prev };
-      for (const item of items) {
-        if (!next[item.packageOptionId]) {
-          next[item.packageOptionId] = "pesin";
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [open, itemIdsKey, items]);
+    setPaymentType("pesin");
+  }, [open, itemIdsKey]);
 
   function resetForm() {
-    setBrideName(emptyForm.brideName);
-    setBridePhone(emptyForm.bridePhone);
-    setGroomName(emptyForm.groomName);
-    setGroomPhone(emptyForm.groomPhone);
+    setContactName(emptyForm.contactName);
+    setContactPhone(emptyForm.contactPhone);
+    setContactRole(emptyForm.contactRole);
     setCategoryFields({});
-    setPaymentFields({});
+    setPaymentType("pesin");
     setError("");
     setSuccess(false);
   }
@@ -139,18 +128,14 @@ export function RequestModal({
       return;
     }
 
-    const missingPayment = items.find(
-      (item) => !paymentFields[item.packageOptionId],
-    );
-    if (missingPayment) {
+    if (!contactRole) {
       setLoading(false);
-      setError("Her paket için ödeme tipi seçin.");
+      setError("Gelin veya damat seçin.");
       return;
     }
 
     const payloadItems = items.map((item) => {
       const category = categoryFields[item.categoryId];
-      const paymentType = paymentFields[item.packageOptionId]!;
       return {
         packageOptionId: item.packageOptionId,
         paymentType,
@@ -163,10 +148,9 @@ export function RequestModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        brideName: brideName.trim(),
-        bridePhone: bridePhone.trim(),
-        groomName: groomName.trim(),
-        groomPhone: groomPhone.trim(),
+        contactName: contactName.trim(),
+        contactPhone: contactPhone.trim(),
+        contactRole,
         items: payloadItems,
       }),
     });
@@ -180,12 +164,12 @@ export function RequestModal({
     }
 
     const message = buildRequestWhatsAppMessage(
-      brideName.trim(),
-      groomName.trim(),
+      contactName.trim(),
+      contactRole,
       items.map((item) => ({
         categoryTitle: item.categoryTitle,
         optionLabel: item.optionLabel,
-        paymentType: paymentFields[item.packageOptionId]!,
+        shootDate: categoryFields[item.categoryId]!.shootDate,
       })),
     );
 
@@ -244,51 +228,47 @@ export function RequestModal({
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-                <FormSection title="Gelin Bilgileri">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Gelin Ad Soyad" required>
+                <FormSection title="İletişim Bilgileri">
+                  <div className="space-y-4">
+                    <Field label="Ad Soyad" required>
                       <input
-                        value={brideName}
-                        onChange={(e) => setBrideName(e.target.value)}
+                        value={contactName}
+                        onChange={(e) => setContactName(e.target.value)}
                         required
                         minLength={2}
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Gelin Telefon" required>
+                    <Field label="Telefon" required>
                       <input
                         type="tel"
-                        value={bridePhone}
-                        onChange={(e) => setBridePhone(e.target.value)}
+                        value={contactPhone}
+                        onChange={(e) => setContactPhone(e.target.value)}
                         required
                         minLength={10}
                         className={inputClass}
                       />
                     </Field>
-                  </div>
-                </FormSection>
-
-                <FormSection title="Damat Bilgileri">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <Field label="Damat Ad Soyad" required>
-                      <input
-                        value={groomName}
-                        onChange={(e) => setGroomName(e.target.value)}
-                        required
-                        minLength={2}
-                        className={inputClass}
-                      />
-                    </Field>
-                    <Field label="Damat Telefon" required>
-                      <input
-                        type="tel"
-                        value={groomPhone}
-                        onChange={(e) => setGroomPhone(e.target.value)}
-                        required
-                        minLength={10}
-                        className={inputClass}
-                      />
-                    </Field>
+                    <div className="flex flex-wrap gap-4">
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-white">
+                        <input
+                          type="checkbox"
+                          checked={contactRole === "gelin"}
+                          onChange={() => setContactRole("gelin")}
+                          className="h-4 w-4 accent-[#93f8b6]"
+                        />
+                        Gelin
+                      </label>
+                      <label className="flex cursor-pointer items-center gap-2 text-sm text-white">
+                        <input
+                          type="checkbox"
+                          checked={contactRole === "damat"}
+                          onChange={() => setContactRole("damat")}
+                          className="h-4 w-4 accent-[#93f8b6]"
+                        />
+                        Damat
+                      </label>
+                    </div>
                   </div>
                 </FormSection>
 
@@ -337,10 +317,21 @@ export function RequestModal({
                 ))}
 
                 <FormSection title="Ödeme Tipi">
-                  <div className="space-y-3">
+                  <p className="text-xs leading-relaxed text-zinc-500">
+                    Tüm paketler için geçerli olacak ödeme planını seçin.
+                  </p>
+                  <div className="flex gap-2">
+                    {(["pesin", "taksitli"] as const).map((type) => (
+                      <PaymentTypeOptionButton
+                        key={type}
+                        type={type}
+                        selected={paymentType === type}
+                        onSelect={() => setPaymentType(type)}
+                      />
+                    ))}
+                  </div>
+                  <div className="space-y-2 border-t border-white/10 pt-3">
                     {items.map((item) => {
-                      const paymentType =
-                        paymentFields[item.packageOptionId] ?? "pesin";
                       const price =
                         paymentType === "pesin"
                           ? item.cashPrice
@@ -349,39 +340,31 @@ export function RequestModal({
                       return (
                         <div
                           key={item.packageOptionId}
-                          className="rounded-xl border border-white/10 bg-black/40 p-4"
+                          className="flex items-center justify-between gap-3 text-sm"
                         >
-                          <p className="text-sm font-medium text-white">
+                          <p className="text-zinc-300">
                             {item.categoryTitle} — {item.optionLabel}
                           </p>
-                          <div className="mt-3 flex gap-2">
-                            {(["pesin", "taksitli"] as const).map((type) => (
-                              <button
-                                key={type}
-                                type="button"
-                                onClick={() =>
-                                  setPaymentFields((prev) => ({
-                                    ...prev,
-                                    [item.packageOptionId]: type,
-                                  }))
-                                }
-                                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium ${
-                                  paymentType === type
-                                    ? "border-white bg-white text-black"
-                                    : "border-white/20 text-zinc-400"
-                                }`}
-                              >
-                                {PAYMENT_TYPE_LABELS[type]}
-                              </button>
-                            ))}
-                          </div>
-                          <p className="mt-2 text-sm text-zinc-400">
+                          <p className="shrink-0 font-semibold text-white">
                             {formatPrice(price)}
                           </p>
                         </div>
                       );
                     })}
                   </div>
+                  <p className="text-sm font-semibold text-white">
+                    Toplam:{" "}
+                    {formatPrice(
+                      items.reduce(
+                        (sum, item) =>
+                          sum +
+                          (paymentType === "pesin"
+                            ? item.cashPrice
+                            : item.installmentPrice),
+                        0,
+                      ),
+                    )}
+                  </p>
                 </FormSection>
 
                 {error ? <p className="text-sm text-red-400">{error}</p> : null}

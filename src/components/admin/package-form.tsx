@@ -17,10 +17,16 @@ import {
 import type { PostShootSection } from "@/lib/post-shoot";
 import { normalizeHexColor } from "@/lib/color-utils";
 import { applyPackageServiceTheme, PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
+import { normalizeDetailSections } from "@/lib/package-detail-section";
 import { HexColorInput } from "@/components/admin/hex-color-input";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
-import { isCustomPackageIcon } from "@/components/packages/package-icon";
+import { isCustomPackageIcon, PackageIconDisplay } from "@/components/packages/package-icon";
 import { packageMediaUrl } from "@/lib/package-media";
+import { PAYMENT_TYPE_DESCRIPTIONS } from "@/lib/constants";
+import {
+  inferOptionIconKey,
+  PACKAGE_OPTION_ICON_KEYS,
+} from "@/lib/package-option-icon";
 
 const defaultContent: PackageCategoryContent = {
   ...PACKAGE_SERVICE_THEME,
@@ -33,6 +39,7 @@ const defaultContent: PackageCategoryContent = {
   postShootTemplates: defaultIndoorPostShootTemplates(),
   highlightTags: [],
   highlightTagsByOption: {},
+  optionIconKeys: {},
   galleryImages: [],
   detailSections: [],
   detailSectionsByOption: {},
@@ -63,14 +70,17 @@ function removeOptionContentKeys(
   const nextDetailSections = { ...(content.detailSectionsByOption ?? {}) };
   const nextInspectEnabled = { ...(content.inspectEnabledByOption ?? {}) };
   const nextHighlightTags = { ...(content.highlightTagsByOption ?? {}) };
+  const nextOptionIconKeys = { ...(content.optionIconKeys ?? {}) };
 
   delete nextDetailSections[key];
   delete nextInspectEnabled[key];
   delete nextHighlightTags[key];
+  delete nextOptionIconKeys[key];
   if (labelKey) {
     delete nextDetailSections[labelKey];
     delete nextInspectEnabled[labelKey];
     delete nextHighlightTags[labelKey];
+    delete nextOptionIconKeys[labelKey];
   }
 
   return {
@@ -78,6 +88,7 @@ function removeOptionContentKeys(
     detailSectionsByOption: nextDetailSections,
     inspectEnabledByOption: nextInspectEnabled,
     highlightTagsByOption: nextHighlightTags,
+    optionIconKeys: nextOptionIconKeys,
   };
 }
 
@@ -144,6 +155,7 @@ export function PackageForm({
               : defaultIndoorPostShootTemplates()),
           highlightTags: loadedContent.highlightTags ?? [],
           highlightTagsByOption: loadedContent.highlightTagsByOption ?? {},
+          optionIconKeys: loadedContent.optionIconKeys ?? {},
           galleryImages: loadedContent.galleryImages ?? [],
           detailSections: loadedContent.detailSections ?? [],
           detailSectionsByOption: loadedContent.detailSectionsByOption ?? {},
@@ -243,6 +255,11 @@ export function PackageForm({
         }
       },
     );
+    for (const key of Object.keys(detailSectionsByOption)) {
+      detailSectionsByOption[key] = normalizeDetailSections(
+        detailSectionsByOption[key],
+      );
+    }
     const inspectEnabledByOption = {
       ...(content.inspectEnabledByOption ?? {}),
     };
@@ -261,6 +278,15 @@ export function PackageForm({
         highlightTagsByOption[mappedKey] = tags;
       }
     });
+    const optionIconKeys = {
+      ...(content.optionIconKeys ?? {}),
+    };
+    Object.entries(content.optionIconKeys ?? {}).forEach(([key, icon]) => {
+      const mappedKey = optionLabelMap[key];
+      if (mappedKey && !optionIconKeys[mappedKey]) {
+        optionIconKeys[mappedKey] = icon;
+      }
+    });
 
     const {
       tagline: _legacyTagline,
@@ -276,6 +302,7 @@ export function PackageForm({
       detailSectionsByOption,
       inspectEnabledByOption,
       highlightTagsByOption,
+      optionIconKeys,
       scheduleType: content.scheduleType ?? "indoor",
       postShootTemplates:
         content.postShootTemplates ??
@@ -523,14 +550,14 @@ export function PackageForm({
           </div>
         </Field>
 
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-4 border-t border-white/10 pt-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h3 className="text-sm font-medium text-white">Fiyat Seçenekleri</h3>
+              <h3 className="text-sm font-medium text-white">Çekim Türleri</h3>
               <p className="mt-1 text-xs text-zinc-500">
-                Detay penceresindeki satırlar (ör. Fotoğraf, Fotoğraf + Video).
-                Peşin ve taksitli fiyatlar buradan gelir. Her seçeneğe ayrı
-                detay etiketi ekleyebilirsiniz.
+                Müşteri pakete tıkladığında açılan menüde görünen seçenekler.
+                Her çekim türünün adını, ikonunu, fiyatlarını ve detaylarını
+                buradan yönetin.
               </p>
             </div>
             <button
@@ -541,248 +568,312 @@ export function PackageForm({
                   { label: "", cashPrice: 0, installmentPrice: 0 },
                 ])
               }
-              className="text-sm text-zinc-400 hover:text-white"
+              className="shrink-0 text-sm text-zinc-400 hover:text-white"
             >
-              + Seçenek Ekle
+              + Çekim Türü Ekle
             </button>
           </div>
-          <div className="hidden gap-3 px-1 md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem]">
-            <span className="text-xs font-medium text-zinc-500">Seçenek Etiketi</span>
-            <span className="text-xs font-medium text-zinc-500">Peşin (₺)</span>
-            <span className="text-xs font-medium text-zinc-500">Taksitli (₺)</span>
-            <span />
-          </div>
+
           {options.map((option, index) => {
             const key = getOptionDetailKey(option, index);
+            const optionLabel =
+              option.label.trim() || `Çekim Türü ${index + 1}`;
             const optionTags =
               content.highlightTagsByOption?.[key] ??
               content.highlightTagsByOption?.[option.label.trim()] ??
               [];
-
-            return (
-            <div
-              key={option.id ?? `option-${index}`}
-              className="space-y-3 rounded-xl border border-white/5 bg-white/[0.02] p-3"
-            >
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem]">
-              <div>
-                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
-                  Seçenek Etiketi
-                </span>
-                <input
-                  placeholder="örn. Fotoğraf"
-                  value={option.label}
-                  onChange={(e) => {
-                    const next = [...options];
-                    next[index] = { ...next[index], label: e.target.value };
-                    setOptions(next);
-                  }}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
-                  Peşin (₺)
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={option.cashPrice}
-                  onChange={(e) => {
-                    const next = [...options];
-                    next[index] = {
-                      ...next[index],
-                      cashPrice: Number(e.target.value),
-                    };
-                    setOptions(next);
-                  }}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <span className="mb-1.5 block text-sm text-zinc-400 md:hidden">
-                  Taksitli (₺)
-                </span>
-                <input
-                  type="number"
-                  min={0}
-                  value={option.installmentPrice}
-                  onChange={(e) => {
-                    const next = [...options];
-                    next[index] = {
-                      ...next[index],
-                      installmentPrice: Number(e.target.value),
-                    };
-                    setOptions(next);
-                  }}
-                  className={inputClass}
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (options.length <= 1) return;
-                    setContent(removeOptionContentKeys(content, option, index));
-                    setOptions(options.filter((_, i) => i !== index));
-                  }}
-                  disabled={options.length <= 1}
-                  className="w-full rounded-xl border border-red-500/30 px-3 py-2.5 text-sm text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Kaldır
-                </button>
-              </div>
-              </div>
-              <TagsEditor
-                title="Detay Etiketleri"
-                tags={optionTags}
-                onChange={(tags) =>
-                  setContent({
-                    ...content,
-                    highlightTagsByOption: {
-                      ...(content.highlightTagsByOption ?? {}),
-                      [key]: tags,
-                    },
-                  })
-                }
-              />
-            </div>
-            );
-          })}
-        </div>
-
-        <div className="space-y-4 border-t border-white/10 pt-5">
-          <div>
-            <h3 className="text-sm font-medium text-white">
-              İncele Bölümleri (Seçenek Bazlı)
-            </h3>
-            <p className="mt-1 text-xs text-zinc-500">
-              Her fiyat seçeneği için farklı «İncele» metni girebilirsiniz.
-            </p>
-          </div>
-          {options.map((option, optionIndex) => {
-            const optionLabel = option.label.trim() || `Seçenek ${optionIndex + 1}`;
-            const key = getOptionDetailKey(option, optionIndex);
             const sections =
               content.detailSectionsByOption?.[key] ??
               content.detailSectionsByOption?.[option.label.trim()] ??
               [];
+            const selectedIconKey =
+              content.optionIconKeys?.[key] ??
+              content.optionIconKeys?.[option.label.trim()] ??
+              "";
 
             return (
               <div
-                key={`${key}-${optionIndex}`}
-                className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                key={option.id ?? `option-${index}`}
+                className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
               >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-white">{optionLabel}</p>
-                    <label className="mt-1 inline-flex items-center gap-2 text-xs text-zinc-400">
-                      <input
-                        type="checkbox"
-                        checked={content.inspectEnabledByOption?.[key] ?? true}
-                        onChange={(e) =>
-                          setContent({
-                            ...content,
-                            inspectEnabledByOption: {
-                              ...(content.inspectEnabledByOption ?? {}),
-                              [key]: e.target.checked,
-                            },
-                          })
-                        }
-                      />
-                      İncele aktif
-                    </label>
+                    <p className="text-sm font-semibold text-white">
+                      {optionLabel}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Paket listesindeki açılır menüde görünür
+                    </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => {
-                      const nextSections = [
-                        ...sections,
-                        {
-                          id: crypto.randomUUID(),
-                          title: "",
-                          body: "",
-                          sortOrder: sections.length,
-                        },
-                      ];
-                      setContent({
-                        ...content,
-                        detailSectionsByOption: {
-                          ...(content.detailSectionsByOption ?? {}),
-                          [key]: nextSections,
-                        },
-                      });
+                      if (options.length <= 1) return;
+                      setContent(removeOptionContentKeys(content, option, index));
+                      setOptions(options.filter((_, i) => i !== index));
                     }}
-                    className="text-sm text-zinc-400 hover:text-white"
+                    disabled={options.length <= 1}
+                    className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    + Bölüm Ekle
+                    Kaldır
                   </button>
                 </div>
 
-                {sections.length === 0 ? (
-                  <p className="text-xs text-zinc-500">
-                    Bu seçenek için henüz incele metni yok.
-                  </p>
-                ) : null}
-
-                {[...sections]
-                  .sort((a, b) => a.sortOrder - b.sortOrder)
-                  .map((section, sectionIndex) => (
-                    <div
-                      key={section.id}
-                      className="space-y-2 rounded-xl border border-white/5 bg-black/20 p-4"
-                    >
-                      <input
-                        value={section.title}
-                        onChange={(e) => {
-                          const next = [...sections];
-                          next[sectionIndex] = { ...next[sectionIndex], title: e.target.value };
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-zinc-500">
+                      Tür adı
+                    </label>
+                    <input
+                      placeholder="örn. Fotoğraf"
+                      value={option.label}
+                      onChange={(e) => {
+                        const next = [...options];
+                        next[index] = { ...next[index], label: e.target.value };
+                        setOptions(next);
+                      }}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-zinc-500">
+                      İkon
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5">
+                        <PackageIconDisplay
+                          iconKey={
+                            selectedIconKey || inferOptionIconKey(option.label)
+                          }
+                          className="h-5 w-5 text-white"
+                        />
+                      </span>
+                      <select
+                        value={selectedIconKey}
+                        onChange={(e) =>
                           setContent({
                             ...content,
-                            detailSectionsByOption: {
-                              ...(content.detailSectionsByOption ?? {}),
-                              [key]: next,
+                            optionIconKeys: {
+                              ...(content.optionIconKeys ?? {}),
+                              [key]: e.target.value,
                             },
-                          });
-                        }}
-                        placeholder="Başlık"
+                          })
+                        }
                         className={inputClass}
-                      />
-                      <textarea
-                        value={section.body}
-                        onChange={(e) => {
-                          const next = [...sections];
-                          next[sectionIndex] = { ...next[sectionIndex], body: e.target.value };
-                          setContent({
-                            ...content,
-                            detailSectionsByOption: {
-                              ...(content.detailSectionsByOption ?? {}),
-                              [key]: next,
-                            },
-                          });
-                        }}
-                        rows={4}
-                        placeholder="Açıklama metni"
-                        className={inputClass}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const next = sections.filter((_, i) => i !== sectionIndex);
-                          setContent({
-                            ...content,
-                            detailSectionsByOption: {
-                              ...(content.detailSectionsByOption ?? {}),
-                              [key]: next,
-                            },
-                          });
-                        }}
-                        className="text-sm text-red-400"
                       >
-                        Bölümü Sil
-                      </button>
+                        <option value="">Otomatik (isme göre)</option>
+                        {PACKAGE_OPTION_ICON_KEYS.map((icon) => (
+                          <option key={icon} value={icon}>
+                            {icon}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  ))}
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-zinc-500">
+                      Hemen Ödeme (₺)
+                    </label>
+                    <p className="mb-2 text-[11px] leading-relaxed text-zinc-600">
+                      ({PAYMENT_TYPE_DESCRIPTIONS.pesin})
+                    </p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={option.cashPrice}
+                      onChange={(e) => {
+                        const next = [...options];
+                        next[index] = {
+                          ...next[index],
+                          cashPrice: Number(e.target.value),
+                        };
+                        setOptions(next);
+                      }}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-zinc-500">
+                      Parçalı Ödeme (₺)
+                    </label>
+                    <p className="mb-2 text-[11px] leading-relaxed text-zinc-600">
+                      ({PAYMENT_TYPE_DESCRIPTIONS.taksitli})
+                    </p>
+                    <input
+                      type="number"
+                      min={0}
+                      value={option.installmentPrice}
+                      onChange={(e) => {
+                        const next = [...options];
+                        next[index] = {
+                          ...next[index],
+                          installmentPrice: Number(e.target.value),
+                        };
+                        setOptions(next);
+                      }}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+
+                <TagsEditor
+                  title="Detay Etiketleri"
+                  tags={optionTags}
+                  onChange={(tags) =>
+                    setContent({
+                      ...content,
+                      highlightTagsByOption: {
+                        ...(content.highlightTagsByOption ?? {}),
+                        [key]: tags,
+                      },
+                    })
+                  }
+                />
+
+                <div className="space-y-3 border-t border-white/10 pt-4">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-white">
+                        İncele içeriği
+                      </h4>
+                      <label className="mt-1 inline-flex items-center gap-2 text-xs text-zinc-400">
+                        <input
+                          type="checkbox"
+                          checked={content.inspectEnabledByOption?.[key] ?? true}
+                          onChange={(e) =>
+                            setContent({
+                              ...content,
+                              inspectEnabledByOption: {
+                                ...(content.inspectEnabledByOption ?? {}),
+                                [key]: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        İncele butonu aktif
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextSections = [
+                          ...sections,
+                          {
+                            id: crypto.randomUUID(),
+                            title: "",
+                            body: "",
+                            tags: [],
+                            sortOrder: sections.length,
+                          },
+                        ];
+                        setContent({
+                          ...content,
+                          detailSectionsByOption: {
+                            ...(content.detailSectionsByOption ?? {}),
+                            [key]: nextSections,
+                          },
+                        });
+                      }}
+                      className="text-sm text-zinc-400 hover:text-white"
+                    >
+                      + Bölüm Ekle
+                    </button>
+                  </div>
+
+                  {sections.length === 0 ? (
+                    <p className="text-xs text-zinc-500">
+                      Bu çekim türü için henüz incele metni yok.
+                    </p>
+                  ) : null}
+
+                  {[...sections]
+                    .sort((a, b) => a.sortOrder - b.sortOrder)
+                    .map((section, sectionIndex) => (
+                      <div
+                        key={section.id}
+                        className="space-y-2 rounded-xl border border-white/5 bg-black/20 p-4"
+                      >
+                        <input
+                          value={section.title}
+                          onChange={(e) => {
+                            const next = [...sections];
+                            next[sectionIndex] = {
+                              ...next[sectionIndex],
+                              title: e.target.value,
+                            };
+                            setContent({
+                              ...content,
+                              detailSectionsByOption: {
+                                ...(content.detailSectionsByOption ?? {}),
+                                [key]: next,
+                              },
+                            });
+                          }}
+                          placeholder="Başlık"
+                          className={inputClass}
+                        />
+                        <TagsEditor
+                          title="Etiketler"
+                          tags={section.tags ?? []}
+                          onChange={(tags) => {
+                            const next = [...sections];
+                            next[sectionIndex] = {
+                              ...next[sectionIndex],
+                              tags,
+                            };
+                            setContent({
+                              ...content,
+                              detailSectionsByOption: {
+                                ...(content.detailSectionsByOption ?? {}),
+                                [key]: next,
+                              },
+                            });
+                          }}
+                        />
+                        <textarea
+                          value={section.body}
+                          onChange={(e) => {
+                            const next = [...sections];
+                            next[sectionIndex] = {
+                              ...next[sectionIndex],
+                              body: e.target.value,
+                            };
+                            setContent({
+                              ...content,
+                              detailSectionsByOption: {
+                                ...(content.detailSectionsByOption ?? {}),
+                                [key]: next,
+                              },
+                            });
+                          }}
+                          rows={4}
+                          placeholder="Açıklama metni"
+                          className={inputClass}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = sections.filter(
+                              (_, i) => i !== sectionIndex,
+                            );
+                            setContent({
+                              ...content,
+                              detailSectionsByOption: {
+                                ...(content.detailSectionsByOption ?? {}),
+                                [key]: next,
+                              },
+                            });
+                          }}
+                          className="text-sm text-red-400"
+                        >
+                          Bölümü Sil
+                        </button>
+                      </div>
+                    ))}
+                </div>
               </div>
             );
           })}
