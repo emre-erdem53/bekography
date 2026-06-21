@@ -16,7 +16,7 @@ import {
 } from "@/lib/post-shoot";
 import type { PostShootTemplateSettingsData } from "@/lib/post-shoot-template-settings";
 import { PostShootSectionEditor } from "@/components/admin/post-shoot-templates-admin-client";
-import { formatCoupleName } from "@/lib/reservations";
+import { formatCoupleName } from "@/lib/reservation-utils";
 
 type PackageOption = {
   id: string;

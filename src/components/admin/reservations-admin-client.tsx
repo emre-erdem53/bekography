@@ -11,7 +11,7 @@ import {
   RESERVATION_STATUS_LABELS,
   formatPrice,
 } from "@/lib/constants";
-import { formatCoupleName } from "@/lib/reservations";
+import { formatCoupleName } from "@/lib/reservation-utils";
 
 type ReservationItem = {
   shootDate: string;

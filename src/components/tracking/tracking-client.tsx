@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Check } from "lucide-react";
 import { RESERVATION_STATUS_LABELS, RESERVATION_STATUS_ORDER } from "@/lib/constants";
-import { normalizeTcKimlik } from "@/lib/reservations";
+import { normalizeTcKimlik } from "@/lib/reservation-utils";
 
 type TrackingData = {
   customerName: string;

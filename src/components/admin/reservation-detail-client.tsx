@@ -13,7 +13,7 @@ import {
   PAYMENT_TYPE_LABELS,
   formatPrice,
 } from "@/lib/constants";
-import { formatCoupleName } from "@/lib/reservations";
+import { formatCoupleName } from "@/lib/reservation-utils";
 import { parsePostShootSnapshot } from "@/lib/post-shoot";
 
 type ReservationDetail = {
