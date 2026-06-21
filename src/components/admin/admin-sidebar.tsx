@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   CalendarDays,
   ClipboardList,
+  FileText,
   LayoutDashboard,
   LogOut,
   Package,
@@ -23,6 +24,11 @@ export type AdminNavItem = {
 export const adminNavItems: AdminNavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/paketler", label: "Paketler", icon: Package },
+  {
+    href: "/admin/cekim-sonrasi-sablonlari",
+    label: "Çekim Sonrası",
+    icon: FileText,
+  },
   { href: "/admin/talepler", label: "Talepler", icon: ClipboardList },
   { href: "/admin/takvim", label: "Takvimim", icon: CalendarDays },
   { href: "/admin/rezervasyonlar", label: "Rezervasyonlar", icon: CalendarCheck },
@@ -33,6 +39,9 @@ export function getAdminPageTitle(pathname: string) {
   if (pathname.startsWith("/admin/paketler/yeni")) return "Yeni Paket";
   if (pathname.match(/^\/admin\/paketler\/[^/]+$/)) return "Paket Düzenle";
   if (pathname.startsWith("/admin/paketler")) return "Paketler";
+  if (pathname.startsWith("/admin/cekim-sonrasi-sablonlari")) {
+    return "Çekim Sonrası Şablonları";
+  }
   if (pathname.match(/^\/admin\/talepler\/[^/]+$/)) return "Talep Detayı";
   if (pathname.startsWith("/admin/talepler")) return "Talepler";
   if (pathname.startsWith("/admin/takvim")) return "Takvimim";

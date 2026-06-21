@@ -1,33 +1,27 @@
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import {
+  getDefaultPostShootTokensForCategory,
+  type PostShootTemplateSettingsData,
+  type PostShootVariableDefinition,
+} from "@/lib/post-shoot-template-settings";
 
 export type PostShootSection = {
   pills: string[];
   description: string;
 };
 
+/** @deprecated Paket bazlı şablonlar kaldırıldı; global şablon + token kullanın. */
 export type PostShootTemplates = {
   digital: PostShootSection;
   editing: PostShootSection;
   printing?: PostShootSection;
 };
 
-export type PostShootPackageBlock = {
-  categoryId: string;
-  categorySlug: string;
-  categoryTitle: string;
-  accentColor: string;
-  pills: string[];
-  description: string;
-};
-
-export type PostShootSectionGroup = {
-  items: PostShootPackageBlock[];
-};
-
 export type PostShootSnapshot = {
-  digital: PostShootSectionGroup;
-  editing: PostShootSectionGroup;
-  printing?: PostShootSectionGroup;
+  digital: PostShootSection;
+  editing: PostShootSection;
+  printing: PostShootSection;
+  source?: "template" | "manual";
 };
 
 type PackageLike = {
@@ -38,12 +32,15 @@ type PackageLike = {
   content: Partial<PackageCategoryContent>;
 };
 
-export function isOutdoorCategory(
-  slug: string,
-  content: Partial<PackageCategoryContent>,
-): boolean {
-  return content.scheduleType === "outdoor" || slug === "dis-cekim";
-}
+type LegacyPostShootPackageBlock = {
+  categoryId: string;
+  pills: string[];
+  description: string;
+};
+
+type LegacyPostShootSectionGroup = {
+  items: LegacyPostShootPackageBlock[];
+};
 
 function parseSection(value: unknown): PostShootSection {
   if (!value || typeof value !== "object") {
@@ -52,26 +49,9 @@ function parseSection(value: unknown): PostShootSection {
   const obj = value as Partial<PostShootSection>;
   return {
     pills: Array.isArray(obj.pills)
-      ? obj.pills.filter((p): p is string => typeof p === "string")
+      ? obj.pills.filter((pill): pill is string => typeof pill === "string")
       : [],
     description: typeof obj.description === "string" ? obj.description : "",
-  };
-}
-
-function parsePackageBlock(value: unknown): PostShootPackageBlock | null {
-  if (!value || typeof value !== "object") return null;
-  const obj = value as Partial<PostShootPackageBlock>;
-  if (typeof obj.categoryId !== "string") return null;
-
-  const section = parseSection(value);
-  return {
-    categoryId: obj.categoryId,
-    categorySlug: typeof obj.categorySlug === "string" ? obj.categorySlug : "",
-    categoryTitle:
-      typeof obj.categoryTitle === "string" ? obj.categoryTitle : "Paket",
-    accentColor: typeof obj.accentColor === "string" ? obj.accentColor : "#ffffff",
-    pills: section.pills,
-    description: section.description,
   };
 }
 
@@ -84,49 +64,44 @@ function isLegacySectionGroup(value: unknown): value is PostShootSection {
   );
 }
 
-function parseSectionGroup(
-  value: unknown,
-  legacyTitle = "Kayıtlı içerik",
-): PostShootSectionGroup {
+function collapseLegacyGroup(value: unknown): PostShootSection {
   if (!value || typeof value !== "object") {
-    return { items: [] };
+    return { pills: [], description: "" };
   }
 
   if (isLegacySectionGroup(value)) {
-    const section = parseSection(value);
-    if (section.pills.length === 0 && !section.description.trim()) {
-      return { items: [] };
-    }
+    return parseSection(value);
+  }
+
+  const group = value as Partial<LegacyPostShootSectionGroup>;
+  if (!Array.isArray(group.items) || group.items.length === 0) {
+    return { pills: [], description: "" };
+  }
+
+  if (group.items.length === 1) {
     return {
-      items: [
-        {
-          categoryId: "__legacy__",
-          categorySlug: "",
-          categoryTitle: legacyTitle,
-          accentColor: "#ffffff",
-          pills: section.pills,
-          description: section.description,
-        },
-      ],
+      pills: group.items[0]?.pills ?? [],
+      description: group.items[0]?.description ?? "",
     };
   }
 
-  const obj = value as Partial<PostShootSectionGroup>;
-  if (!Array.isArray(obj.items)) {
-    return { items: [] };
-  }
+  const pills = [
+    ...new Set(group.items.flatMap((item) => item.pills ?? [])),
+  ];
+  const description = group.items
+    .map((item) => item.description?.trim())
+    .filter(Boolean)
+    .join("\n\n");
 
-  return {
-    items: obj.items
-      .map(parsePackageBlock)
-      .filter((block): block is PostShootPackageBlock => block !== null),
-  };
+  return { pills, description };
 }
 
 export function emptyPostShootSnapshot(): PostShootSnapshot {
   return {
-    digital: { items: [] },
-    editing: { items: [] },
+    digital: { pills: [], description: "" },
+    editing: { pills: [], description: "" },
+    printing: { pills: [], description: "" },
+    source: "template",
   };
 }
 
@@ -135,20 +110,35 @@ export function parsePostShootSnapshot(value: unknown): PostShootSnapshot {
     return emptyPostShootSnapshot();
   }
 
-  const data = value as Partial<PostShootSnapshot>;
-  const snapshot: PostShootSnapshot = {
-    digital: parseSectionGroup(data.digital),
-    editing: parseSectionGroup(data.editing),
+  const data = value as Partial<PostShootSnapshot> & {
+    digital?: unknown;
+    editing?: unknown;
+    printing?: unknown;
   };
 
-  if (data.printing) {
-    const printing = parseSectionGroup(data.printing);
-    if (printing.items.length > 0) {
-      snapshot.printing = printing;
-    }
-  }
+  const digital = data.digital
+    ? collapseLegacyGroup(data.digital)
+    : { pills: [], description: "" };
+  const editing = data.editing
+    ? collapseLegacyGroup(data.editing)
+    : { pills: [], description: "" };
+  const printing = data.printing
+    ? collapseLegacyGroup(data.printing)
+    : { pills: [], description: "" };
 
-  return snapshot;
+  return {
+    digital,
+    editing,
+    printing,
+    source: data.source === "manual" ? "manual" : "template",
+  };
+}
+
+export function isOutdoorCategory(
+  slug: string,
+  content: Partial<PackageCategoryContent>,
+): boolean {
+  return content.scheduleType === "outdoor" || slug === "dis-cekim";
 }
 
 export function getUniqueCategoriesFromItems(
@@ -170,93 +160,191 @@ export function getUniqueCategoriesFromItems(
   return result;
 }
 
-export function syncPostShootWithItems(
-  current: PostShootSnapshot,
-  items: { packageOptionId: string }[],
-  categories: (PackageLike & { options?: { id: string }[] })[],
-  options?: { forceReset?: boolean },
-): PostShootSnapshot {
-  const forceReset = options?.forceReset ?? false;
-  const activeCategories = getUniqueCategoriesFromItems(items, categories);
-
-  function syncGroup(
-    sectionKey: "digital" | "editing" | "printing",
-    getTemplate: (category: PackageLike) => PostShootSection | undefined,
-  ): PostShootSectionGroup {
-    const currentItems = current[sectionKey]?.items ?? [];
-    const nextItems: PostShootPackageBlock[] = [];
-
-    for (const category of activeCategories) {
-      const template = getTemplate(category);
-
-      if (sectionKey === "printing") {
-        if (
-          !template ||
-          isOutdoorCategory(category.slug, category.content)
-        ) {
-          continue;
-        }
-      } else if (!template) {
-        continue;
-      }
-
-      const existing = currentItems.find(
-        (block) => block.categoryId === category.id,
-      );
-
-      if (existing && !forceReset) {
-        nextItems.push({
-          ...existing,
-          categorySlug: category.slug,
-          categoryTitle: category.title,
-          accentColor: category.accentColor,
-        });
-      } else {
-        nextItems.push({
-          categoryId: category.id,
-          categorySlug: category.slug,
-          categoryTitle: category.title,
-          accentColor: category.accentColor,
-          pills: [...(template?.pills ?? [])],
-          description: template?.description ?? "",
-        });
-      }
-    }
-
-    return { items: nextItems };
-  }
-
-  const digital = syncGroup(
-    "digital",
-    (category) => category.content.postShootTemplates?.digital,
+export function hasPrintingPackages(
+  categories: { slug: string; content: Partial<PackageCategoryContent> }[],
+): boolean {
+  return categories.some(
+    (category) => !isOutdoorCategory(category.slug, category.content),
   );
-  const editing = syncGroup(
-    "editing",
-    (category) => category.content.postShootTemplates?.editing,
-  );
-  const printing = syncGroup(
-    "printing",
-    (category) => category.content.postShootTemplates?.printing,
-  );
-
-  const snapshot: PostShootSnapshot = { digital, editing };
-
-  if (printing.items.length > 0) {
-    snapshot.printing = printing;
-  }
-
-  return snapshot;
 }
 
+/** @deprecated Global şablon sistemi kullanın. */
 export function shouldShowPrintingSection(
   categories: {
     slug: string;
     content: Partial<PackageCategoryContent>;
   }[],
 ): boolean {
-  return categories.some(
-    (category) =>
-      !isOutdoorCategory(category.slug, category.content) &&
-      Boolean(category.content.postShootTemplates?.printing),
+  return hasPrintingPackages(categories);
+}
+
+function parseNumericValue(value: string): number | null {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return null;
+  const parsed = Number.parseInt(digits, 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export function mergeTokenValues(
+  values: string[],
+  strategy: PostShootVariableDefinition["mergeStrategy"],
+): string {
+  const nonEmpty = values.map((value) => value.trim()).filter(Boolean);
+  if (nonEmpty.length === 0) return "";
+
+  switch (strategy) {
+    case "join":
+      return nonEmpty.join(" ve ");
+    case "sum": {
+      const numbers = nonEmpty
+        .map(parseNumericValue)
+        .filter((value): value is number => value !== null);
+      if (numbers.length === 0) return nonEmpty[0] ?? "";
+      return String(numbers.reduce((sum, value) => sum + value, 0));
+    }
+    case "max": {
+      const numbers = nonEmpty
+        .map(parseNumericValue)
+        .filter((value): value is number => value !== null);
+      if (numbers.length === 0) return nonEmpty[0] ?? "";
+      return String(Math.max(...numbers));
+    }
+    case "first":
+      return nonEmpty[0] ?? "";
+    case "unique_list":
+      return [...new Set(nonEmpty)].join(" ve ");
+    default:
+      return nonEmpty[0] ?? "";
+  }
+}
+
+export function renderPostShootTemplate(
+  template: string,
+  tokenValues: Record<string, string>,
+): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+    return tokenValues[key] ?? "";
+  });
+}
+
+function renderPills(
+  pills: string[],
+  tokenValues: Record<string, string>,
+): string[] {
+  return pills
+    .map((pill) => renderPostShootTemplate(pill, tokenValues).trim())
+    .filter(Boolean);
+}
+
+function collectTokenValues(
+  categories: PackageLike[],
+  variables: PostShootVariableDefinition[],
+): Record<string, string> {
+  const buckets = new Map<string, string[]>();
+
+  for (const variable of variables) {
+    buckets.set(variable.key, []);
+  }
+
+  for (const category of categories) {
+    const defaults = getDefaultPostShootTokensForCategory(
+      category.slug,
+      category.content.scheduleType,
+    );
+    const packageTokens = {
+      ...defaults,
+      ...(category.content.postShootTokens ?? {}),
+    };
+
+    for (const variable of variables) {
+      const value = packageTokens[variable.key];
+      if (typeof value === "string" && value.trim()) {
+        buckets.get(variable.key)?.push(value.trim());
+      }
+    }
+  }
+
+  const merged: Record<string, string> = {};
+  for (const variable of variables) {
+    const values = buckets.get(variable.key) ?? [];
+    merged[variable.key] = mergeTokenValues(values, variable.mergeStrategy);
+  }
+
+  return merged;
+}
+
+function buildSectionFromTemplate(
+  templateSection: PostShootSection,
+  tokenValues: Record<string, string>,
+): PostShootSection {
+  return {
+    pills: renderPills(templateSection.pills, tokenValues),
+    description: renderPostShootTemplate(
+      templateSection.description,
+      tokenValues,
+    ).trim(),
+  };
+}
+
+export function buildPostShootSnapshot(
+  items: { packageOptionId: string }[],
+  categories: (PackageLike & { options?: { id: string }[] })[],
+  settings: PostShootTemplateSettingsData,
+): PostShootSnapshot {
+  const activeCategories = getUniqueCategoriesFromItems(items, categories);
+  const tokenValues = collectTokenValues(
+    activeCategories,
+    settings.variables,
   );
+
+  const digital = buildSectionFromTemplate(settings.digital, tokenValues);
+  const editing = buildSectionFromTemplate(settings.editing, tokenValues);
+
+  const printing = hasPrintingPackages(activeCategories)
+    ? buildSectionFromTemplate(settings.printing, tokenValues)
+    : {
+        pills: [],
+        description: settings.noPrintingText,
+      };
+
+  return {
+    digital,
+    editing,
+    printing,
+    source: "template",
+  };
+}
+
+export function syncPostShootWithItems(
+  current: PostShootSnapshot,
+  items: { packageOptionId: string }[],
+  categories: (PackageLike & { options?: { id: string }[] })[],
+  settings: PostShootTemplateSettingsData,
+  options?: { forceReset?: boolean },
+): PostShootSnapshot {
+  if (current.source === "manual" && !options?.forceReset) {
+    return current;
+  }
+
+  return buildPostShootSnapshot(items, categories, settings);
+}
+
+export function getPackagePostShootTokens(
+  content: Partial<PackageCategoryContent>,
+  slug: string,
+  variableKeys: string[],
+): Record<string, string> {
+  const defaults = getDefaultPostShootTokensForCategory(
+    slug,
+    content.scheduleType,
+  );
+  const stored = content.postShootTokens ?? {};
+  const result: Record<string, string> = {};
+
+  for (const key of variableKeys) {
+    const value = stored[key] ?? defaults[key] ?? "";
+    result[key] = typeof value === "string" ? value : "";
+  }
+
+  return result;
 }

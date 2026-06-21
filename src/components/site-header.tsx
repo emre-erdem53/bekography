@@ -16,26 +16,14 @@ import { EASE_OUT, duration } from "@/lib/motion";
 const links: {
   href: string;
   label: string;
-  sectionId?: string;
 }[] = [
-  { href: "/", label: "Anasayfa", sectionId: "kesfet" },
+  { href: "/", label: "Anasayfa" },
   { href: "/fotograflar", label: "Fotoğraflar" },
   { href: "/videolar", label: "Videolar" },
-  { href: "/paketler", label: "Paketler", sectionId: "paket-olustur" },
-  { href: "/about", label: "Hakkımızda", sectionId: "hakkimizda" },
-  { href: "/contact", label: "İletişim", sectionId: "iletisim" },
+  { href: "/paketler", label: "Paketler" },
+  { href: "/about", label: "Hakkımızda" },
+  { href: "/contact", label: "İletişim" },
 ];
-
-function resolveNavHref(
-  href: string,
-  pathname: string,
-  sectionId?: string,
-) {
-  if (pathname === "/" && sectionId) {
-    return `/#${sectionId}`;
-  }
-  return href;
-}
 
 const HEADER_HEIGHT = 96;
 
@@ -132,8 +120,7 @@ export function SiteHeader() {
           </Link>
         </motion.div>
         <nav className="hidden items-center gap-12 md:flex">
-          {links.map(({ href, label, sectionId }, i) => {
-            const navHref = resolveNavHref(href, pathname, sectionId);
+          {links.map(({ href, label }, i) => {
             const active =
               href === "/"
                 ? pathname === "/"
@@ -150,7 +137,7 @@ export function SiteHeader() {
                 }}
               >
                 <Link
-                  href={navHref}
+                  href={href}
                   data-active={active ? "true" : undefined}
                   className={`nav-link text-[10px] font-bold uppercase tracking-[0.3em] transition-colors ${
                     active
@@ -207,8 +194,7 @@ export function SiteHeader() {
                 closed: {},
               }}
             >
-              {links.map(({ href, label, sectionId }) => {
-                const navHref = resolveNavHref(href, pathname, sectionId);
+              {links.map(({ href, label }) => {
                 return (
                 <motion.div
                   key={href}
@@ -219,7 +205,7 @@ export function SiteHeader() {
                   transition={{ duration: 0.3, ease: EASE_OUT }}
                 >
                   <Link
-                    href={navHref}
+                    href={href}
                     className="flex min-h-[3.25rem] items-center text-2xl font-extrabold uppercase tracking-[0.18em] text-white"
                     onClick={() => setOpen(false)}
                   >

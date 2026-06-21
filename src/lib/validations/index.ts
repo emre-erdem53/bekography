@@ -14,12 +14,6 @@ const postShootSectionSchema = z.object({
   description: z.string(),
 });
 
-const postShootTemplatesSchema = z.object({
-  digital: postShootSectionSchema,
-  editing: postShootSectionSchema,
-  printing: postShootSectionSchema.optional(),
-});
-
 const tcSchema = z
   .string()
   .regex(/^\d{11}$/, "TC kimlik numarası 11 haneli olmalıdır")
@@ -84,7 +78,7 @@ export const packageCategorySchema = z.object({
   content: z
     .object({
       scheduleType: z.enum(["outdoor", "indoor"]).optional(),
-      postShootTemplates: postShootTemplatesSchema.optional(),
+      postShootTokens: z.record(z.string(), z.string()).optional(),
       highlightTags: z.array(z.string()).optional(),
       highlightTagsByOption: z.record(z.string(), z.array(z.string())).optional(),
       galleryImages: z.array(packageGalleryImageSchema).optional(),
@@ -131,23 +125,11 @@ const installmentSchema = z.object({
   dueDate: z.string().min(1, "Vade tarihi seçin"),
 });
 
-const postShootPackageBlockSchema = z.object({
-  categoryId: z.string().min(1),
-  categorySlug: z.string(),
-  categoryTitle: z.string().min(1),
-  accentColor: z.string(),
-  pills: z.array(z.string()),
-  description: z.string(),
-});
-
-const postShootSectionGroupSchema = z.object({
-  items: z.array(postShootPackageBlockSchema),
-});
-
 const postShootSnapshotSchema = z.object({
-  digital: postShootSectionGroupSchema,
-  editing: postShootSectionGroupSchema,
-  printing: postShootSectionGroupSchema.optional(),
+  digital: postShootSectionSchema,
+  editing: postShootSectionSchema,
+  printing: postShootSectionSchema,
+  source: z.enum(["template", "manual"]).optional(),
 });
 
 export const createReservationSchema = z.object({
@@ -184,4 +166,14 @@ export const updateReservationStatusSchema = z.object({
 
 export const updateReservationSchema = createReservationSchema.partial().extend({
   status: updateReservationStatusSchema.shape.status.optional(),
+});
+
+export const trackReservationSchema = z.object({
+  tc: z
+    .string()
+    .min(1, "TC kimlik numarası girin")
+    .transform((value) => value.replace(/\D/g, ""))
+    .refine((value) => /^\d{11}$/.test(value), {
+      message: "TC kimlik numarası 11 haneli olmalıdır",
+    }),
 });

@@ -1,4 +1,4 @@
-import type { PostShootTemplates } from "@/lib/post-shoot";
+import { getDefaultPostShootTokensForCategory } from "@/lib/post-shoot-template-settings";
 
 export type PackageServiceItem = {
   title: string;
@@ -35,7 +35,7 @@ export type PackageCategoryContent = {
   afterShootDescription: string;
   afterShootExtra?: string;
   scheduleType?: "outdoor" | "indoor";
-  postShootTemplates?: PostShootTemplates;
+  postShootTokens?: Record<string, string>;
   highlightTags?: string[];
   highlightTagsByOption?: Record<string, string[]>;
   optionIconKeys?: Record<string, string>;
@@ -62,39 +62,22 @@ export function defaultRequestFieldLabels(
   };
 }
 
-export function defaultOutdoorPostShootTemplates(): PostShootTemplates {
-  return {
-    digital: {
-      pills: ["Tüm Çekilenler", "7 Günde Hazır", "30 Günde Alınmalı"],
-      description:
-        "Çekimden kalan tüm görüntüleri yüksek çözünürlükte, 7 gün içinde indirme linki veya harici disk ile teslim ediyoruz. Teslimden sonra 30 gün içinde alınmalıdır.",
-    },
-    editing: {
-      pills: ["18 Fotoğraf", "Albüm", "Dış Çekim Filmi", "70 Gün"],
-      description:
-        "Seçilen 18 fotoğraf düzenlenir, albüm tasarımı hazırlanır ve 30-60 saniyelik dış çekim filmi 70 gün içinde teslim edilir.",
-    },
-  };
+export function defaultOutdoorPostShootTokens(): Record<string, string> {
+  return getDefaultPostShootTokensForCategory("dis-cekim", "outdoor");
 }
 
-export function defaultIndoorPostShootTemplates(): PostShootTemplates {
-  return {
-    digital: {
-      pills: ["Tüm Çekilenler", "7 Günde Hazır", "30 Günde Alınmalı"],
-      description:
-        "Çekilen tüm görüntüleri yüksek çözünürlükte, 7 gün içinde indirme linki veya harici disk ile teslim ediyoruz. Teslimden sonra 30 gün içinde alınmalıdır.",
-    },
-    editing: {
-      pills: ["18 Fotoğraf", "Salon Filmi", "70 Gün"],
-      description:
-        "Seçilen fotoğraflar düzenlenir ve seçtiğiniz müzikle salon filminiz 70 gün içinde hazırlanır.",
-    },
-    printing: {
-      pills: ["Albüm", "3 Çerçeve", "30 Gün"],
-      description:
-        "30x60x2,5 cm albüm (7 sayfa, 5 fotoğraf, mat) ve 25x25x3 cm 3 adet çerçeve 30 gün içinde ücretsiz kargo ile adresinize gönderilir.",
-    },
-  };
+export function defaultIndoorPostShootTokens(): Record<string, string> {
+  return getDefaultPostShootTokensForCategory("dugun", "indoor");
+}
+
+/** @deprecated Paket bazlı şablonlar kaldırıldı. */
+export function defaultOutdoorPostShootTemplates() {
+  return defaultOutdoorPostShootTokens();
+}
+
+/** @deprecated Paket bazlı şablonlar kaldırıldı. */
+export function defaultIndoorPostShootTemplates() {
+  return defaultIndoorPostShootTokens();
 }
 
 export type SeedPackageCategory = {
@@ -169,7 +152,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootDescription:
         "Çekimden kalan tüm görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçilen fotoğraflar düzenlenir, özel albüm ve çerçeve tasarımları hazırlanır. İstediğiniz seçimleriniz tamamlandıktan sonra baskılarınız adresinize kargo ile gönderilir.",
       scheduleType: "outdoor",
-      postShootTemplates: defaultOutdoorPostShootTemplates(),
+      postShootTokens: defaultOutdoorPostShootTokens(),
     },
     options: [
       { label: "Fotoğraf", cash: 26000, installment: 32000 },
@@ -196,7 +179,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootDescription:
         "Çekilen tüm görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğiniz müzikle düğün salon filminizi düzenliyor, fotoğrafları baskı ve dijital teslim için hazır hale getiriyoruz.",
       scheduleType: "indoor",
-      postShootTemplates: defaultIndoorPostShootTemplates(),
+      postShootTokens: defaultIndoorPostShootTokens(),
     },
     options: [
       { label: "Video Film", cash: 26000, installment: 32000 },
@@ -225,7 +208,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootExtra:
         "Bu hizmet dış çekim veya düğün filmine ek olarak satın alınabilir.",
       scheduleType: "indoor",
-      postShootTemplates: defaultIndoorPostShootTemplates(),
+      postShootTokens: defaultIndoorPostShootTokens(),
     },
     options: [
       { label: "Video Film", cash: 20000, installment: 26000 },
@@ -274,7 +257,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootExtra:
         "Bu hizmet dış çekim veya düğün filmine ek olarak satın alınabilir.",
       scheduleType: "indoor",
-      postShootTemplates: defaultIndoorPostShootTemplates(),
+      postShootTokens: defaultIndoorPostShootTokens(),
     },
     options: [
       { label: "Video Film", cash: 17000, installment: 23000 },
@@ -323,7 +306,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootDescription:
         "Tüm çekimlerden elde edilen görüntüleri yüksek çözünürlükte teslim ediyoruz. Karma film ve uzun metraj düğün filminizi hazırlıyor, albüm ve çerçeve tasarımlarınızı tamamlayıp adresinize gönderiyoruz.",
       scheduleType: "indoor",
-      postShootTemplates: defaultIndoorPostShootTemplates(),
+      postShootTokens: defaultIndoorPostShootTokens(),
     },
     options: [{ label: "Full Hikaye", cash: 95000, installment: 135000 }],
   },
@@ -347,7 +330,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootDescription:
         "Çekilen tüm orijinal görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğimiz bir müzikle söz/isteme filminizi düzenliyoruz. Anlaşmada fotoğraf çekimi varsa fotoğraflar üzerinde baskı ve düzenleme yapılmadan doğal halleriyle dijital olarak teslim ediyoruz.",
       scheduleType: "indoor",
-      postShootTemplates: defaultIndoorPostShootTemplates(),
+      postShootTokens: defaultIndoorPostShootTokens(),
     },
     options: [
       { label: "Video Film", cash: 24000, installment: 29000 },
@@ -374,7 +357,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootDescription:
         "Çekilen tüm orijinal görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğimiz bir müzikle kına salon filminizi düzenliyoruz. Anlaşmada fotoğraf çekimi varsa fotoğraflar üzerinde baskı ve düzenleme yapılmadan doğal halleriyle dijital olarak teslim ediliyor.",
       scheduleType: "indoor",
-      postShootTemplates: defaultIndoorPostShootTemplates(),
+      postShootTokens: defaultIndoorPostShootTokens(),
     },
     options: [
       { label: "Video Film", cash: 26000, installment: 32000 },
@@ -401,7 +384,7 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       afterShootDescription:
         "Çekilen tüm orijinal görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğimiz bir müzikle nişan salon filminizi düzenliyoruz. Anlaşmada fotoğraf çekimi varsa fotoğraflar üzerinde baskı ve düzenleme yapılmadan doğal halleriyle dijital olarak teslim ediliyor.",
       scheduleType: "indoor",
-      postShootTemplates: defaultIndoorPostShootTemplates(),
+      postShootTokens: defaultIndoorPostShootTokens(),
     },
     options: [
       { label: "Video Film", cash: 25000, installment: 35000 },

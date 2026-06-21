@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Check } from "lucide-react";
 import { RESERVATION_STATUS_LABELS, RESERVATION_STATUS_ORDER } from "@/lib/constants";
+import { normalizeTcKimlik } from "@/lib/reservations";
 
 type TrackingData = {
   customerName: string;
@@ -15,21 +16,79 @@ type TrackingData = {
   items: { categoryTitle: string; optionLabel: string; paymentType: string }[];
 };
 
+function trackingStorageKey(slug: string) {
+  return `bekography-takip:${slug}`;
+}
+
 export function TrackingClient({ slug }: { slug: string }) {
   const [data, setData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [tc, setTc] = useState("");
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/reservations/track/${slug}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Not found");
-        return res.json();
-      })
-      .then(setData)
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    const cached = sessionStorage.getItem(trackingStorageKey(slug));
+    if (!cached) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setData(JSON.parse(cached) as TrackingData);
+      setVerified(true);
+    } catch {
+      sessionStorage.removeItem(trackingStorageKey(slug));
+    } finally {
+      setLoading(false);
+    }
   }, [slug]);
+
+  async function handleVerify(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+
+    const normalized = normalizeTcKimlik(tc);
+    if (normalized.length !== 11) {
+      setError("TC kimlik numarası 11 haneli olmalıdır");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await fetch(`/api/reservations/track/${slug}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tc: normalized }),
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (response.status === 404) {
+        setNotFound(true);
+        return;
+      }
+
+      if (!response.ok) {
+        setError(
+          typeof payload.error === "string"
+            ? payload.error
+            : "TC kimlik numarası doğrulanamadı",
+        );
+        return;
+      }
+
+      setData(payload as TrackingData);
+      setVerified(true);
+      sessionStorage.setItem(trackingStorageKey(slug), JSON.stringify(payload));
+    } catch {
+      setError("Bağlantı hatası. Lütfen tekrar deneyin.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -39,7 +98,7 @@ export function TrackingClient({ slug }: { slug: string }) {
     );
   }
 
-  if (error || !data) {
+  if (notFound) {
     return (
       <main className="flex min-h-screen flex-1 items-center justify-center bg-black px-4 text-center">
         <div>
@@ -49,6 +108,61 @@ export function TrackingClient({ slug }: { slug: string }) {
           <p className="mt-2 text-zinc-400">
             Bu takip linki geçersiz veya süresi dolmuş olabilir.
           </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!verified || !data) {
+    return (
+      <main className="flex min-h-screen flex-1 items-center justify-center bg-black px-4 py-12 text-white">
+        <div className="w-full max-w-md">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+            Bekography
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold">Rezervasyon Takibi</h1>
+          <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+            Sürecinizi görüntülemek için gelin veya damat TC kimlik numarasından
+            birini girin.
+          </p>
+
+          <form onSubmit={handleVerify} className="mt-8 space-y-4">
+            <div>
+              <label
+                htmlFor="tracking-tc"
+                className="mb-2 block text-sm text-zinc-300"
+              >
+                TC Kimlik Numarası
+              </label>
+              <input
+                id="tracking-tc"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={11}
+                value={tc}
+                onChange={(event) =>
+                  setTc(normalizeTcKimlik(event.target.value).slice(0, 11))
+                }
+                placeholder="11 haneli TC kimlik no"
+                className="w-full rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3.5 text-lg tracking-[0.2em] text-white outline-none focus:border-white/30"
+              />
+            </div>
+
+            {error ? (
+              <p className="text-sm text-red-400" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={submitting || tc.length !== 11}
+              className="w-full rounded-2xl bg-white px-4 py-3.5 text-sm font-semibold text-black transition enabled:hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "Doğrulanıyor..." : "Takibi Görüntüle"}
+            </button>
+          </form>
         </div>
       </main>
     );

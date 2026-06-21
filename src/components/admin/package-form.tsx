@@ -10,11 +10,14 @@ import type {
   PackageGalleryImage,
 } from "@/lib/package-seed-data";
 import {
-  defaultIndoorPostShootTemplates,
-  defaultOutdoorPostShootTemplates,
+  defaultIndoorPostShootTokens,
+  defaultOutdoorPostShootTokens,
   defaultRequestFieldLabels,
 } from "@/lib/package-seed-data";
-import type { PostShootSection } from "@/lib/post-shoot";
+import {
+  getDefaultPostShootTokensForCategory,
+  type PostShootVariableDefinition,
+} from "@/lib/post-shoot-template-settings";
 import { normalizeHexColor } from "@/lib/color-utils";
 import { applyPackageServiceTheme, PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
@@ -36,7 +39,7 @@ const defaultContent: PackageCategoryContent = {
   afterShootTitle: "Çekim Sonrası",
   afterShootDescription: "",
   scheduleType: "indoor",
-  postShootTemplates: defaultIndoorPostShootTemplates(),
+  postShootTokens: defaultIndoorPostShootTokens(),
   highlightTags: [],
   highlightTagsByOption: {},
   optionIconKeys: {},
@@ -122,6 +125,16 @@ export function PackageForm({
   const [loading, setLoading] = useState(!!packageId);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [templateVariables, setTemplateVariables] = useState<
+    PostShootVariableDefinition[]
+  >([]);
+
+  useEffect(() => {
+    fetch("/api/admin/post-shoot-templates")
+      .then((res) => res.json())
+      .then((data) => setTemplateVariables(data.variables ?? []))
+      .catch(() => setTemplateVariables([]));
+  }, []);
 
   useEffect(() => {
     if (!packageId) return;
@@ -148,11 +161,13 @@ export function PackageForm({
           ...loadedContent,
           ...PACKAGE_SERVICE_THEME,
           scheduleType: loadedContent.scheduleType ?? "indoor",
-          postShootTemplates:
-            loadedContent.postShootTemplates ??
-            (loadedContent.scheduleType === "outdoor"
-              ? defaultOutdoorPostShootTemplates()
-              : defaultIndoorPostShootTemplates()),
+          postShootTokens: {
+            ...getDefaultPostShootTokensForCategory(
+              data.slug,
+              loadedContent.scheduleType ?? "indoor",
+            ),
+            ...(loadedContent.postShootTokens ?? {}),
+          },
           highlightTags: loadedContent.highlightTags ?? [],
           highlightTagsByOption: loadedContent.highlightTagsByOption ?? {},
           optionIconKeys: loadedContent.optionIconKeys ?? {},
@@ -304,11 +319,7 @@ export function PackageForm({
       highlightTagsByOption,
       optionIconKeys,
       scheduleType: content.scheduleType ?? "indoor",
-      postShootTemplates:
-        content.postShootTemplates ??
-        (content.scheduleType === "outdoor"
-          ? defaultOutdoorPostShootTemplates()
-          : defaultIndoorPostShootTemplates()),
+      postShootTokens: content.postShootTokens ?? {},
     });
 
     const payload = {
@@ -382,7 +393,7 @@ export function PackageForm({
             className={inputClass}
           />
         </Field>
-        <Field label="Accent Renk (#hex)">
+        <Field label="Accent Renk">
           <HexColorInput value={accentColor} onChange={setAccentColor} />
         </Field>
         <Field label="Paket İkonu (SVG)">
@@ -884,10 +895,9 @@ export function PackageForm({
         <div>
           <h2 className="font-semibold text-white">İçerik</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Rezervasyon oluşturma formunda kullanılacak metinler. Çekim
-            açıklamaları sitede gösterilmez; çekim sonrası etiket ve
-            açıklamalar rezervasyon formunun 3. bölümüne seçilen paketlere göre
-            otomatik doldurulur.
+            Rezervasyon oluşturma formunda kullanılacak metinler. Çekim sonrası
+            metinleri global şablondan üretilir; bu paket için yalnızca dinamik
+            alan değerleri aşağıda tanımlanır.
           </p>
         </div>
 
@@ -926,58 +936,50 @@ export function PackageForm({
         <div className="space-y-4 border-t border-white/10 pt-5">
           <div>
             <h3 className="text-sm font-medium text-white">
-              Çekim Sonrası Şablonları
+              Çekim Sonrası Değişkenleri
             </h3>
             <p className="mt-1 text-xs text-zinc-500">
-              Dijital, Düzenleme ve Baskı alt başlıkları için etiket ve
-              açıklamalar.
+              Global şablonda kullanılan dinamik alanlar için bu pakete özel
+              değerler. Metinler{" "}
+              <Link
+                href="/admin/cekim-sonrasi-sablonlari"
+                className="text-zinc-300 underline hover:text-white"
+              >
+                Çekim Sonrası Şablonları
+              </Link>{" "}
+              sayfasından yönetilir.
             </p>
           </div>
 
-          <PostShootSectionEditor
-            title="Dijital"
-            section={content.postShootTemplates?.digital ?? { pills: [], description: "" }}
-            onChange={(digital) =>
-              setContent({
-                ...content,
-                postShootTemplates: {
-                  ...(content.postShootTemplates ??
-                    defaultIndoorPostShootTemplates()),
-                  digital,
-                },
-              })
-            }
-          />
-          <PostShootSectionEditor
-            title="Düzenleme"
-            section={content.postShootTemplates?.editing ?? { pills: [], description: "" }}
-            onChange={(editing) =>
-              setContent({
-                ...content,
-                postShootTemplates: {
-                  ...(content.postShootTemplates ??
-                    defaultIndoorPostShootTemplates()),
-                  editing,
-                },
-              })
-            }
-          />
-          <PostShootSectionEditor
-            title="Baskı"
-            section={
-              content.postShootTemplates?.printing ?? { pills: [], description: "" }
-            }
-            onChange={(printing) =>
-              setContent({
-                ...content,
-                postShootTemplates: {
-                  ...(content.postShootTemplates ??
-                    defaultIndoorPostShootTemplates()),
-                  printing,
-                },
-              })
-            }
-          />
+          {templateVariables.length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              Henüz dinamik alan tanımlanmamış.
+            </p>
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {templateVariables.map((variable) => (
+                <Field key={variable.key} label={variable.label}>
+                  <input
+                    value={content.postShootTokens?.[variable.key] ?? ""}
+                    onChange={(e) =>
+                      setContent({
+                        ...content,
+                        postShootTokens: {
+                          ...(content.postShootTokens ?? {}),
+                          [variable.key]: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder={variable.hint ?? variable.key}
+                    className={inputClass}
+                  />
+                  <p className="mt-1 font-mono text-[11px] text-zinc-500">
+                    {`{{${variable.key}}}`}
+                  </p>
+                </Field>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1053,85 +1055,6 @@ function TagsEditor({
           Ekle
         </button>
       </div>
-    </div>
-  );
-}
-
-function PostShootSectionEditor({
-  title,
-  section,
-  onChange,
-}: {
-  title: string;
-  section: PostShootSection;
-  onChange: (section: PostShootSection) => void;
-}) {
-  const [pillInput, setPillInput] = useState("");
-
-  function addPill() {
-    const value = pillInput.trim();
-    if (!value) return;
-    onChange({ ...section, pills: [...section.pills, value] });
-    setPillInput("");
-  }
-
-  return (
-    <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
-      <h3 className="text-sm font-medium text-white">{title}</h3>
-      <div className="flex flex-wrap gap-2">
-        {section.pills.map((pill, index) => (
-          <span
-            key={`${pill}-${index}`}
-            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-200"
-          >
-            {pill}
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  ...section,
-                  pills: section.pills.filter((_, i) => i !== index),
-                })
-              }
-              className="text-zinc-400 hover:text-white"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input
-          value={pillInput}
-          onChange={(e) => setPillInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addPill();
-            }
-          }}
-          placeholder="Etiket ekle..."
-          className={inputClass}
-        />
-        <button
-          type="button"
-          onClick={addPill}
-          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white"
-        >
-          Ekle
-        </button>
-      </div>
-      <textarea
-        value={section.description}
-        onChange={(e) => onChange({ ...section, description: e.target.value })}
-        rows={3}
-        placeholder="Açıklama metni..."
-        className={inputClass}
-      />
-      <p className="text-xs text-zinc-500">
-        Etiketleri yazıp Enter veya Ekle ile ekleyin. Rezervasyon formunda bu
-        başlık altında görünür.
-      </p>
     </div>
   );
 }

@@ -10,12 +10,12 @@ import {
   emptyPostShootSnapshot,
   isOutdoorCategory,
   parsePostShootSnapshot,
-  shouldShowPrintingSection,
   syncPostShootWithItems,
-  type PostShootPackageBlock,
-  type PostShootSectionGroup,
+  type PostShootSection,
   type PostShootSnapshot,
 } from "@/lib/post-shoot";
+import type { PostShootTemplateSettingsData } from "@/lib/post-shoot-template-settings";
+import { PostShootSectionEditor } from "@/components/admin/post-shoot-templates-admin-client";
 import { formatCoupleName } from "@/lib/reservations";
 
 type PackageOption = {
@@ -95,22 +95,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [totalPriceManual, setTotalPriceManual] = useState(false);
-
-  const showPrinting = useMemo(
-    () =>
-      shouldShowPrintingSection(
-        items.map((item) => {
-          const category = categories.find((c) =>
-            c.options.some((o) => o.id === item.packageOptionId),
-          );
-          return {
-            slug: item.categorySlug,
-            content: category?.content ?? {},
-          };
-        }),
-      ),
-    [items, categories],
-  );
+  const [templateSettings, setTemplateSettings] =
+    useState<PostShootTemplateSettingsData | null>(null);
 
   const itemsTotal = useMemo(
     () => items.reduce((sum, item) => sum + item.agreedUnitPrice, 0),
@@ -125,16 +111,28 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const expectedPayable = totalPrice - discountAmount;
 
   function applyPostShootSync(nextItems: SelectedItem[], forceReset = false) {
+    if (!templateSettings) return;
     setPostShoot((prev) =>
-      syncPostShootWithItems(prev, nextItems, categories, { forceReset }),
+      syncPostShootWithItems(
+        prev,
+        nextItems,
+        categories,
+        templateSettings,
+        { forceReset },
+      ),
     );
   }
 
   useEffect(() => {
     async function load() {
-      const packagesRes = await fetch("/api/admin/packages");
+      const [packagesRes, templatesRes] = await Promise.all([
+        fetch("/api/admin/packages"),
+        fetch("/api/admin/post-shoot-templates"),
+      ]);
       const packages: PackageCategory[] = await packagesRes.json();
+      const templates: PostShootTemplateSettingsData = await templatesRes.json();
       setCategories(packages);
+      setTemplateSettings(templates);
 
       if (reservationId) {
         const reservationRes = await fetch(
@@ -273,12 +271,20 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   }, [requestId, reservationId]);
 
   useEffect(() => {
-    if (categories.length === 0 || reservationId || items.length === 0) return;
+    if (!templateSettings || categories.length === 0 || items.length === 0) {
+      return;
+    }
+    if (reservationId) return;
     if (!requestId) return;
     setPostShoot(
-      syncPostShootWithItems(emptyPostShootSnapshot(), items, categories),
+      syncPostShootWithItems(
+        emptyPostShootSnapshot(),
+        items,
+        categories,
+        templateSettings,
+      ),
     );
-  }, [categories, requestId, reservationId, items]);
+  }, [templateSettings, categories, requestId, reservationId, items]);
 
   useEffect(() => {
     if (!totalPriceManual && items.length > 0) {
@@ -363,11 +369,15 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     });
   }
 
-  function updatePostShootGroup(
-    key: keyof PostShootSnapshot,
-    group: PostShootSectionGroup,
+  function updatePostShootSection(
+    key: "digital" | "editing" | "printing",
+    section: PostShootSection,
   ) {
-    setPostShoot((prev) => ({ ...prev, [key]: group }));
+    setPostShoot((prev) => ({
+      ...prev,
+      [key]: section,
+      source: "manual",
+    }));
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -394,9 +404,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       totalPrice,
       cancellationFeeMax,
       discountAmount,
-      postShoot: showPrinting
-        ? postShoot
-        : { digital: postShoot.digital, editing: postShoot.editing },
+      postShoot,
       notes: notes || undefined,
       items: items.map((item) => {
         const outdoor = isOutdoorCategory(
@@ -749,32 +757,35 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
       <Section title="3. Çekim Sonrası">
         <p className="text-sm text-zinc-400">
-          Her paketin şablonu kendi bloğu olarak gelir; içerikler birbirine
-          karışmaz. Gerekirse paket bazında düzenleyebilirsiniz.
+          Global şablondan otomatik oluşturulur; seçilen tüm paketler tek metinde
+          birleştirilir. Düzenlerseniz manuel kayda geçer.
+          {postShoot.source === "manual" ? (
+            <span className="mt-1 block text-amber-300/90">
+              Bu rezervasyon için metinler manuel düzenlendi.
+            </span>
+          ) : null}
         </p>
-        <PostShootGroupEditor
+        <PostShootSectionEditor
           title="Dijital"
-          group={postShoot.digital}
-          onChange={(group) => updatePostShootGroup("digital", group)}
+          section={postShoot.digital}
+          onChange={(section) => updatePostShootSection("digital", section)}
         />
-        <PostShootGroupEditor
+        <PostShootSectionEditor
           title="Düzenleme"
-          group={postShoot.editing}
-          onChange={(group) => updatePostShootGroup("editing", group)}
+          section={postShoot.editing}
+          onChange={(section) => updatePostShootSection("editing", section)}
         />
-        {showPrinting ? (
-          <PostShootGroupEditor
-            title="Baskı"
-            group={postShoot.printing ?? { items: [] }}
-            onChange={(group) => updatePostShootGroup("printing", group)}
-          />
-        ) : null}
+        <PostShootSectionEditor
+          title="Baskı"
+          section={postShoot.printing}
+          onChange={(section) => updatePostShootSection("printing", section)}
+        />
         <button
           type="button"
           onClick={() => applyPostShootSync(items, true)}
           className="text-sm text-zinc-400 hover:text-white"
         >
-          Paket şablonlarından yeniden doldur
+          Global şablondan yeniden doldur
         </button>
       </Section>
 
@@ -909,118 +920,6 @@ function Section({
     <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
       <h2 className="font-semibold text-white">{title}</h2>
       {children}
-    </div>
-  );
-}
-
-function PostShootGroupEditor({
-  title,
-  group,
-  onChange,
-}: {
-  title: string;
-  group: PostShootSectionGroup;
-  onChange: (group: PostShootSectionGroup) => void;
-}) {
-  return (
-    <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
-      <h3 className="text-sm font-medium text-white">{title}</h3>
-      {group.items.length === 0 ? (
-        <p className="text-sm text-zinc-500">
-          Çekim hizmetine paket eklendiğinde burada görünür.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {group.items.map((block, index) => (
-            <PostShootPackageBlockEditor
-              key={block.categoryId}
-              block={block}
-              onChange={(updated) => {
-                const next = [...group.items];
-                next[index] = updated;
-                onChange({ items: next });
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PostShootPackageBlockEditor({
-  block,
-  onChange,
-}: {
-  block: PostShootPackageBlock;
-  onChange: (block: PostShootPackageBlock) => void;
-}) {
-  const [pillInput, setPillInput] = useState("");
-
-  function addPill() {
-    const value = pillInput.trim();
-    if (!value) return;
-    onChange({ ...block, pills: [...block.pills, value] });
-    setPillInput("");
-  }
-
-  return (
-    <div
-      className="space-y-3 rounded-lg border border-white/10 p-3"
-      style={{ borderColor: `${block.accentColor}44` }}
-    >
-      <h4 className="text-sm font-semibold" style={{ color: block.accentColor }}>
-        {block.categoryTitle}
-      </h4>
-      <div className="flex flex-wrap gap-2">
-        {block.pills.map((pill, index) => (
-          <span
-            key={`${pill}-${index}`}
-            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-200"
-          >
-            {pill}
-            <button
-              type="button"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  pills: block.pills.filter((_, i) => i !== index),
-                })
-              }
-              className="text-zinc-400 hover:text-white"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input
-          value={pillInput}
-          onChange={(e) => setPillInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addPill();
-            }
-          }}
-          placeholder="Etiket ekle..."
-          className={inputClass}
-        />
-        <button
-          type="button"
-          onClick={addPill}
-          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300"
-        >
-          Ekle
-        </button>
-      </div>
-      <textarea
-        value={block.description}
-        onChange={(e) => onChange({ ...block, description: e.target.value })}
-        rows={3}
-        className={inputClass}
-      />
     </div>
   );
 }
