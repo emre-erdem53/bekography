@@ -14,6 +14,8 @@ export const BEKOGRAPHY_COORDINATES = {
 export const BEKOGRAPHY_PHONE_DISPLAY = "0546 937 04 64";
 export const BEKOGRAPHY_PHONE_TEL = "+905469370464";
 export const BEKOGRAPHY_INSTAGRAM_URL = "https://www.instagram.com/bekography/";
+export const BEKOGRAPHY_INSTAGRAM_HANDLE = "bekography";
+export const BEKOGRAPHY_INSTAGRAM_PROFILE_IMAGE = "/icon.png";
 
 export function getBekographyMapsUrl(placeId?: string | null) {
   if (placeId?.trim()) {

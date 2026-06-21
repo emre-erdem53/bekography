@@ -13,14 +13,29 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { EASE_OUT, duration } from "@/lib/motion";
 
-const links = [
-  { href: "/", label: "Anasayfa" },
+const links: {
+  href: string;
+  label: string;
+  sectionId?: string;
+}[] = [
+  { href: "/", label: "Anasayfa", sectionId: "kesfet" },
   { href: "/fotograflar", label: "Fotoğraflar" },
   { href: "/videolar", label: "Videolar" },
-  { href: "/paketler", label: "Paketler" },
-  { href: "/about", label: "Hakkımızda" },
-  { href: "/contact", label: "İletişim" },
-] as const;
+  { href: "/paketler", label: "Paketler", sectionId: "paket-olustur" },
+  { href: "/about", label: "Hakkımızda", sectionId: "hakkimizda" },
+  { href: "/contact", label: "İletişim", sectionId: "iletisim" },
+];
+
+function resolveNavHref(
+  href: string,
+  pathname: string,
+  sectionId?: string,
+) {
+  if (pathname === "/" && sectionId) {
+    return `/#${sectionId}`;
+  }
+  return href;
+}
 
 const HEADER_HEIGHT = 96;
 
@@ -117,9 +132,12 @@ export function SiteHeader() {
           </Link>
         </motion.div>
         <nav className="hidden items-center gap-12 md:flex">
-          {links.map(({ href, label }, i) => {
+          {links.map(({ href, label, sectionId }, i) => {
+            const navHref = resolveNavHref(href, pathname, sectionId);
             const active =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
+              href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(href);
             return (
               <motion.div
                 key={href}
@@ -132,7 +150,7 @@ export function SiteHeader() {
                 }}
               >
                 <Link
-                  href={href}
+                  href={navHref}
                   data-active={active ? "true" : undefined}
                   className={`nav-link text-[10px] font-bold uppercase tracking-[0.3em] transition-colors ${
                     active
@@ -149,14 +167,14 @@ export function SiteHeader() {
         <div className="flex items-center md:hidden">
           <motion.button
             type="button"
-            className="flex h-10 w-10 items-center justify-center text-white"
+            className="flex h-12 w-12 items-center justify-center text-white"
             aria-expanded={open}
             aria-label={open ? "Menüyü kapat" : "Menüyü aç"}
             onClick={() => setOpen((v) => !v)}
             whileTap={{ scale: 0.92 }}
           >
             <motion.span
-              className="text-2xl leading-none"
+              className="text-3xl leading-none"
               animate={{ rotate: open ? 90 : 0 }}
               transition={{ duration: duration.micro, ease: EASE_OUT }}
             >
@@ -175,7 +193,7 @@ export function SiteHeader() {
             transition={{ duration: reduce ? 0.01 : 0.35, ease: EASE_OUT }}
           >
             <motion.div
-              className="relative flex h-full flex-col gap-7 px-8 py-10"
+              className="relative flex h-full flex-col gap-1 px-8 py-8"
               initial="closed"
               animate="open"
               exit="closed"
@@ -189,7 +207,9 @@ export function SiteHeader() {
                 closed: {},
               }}
             >
-              {links.map(({ href, label }) => (
+              {links.map(({ href, label, sectionId }) => {
+                const navHref = resolveNavHref(href, pathname, sectionId);
+                return (
                 <motion.div
                   key={href}
                   variants={{
@@ -199,14 +219,15 @@ export function SiteHeader() {
                   transition={{ duration: 0.3, ease: EASE_OUT }}
                 >
                   <Link
-                    href={href}
-                    className="block text-lg font-extrabold uppercase tracking-[0.22em] text-white"
+                    href={navHref}
+                    className="flex min-h-[3.25rem] items-center text-2xl font-extrabold uppercase tracking-[0.18em] text-white"
                     onClick={() => setOpen(false)}
                   >
                     {label}
                   </Link>
                 </motion.div>
-              ))}
+              );
+              })}
               <div className="pointer-events-none absolute bottom-6 left-8">
                 <Image
                   src="/logo/logo-white.svg"

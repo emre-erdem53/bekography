@@ -1220,12 +1220,6 @@ const manuallyOrderedMediaItems = (() => {
     used.add(entry.id);
   }
 
-  const legacyPhoto1 = byFileName.get("1.jpg");
-  if (legacyPhoto1 && !used.has(legacyPhoto1.id)) {
-    ordered.push(legacyPhoto1);
-    used.add(legacyPhoto1.id);
-  }
-
   return packExploreGrid(buildAsymmetricLayout(ordered));
 })();
 

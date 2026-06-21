@@ -5,18 +5,14 @@ import {
   PAYMENT_TYPE_LABELS,
   formatPrice,
 } from "@/lib/constants";
+import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import type { PackageCategoryData } from "@/lib/package-types";
-import {
-  buildCartItemFromCategory,
-  useCartStore,
-} from "@/stores/cart-store";
 
 export function PackagePricingTable({
   category,
 }: {
   category: PackageCategoryData;
 }) {
-  const addItem = useCartStore((state) => state.addItem);
   const { options, accentColor } = category;
 
   return (
@@ -73,13 +69,11 @@ export function PackagePricingTable({
                 </span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => addItem(buildCartItemFromCategory(category, option))}
-              className="rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white hover:text-black"
-            >
-              Sepete Ekle
-            </button>
+            <PackageCartToggleButton
+              category={category}
+              option={option}
+              variant="compact"
+            />
           </div>
         ))}
       </div>

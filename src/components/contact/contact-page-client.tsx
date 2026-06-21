@@ -15,7 +15,11 @@ import {
 } from "@/lib/site-location";
 import { turkishUppercase } from "@/lib/turkish-text";
 
-export function ContactPageClient() {
+export function ContactPageClient({
+  variant = "page",
+}: {
+  variant?: "page" | "section";
+}) {
   const reduce = useReducedMotion();
   const whatsappNumber = "905469370464";
   const whatsappLink = `https://wa.me/${whatsappNumber}?text=Merhaba%20Bekography%2C%20bilgi%20almak%20istiyorum.`;
@@ -23,11 +27,20 @@ export function ContactPageClient() {
     ABOUT_TEAM_PORTRAIT_FILES.bekirContact,
   );
 
+  const Tag = variant === "section" ? "section" : "main";
+  const outerClass =
+    variant === "section"
+      ? "scroll-mt-24 flex flex-col bg-[#f7f7f7] transition-colors duration-300 dark:bg-zinc-950 md:flex-row"
+      : "flex min-h-screen flex-1 flex-col bg-[#f7f7f7] pt-24 transition-colors duration-300 dark:bg-zinc-950 md:flex-row";
+
   return (
-    <>
-      <main className="flex min-h-screen flex-1 flex-col bg-[#f7f7f7] pt-24 transition-colors duration-300 dark:bg-zinc-950 md:flex-row">
+    <Tag id={variant === "section" ? "iletisim" : undefined} className={outerClass}>
         <motion.section
-          className="relative h-[46vh] w-full overflow-hidden bg-[#141414] md:h-auto md:w-[54%] md:min-h-[calc(100vh-6rem)]"
+          className={`relative w-full overflow-hidden bg-[#141414] ${
+            variant === "section"
+              ? "h-[46vh] md:h-auto md:min-h-[640px] md:w-[54%]"
+              : "h-[46vh] md:h-auto md:w-[54%] md:min-h-[calc(100vh-6rem)]"
+          }`}
           initial={reduce ? false : { opacity: 0, x: -36 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.85, ease: EASE_OUT }}
@@ -239,7 +252,6 @@ export function ContactPageClient() {
             </motion.div>
           </div>
         </motion.section>
-      </main>
-    </>
+    </Tag>
   );
 }

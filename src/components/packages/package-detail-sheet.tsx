@@ -8,10 +8,10 @@ import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { getCategoryGalleryUrls } from "@/lib/package-media";
 import { PackageGalleryCarousel } from "@/components/packages/package-gallery-carousel";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
+import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import { PackageInspectSheet } from "@/components/packages/package-inspect-sheet";
 import {
   buildCartItemFromCategory,
-  useCartStore,
   type CartItemInput,
 } from "@/stores/cart-store";
 import { RequestModal } from "@/components/packages/request-modal";
@@ -39,14 +39,12 @@ function PackageOptionSection({
   category,
   option,
   galleryUrls,
-  onAddToCart,
   onInspect,
   onQuickRequest,
 }: {
   category: PackageCategoryData;
   option: PackageOptionData;
   galleryUrls: string[];
-  onAddToCart: () => void;
   onInspect: () => void;
   onQuickRequest: () => void;
 }) {
@@ -102,13 +100,7 @@ function PackageOptionSection({
           >
             İncele
           </button>
-          <button
-            type="button"
-            onClick={onAddToCart}
-            className="w-full rounded-2xl bg-[#93f8b6] py-2.5 text-xs font-semibold text-black transition-opacity hover:opacity-90 sm:py-3.5 sm:text-sm"
-          >
-            Sepete Ekle
-          </button>
+          <PackageCartToggleButton category={category} option={option} />
           <button
             type="button"
             onClick={onQuickRequest}
@@ -127,7 +119,6 @@ export function PackageDetailSheet({
   initialOptionId = null,
   onClose,
 }: PackageDetailSheetProps) {
-  const addItem = useCartStore((state) => state.addItem);
   const [inspectOptionId, setInspectOptionId] = useState<string | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
   const [singleRequestItems, setSingleRequestItems] = useState<CartItemInput[]>(
@@ -185,10 +176,6 @@ export function PackageDetailSheet({
                   option={option}
                   galleryUrls={galleryUrls}
                   onInspect={() => setInspectOptionId(option.id)}
-                  onAddToCart={() => {
-                    addItem(buildCartItemFromCategory(category, option));
-                    onClose();
-                  }}
                   onQuickRequest={() => {
                     setSingleRequestItems([
                       buildCartItemFromCategory(category, option),

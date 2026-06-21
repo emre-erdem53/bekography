@@ -10,6 +10,11 @@ import {
   useState,
 } from "react";
 import { Loader2 } from "lucide-react";
+import {
+  BEKOGRAPHY_INSTAGRAM_HANDLE,
+  BEKOGRAPHY_INSTAGRAM_PROFILE_IMAGE,
+  BEKOGRAPHY_INSTAGRAM_URL,
+} from "@/lib/site-location";
 import { GridMediaTile } from "@/components/home/grid-media-tile";
 import {
   getExploreLoadMoreCount,
@@ -26,6 +31,10 @@ import type {
 const PRIORITY_TILE_COUNT = 3;
 /** Kullanıcı scroll etmeden «daha fazla yükle» tetiklenmesin. */
 const SCROLL_GATE_PX = 40;
+/** Sağa kaydırarak modal kapatma eşiği (px). */
+const DISMISS_CLOSE_PX = 112;
+/** Eksen kilidi için minimum hareket (px). */
+const DISMISS_AXIS_LOCK_PX = 12;
 
 // `displayPattern` is computed in `lib/explore-media.ts`. The pattern is
 // orientation-aware (wide slots host landscape, narrow slots host portrait)
@@ -71,6 +80,8 @@ export function HomeExploreCarousel({
   // We persist for the modal session so toggling once applies to all
   // subsequent posts the user scrolls through.
   const [userMuted, setUserMuted] = useState(false);
+  const [dismissOffset, setDismissOffset] = useState(0);
+  const [dismissTransition, setDismissTransition] = useState(true);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const readyCountRef = useRef(readyCount);
@@ -83,6 +94,23 @@ export function HomeExploreCarousel({
   const gridVideoObserverRef = useRef<IntersectionObserver | null>(null);
   const modalScrollRef = useRef<HTMLDivElement | null>(null);
   const carouselScrollRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const activeIndexRef = useRef(activeIndex);
+  const isPinchingRef = useRef(isPinching);
+  const dismissOffsetRef = useRef(0);
+  const dismissDragRef = useRef<{
+    pointerId: number | null;
+    startX: number;
+    startY: number;
+    axis: "x" | "y" | null;
+  }>({ pointerId: null, startX: 0, startY: 0, axis: null });
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  useEffect(() => {
+    isPinchingRef.current = isPinching;
+  }, [isPinching]);
 
   // The grid order and the modal swipe order are *the same array* so that
   // tile N in the grid is index N in the swipe stream. There is no separate
@@ -331,7 +359,112 @@ export function HomeExploreCarousel({
     setModalIndex(null);
     setActiveIndex(0);
     setCarouselSlideByIndex({});
+    setDismissOffset(0);
+    dismissOffsetRef.current = 0;
+    dismissDragRef.current = {
+      pointerId: null,
+      startX: 0,
+      startY: 0,
+      axis: null,
+    };
   }, []);
+
+  const finishDismissDrag = useCallback(
+    (target: HTMLDivElement, pointerId: number) => {
+      dismissDragRef.current.pointerId = null;
+      dismissDragRef.current.axis = null;
+      if (target.hasPointerCapture(pointerId)) {
+        target.releasePointerCapture(pointerId);
+      }
+
+      setDismissTransition(true);
+      const offset = dismissOffsetRef.current;
+      const shouldClose = offset >= DISMISS_CLOSE_PX;
+
+      if (shouldClose) {
+        const exitDistance =
+          typeof window !== "undefined" ? window.innerWidth : offset;
+        setDismissOffset(exitDistance);
+        dismissOffsetRef.current = exitDistance;
+        window.setTimeout(() => {
+          closeModal();
+        }, 200);
+        return;
+      }
+
+      setDismissOffset(0);
+      dismissOffsetRef.current = 0;
+    },
+    [closeModal],
+  );
+
+  const handleDismissPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (isPinchingRef.current || event.button !== 0) return;
+      if ((event.target as HTMLElement).closest("a, button")) return;
+      dismissDragRef.current = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        axis: null,
+      };
+    },
+    [],
+  );
+
+  const handleDismissPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dismissDragRef.current;
+      if (drag.pointerId !== event.pointerId || isPinchingRef.current) return;
+
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+
+      if (!drag.axis) {
+        if (
+          Math.abs(dx) < DISMISS_AXIS_LOCK_PX &&
+          Math.abs(dy) < DISMISS_AXIS_LOCK_PX
+        ) {
+          return;
+        }
+        drag.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      }
+
+      if (drag.axis !== "x") return;
+      if (dx <= 0) {
+        if (dismissOffsetRef.current !== 0) {
+          dismissOffsetRef.current = 0;
+          setDismissOffset(0);
+        }
+        return;
+      }
+
+      const carousel = carouselScrollRefs.current[activeIndexRef.current];
+      if (carousel && carousel.scrollLeft > 8) return;
+
+      if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+
+      setDismissTransition(false);
+      dismissOffsetRef.current = dx;
+      setDismissOffset(dx);
+    },
+    [],
+  );
+
+  const handleDismissPointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dismissDragRef.current;
+      if (drag.pointerId !== event.pointerId) return;
+      if (!drag.axis && dismissOffsetRef.current === 0) {
+        dismissDragRef.current.pointerId = null;
+        return;
+      }
+      finishDismissDrag(event.currentTarget, event.pointerId);
+    },
+    [finishDismissDrag],
+  );
 
   const openModal = useCallback((index: number) => {
     setActiveIndex(index);
@@ -358,6 +491,10 @@ export function HomeExploreCarousel({
   const activeHasCarousel = Boolean(
     activeItem?.carouselItems && activeItem.carouselItems.length > 1,
   );
+  const dismissOpacity =
+    dismissOffset > 0
+      ? Math.max(0.35, 1 - dismissOffset / 420)
+      : 1;
 
   // ----------------------------- RENDER ----------------------------------
 
@@ -431,9 +568,23 @@ export function HomeExploreCarousel({
       {/* Fullscreen modal */}
       {modalIndex !== null ? (
         <div
-          className="fixed inset-x-0 top-0 z-[70] overflow-hidden bg-black"
+          className="fixed inset-x-0 top-0 z-[70] overflow-hidden bg-black touch-pan-y"
           style={{ height: "100dvh" }}
+          onPointerDown={handleDismissPointerDown}
+          onPointerMove={handleDismissPointerMove}
+          onPointerUp={handleDismissPointerEnd}
+          onPointerCancel={handleDismissPointerEnd}
         >
+          <div
+            className="relative h-full w-full"
+            style={{
+              transform: `translate3d(${dismissOffset}px, 0, 0)`,
+              opacity: dismissOpacity,
+              transition: dismissTransition
+                ? "transform 0.22s ease-out, opacity 0.22s ease-out"
+                : "none",
+            }}
+          >
           {/* Vertical scroll-snap container — the swipe order is identical
               to the grid order because we render `media` in DOM order.
               While the user pinch-zooms an image we lock the scroller so
@@ -486,83 +637,104 @@ export function HomeExploreCarousel({
             })}
           </div>
 
-          {/* Top overlay: close + brand title */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-[80] flex items-start justify-between p-4">
-            <button
-              type="button"
-              onClick={closeModal}
-              className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/35 bg-black/45 text-white backdrop-blur-sm"
-              aria-label="Önizlemeyi kapat"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-5 w-5"
-                aria-hidden
-              >
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <h3 className="font-brand mt-2 text-xl lowercase text-white sm:text-2xl">
-              bekography
-            </h3>
-            <span aria-hidden className="h-11 w-11" />
-          </div>
-
-          {/* Bottom overlay: hint + dot indicators + Instagram link */}
+          {/* Modal chrome: counter, dots, profile, close */}
           {activeItem ? (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[80] p-4 pb-7 sm:p-6 sm:pb-8">
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] uppercase tracking-[0.18em] text-white/75">
-                    Yukarı / aşağı kaydırarak gezin
-                  </p>
-                  {activeHasCarousel && activeItem.carouselItems ? (
-                    <div className="mt-3 flex items-center gap-1.5">
-                      {activeItem.carouselItems.map((slide, slideIdx) => (
-                        <span
-                          key={slide.id}
-                          className={`h-1.5 w-1.5 rounded-full transition-opacity ${
-                            slideIdx === activeCarouselSlideIndex
-                              ? "bg-white/95"
-                              : "bg-white/35"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
+            <>
+              {activeHasCarousel && activeItem.carouselItems ? (
+                <div className="pointer-events-none absolute right-4 top-4 z-[80] rounded-full bg-black/55 px-3 py-1.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm sm:right-6 sm:top-6 sm:text-sm">
+                  {activeCarouselSlideIndex + 1}/{activeItem.carouselItems.length}
+                </div>
+              ) : null}
+
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[80] px-4 pb-[max(env(safe-area-inset-bottom),1.75rem)] pt-16 sm:px-6">
+                {activeHasCarousel && activeItem.carouselItems ? (
+                  <div className="mb-5 flex items-center justify-center gap-2">
+                    {activeItem.carouselItems.map((slide, slideIdx) => (
+                      <span
+                        key={slide.id}
+                        className={`rounded-full transition-all duration-200 ${
+                          slideIdx === activeCarouselSlideIndex
+                            ? "h-2 w-6 bg-white"
+                            : "h-2 w-2 bg-white/45"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="flex items-end justify-between gap-4">
+                  <a
+                    href={activeItem.instagramUrl || BEKOGRAPHY_INSTAGRAM_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pointer-events-auto inline-flex min-w-0 max-w-[calc(100%-4rem)] items-center gap-2.5"
+                  >
+                    <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-white/80">
+                      <Image
+                        src={BEKOGRAPHY_INSTAGRAM_PROFILE_IMAGE}
+                        alt=""
+                        width={36}
+                        height={36}
+                        className="h-full w-full object-cover"
+                      />
+                    </span>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <span className="truncate text-sm font-semibold text-white">
+                        @{BEKOGRAPHY_INSTAGRAM_HANDLE}
+                      </span>
+                      <VerifiedBadge />
+                    </span>
+                  </a>
+
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="pointer-events-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/35 bg-black/55 text-white backdrop-blur-sm transition-colors hover:bg-black/75"
+                    aria-label="Önizlemeyi kapat"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-5 w-5"
+                      aria-hidden
+                    >
+                      <path d="M15 18l-6-6 6-6" />
+                    </svg>
+                  </button>
                 </div>
               </div>
-              <a
-                href={activeItem.instagramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pointer-events-auto mt-4 inline-flex items-center justify-center gap-2.5"
-              >
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full shadow-lg">
-                  <Image
-                    src="/instagram.svg"
-                    alt=""
-                    width={16}
-                    height={16}
-                    className="h-7 w-7"
-                    aria-hidden
-                  />
-                </span>
-                <span className="inline-flex h-9 items-center justify-center rounded-full border border-white/60 bg-black/70 px-5 text-[10px] font-bold uppercase tracking-[0.22em] text-white transition-colors hover:bg-white hover:text-black">
-                  Instagram&apos;da Gör
-                </span>
-              </a>
-            </div>
+            </>
           ) : null}
+          </div>
         </div>
       ) : null}
     </>
+  );
+}
+
+function VerifiedBadge() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-label="Onaylı hesap"
+      className="h-4 w-4 shrink-0"
+      role="img"
+    >
+      <circle cx="12" cy="12" r="10" fill="#0095F6" />
+      <path
+        d="M7.5 12.2 10.4 15l6.1-6.3"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
