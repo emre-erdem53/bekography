@@ -199,12 +199,13 @@ export function SiteHeader() {
               );
               })}
               <div className="pointer-events-none absolute bottom-6 left-8">
-                <Image
+                <img
                   src="/logo/logo-white.svg"
                   alt="bekography"
                   width={80}
                   height={20}
                   className="h-5 w-auto opacity-80"
+                  decoding="async"
                 />
               </div>
             </motion.div>

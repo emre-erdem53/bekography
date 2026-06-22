@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 type BekographyBrandProps = {
@@ -28,13 +27,15 @@ export function BekographyBrand({
       className={`inline-flex items-stretch gap-2 transition-opacity hover:opacity-70 sm:gap-2.5 ${className}`.trim()}
     >
       <span className={`flex shrink-0 items-center ${logoHeight}`}>
-        <Image
+        {/* Plain img — Next/Image can break SVG class-based fills. */}
+        <img
           src="/logo/logo-white.svg"
           alt=""
           width={260}
           height={58}
+          aria-hidden
           className="h-full w-auto object-contain"
-          priority={size === "md"}
+          decoding="async"
         />
       </span>
       <span className="flex min-w-0 flex-col justify-center gap-1">
