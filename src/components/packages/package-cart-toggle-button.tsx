@@ -41,7 +41,15 @@ export function PackageCartToggleButton({
         className={
           inCart
             ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-400 sm:h-9 sm:w-9"
-            : "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 text-white transition-colors hover:bg-white hover:text-black sm:h-9 sm:w-9"
+            : "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border transition-colors hover:bg-white/5 sm:h-9 sm:w-9"
+        }
+        style={
+          inCart
+            ? undefined
+            : {
+                borderColor: `${category.accentColor}66`,
+                color: category.accentColor,
+              }
         }
       >
         {inCart ? (
