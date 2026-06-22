@@ -135,13 +135,13 @@ export function ContactPageClient({
                   rel="noopener noreferrer"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[#25d366] px-5 py-4 text-sm font-semibold text-black transition-opacity hover:opacity-90"
                 >
-                  <Image
+                  <img
                     src="/whatsapp.svg"
                     alt=""
                     width={24}
                     height={24}
                     loading="eager"
-                    unoptimized
+                    decoding="async"
                     className="h-6 w-6"
                     aria-hidden
                   />

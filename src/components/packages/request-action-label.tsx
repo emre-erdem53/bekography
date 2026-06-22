@@ -6,13 +6,10 @@ type RequestActionLabelProps = {
   iconVariant?: "brand" | "monochrome" | "onDark";
 };
 
-export function RequestActionLabel({
-  children,
-  iconVariant: _iconVariant = "brand",
-}: RequestActionLabelProps) {
+export function RequestActionLabel({ children }: RequestActionLabelProps) {
   return (
     <span className="inline-flex items-center justify-center gap-2">
-      <WhatsAppIcon variant={iconVariant} />
+      <WhatsAppIcon />
       <span>{children}</span>
     </span>
   );
