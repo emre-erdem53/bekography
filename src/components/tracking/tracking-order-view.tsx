@@ -83,8 +83,8 @@ export const ReservationOrderDocument = forwardRef<
 
       <section className="mt-10">
         <SectionHeading>Ödeme Planı</SectionHeading>
-        <div className="mt-5 overflow-x-auto rounded-2xl border border-white/15 bg-[#0a0a0a]">
-          <div className="grid min-w-[720px] grid-cols-3 border-b border-white/10">
+        <div className="mt-5 rounded-2xl border border-white/15 bg-[#0a0a0a]">
+          <div className="grid grid-cols-1 border-b border-white/10 md:grid-cols-3">
             <PaymentSummaryCell
               label="Toplam Fiyat"
               value={formatPrice(data.totalPrice)}
@@ -99,16 +99,11 @@ export const ReservationOrderDocument = forwardRef<
             />
           </div>
           {data.installments.length > 0 ? (
-            <div
-              className="grid min-w-[720px]"
-              style={{
-                gridTemplateColumns: `repeat(${data.installments.length}, minmax(0, 1fr))`,
-              }}
-            >
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {data.installments.map((row, index) => (
                 <div
                   key={index}
-                  className="border-r border-white/10 px-5 py-4 last:border-r-0"
+                  className="border-b border-white/10 px-5 py-4 last:border-b-0 sm:border-b-0"
                 >
                   <p className="text-xs text-zinc-500">
                     Ödenecek{" "}
@@ -117,7 +112,7 @@ export const ReservationOrderDocument = forwardRef<
                     })}
                   </p>
                   <p
-                    className={`mt-2 text-2xl font-semibold ${
+                    className={`mt-2 text-xl font-semibold sm:text-2xl ${
                       index % 2 === 0 ? "text-emerald-400" : "text-rose-400"
                     }`}
                   >
@@ -383,9 +378,9 @@ function PaymentSummaryCell({
   value: string;
 }) {
   return (
-    <div className="border-r border-white/10 px-5 py-4 last:border-r-0">
+    <div className="border-b border-white/10 px-5 py-4 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
       <p className="text-xs text-zinc-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
+      <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">{value}</p>
     </div>
   );
 }

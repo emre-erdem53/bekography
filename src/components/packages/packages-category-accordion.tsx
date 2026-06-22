@@ -1,10 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { PackageIconDisplay } from "@/components/packages/package-icon";
+import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import { getOptionIconKey } from "@/lib/package-option-icon";
 import { formatPrice } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
@@ -37,11 +38,7 @@ function AccordionOptionRow({
     [];
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="group flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-[#0a0a0a] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-[#111] sm:gap-3 sm:px-4 sm:py-3"
-    >
+    <div className="flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-[#0a0a0a] px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
         style={{ backgroundColor: `${category.accentColor}18` }}
@@ -95,18 +92,26 @@ function AccordionOptionRow({
           </div>
         </div>
 
-        <span
-          className="inline-flex items-center gap-0.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors group-hover:bg-white/5 sm:text-xs"
-          style={{
-            borderColor: `${category.accentColor}66`,
-            color: category.accentColor,
-          }}
-        >
-          İncele
-          <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
-        </span>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onSelect}
+            className="rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors hover:bg-white/5 sm:px-3 sm:text-xs"
+            style={{
+              borderColor: `${category.accentColor}66`,
+              color: category.accentColor,
+            }}
+          >
+            İncele
+          </button>
+          <PackageCartToggleButton
+            category={category}
+            option={option}
+            variant="icon"
+          />
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
 

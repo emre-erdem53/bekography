@@ -9,7 +9,7 @@ import {
 type PackageCartToggleButtonProps = {
   category: PackageCategoryData;
   option: PackageOptionData;
-  variant?: "full" | "compact";
+  variant?: "full" | "compact" | "icon";
 };
 
 export function PackageCartToggleButton({
@@ -29,6 +29,23 @@ export function PackageCartToggleButton({
       return;
     }
     addItem(buildCartItemFromCategory(category, option));
+  }
+
+  if (variant === "icon") {
+    return (
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label={inCart ? "Sepetten çıkar" : "Sepete ekle"}
+        className={
+          inCart
+            ? "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500 text-lg font-semibold leading-none text-white transition-colors hover:bg-red-400 sm:h-9 sm:w-9"
+            : "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 text-lg font-semibold leading-none text-white transition-colors hover:bg-white hover:text-black sm:h-9 sm:w-9"
+        }
+      >
+        {inCart ? "−" : "+"}
+      </button>
+    );
   }
 
   if (variant === "compact") {
