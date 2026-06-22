@@ -139,6 +139,12 @@ export function ReservationDetailClient({
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <Link
+            href={`/admin/rezervasyonlar/${reservationId}/ozet`}
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
+          >
+            Sipariş Özeti
+          </Link>
+          <Link
             href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
           >

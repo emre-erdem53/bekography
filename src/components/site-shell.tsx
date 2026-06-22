@@ -27,9 +27,11 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <div className={mounted ? cartBottomInset : undefined}>{children}</div>
-      <PackageCartBar />
-      <GlobalCartRequestModal />
+      <div className={mounted && !isTracking ? cartBottomInset : undefined}>
+        {children}
+      </div>
+      {!isTracking ? <PackageCartBar /> : null}
+      {!isTracking ? <GlobalCartRequestModal /> : null}
       {!isTracking && <FooterDark />}
     </>
   );

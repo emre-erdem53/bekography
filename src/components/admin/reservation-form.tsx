@@ -21,6 +21,26 @@ import type { PostShootTemplateSettingsData } from "@/lib/post-shoot-template-se
 import { PostShootSectionEditor } from "@/components/admin/post-shoot-templates-admin-client";
 import { formatCoupleName } from "@/lib/reservation-utils";
 
+const TIME_STEP_SECONDS = 900;
+
+function snapTimeToQuarterHour(value: string): string {
+  if (!value) return value;
+
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return value;
+
+  let hours = Number(match[1]);
+  let minutes = Number(match[2]);
+  let snapped = Math.round(minutes / 15) * 15;
+
+  if (snapped === 60) {
+    hours = (hours + 1) % 24;
+    snapped = 0;
+  }
+
+  return `${String(hours).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`;
+}
+
 type PackageOption = {
   id: string;
   label: string;
@@ -61,6 +81,26 @@ type Installment = {
   amount: number;
   dueDate: string;
 };
+
+function hasPartialPayment(items: SelectedItem[]) {
+  return items.some((item) => item.paymentType === "taksitli");
+}
+
+function splitEqualInstallments(
+  count: number,
+  total: number,
+  existing: Installment[] = [],
+): Installment[] {
+  const safeCount = Math.max(1, count);
+  const safeTotal = Math.max(0, total);
+  const base = Math.floor(safeTotal / safeCount);
+  const remainder = safeTotal - base * safeCount;
+
+  return Array.from({ length: safeCount }, (_, index) => ({
+    amount: index === safeCount - 1 ? base + remainder : base,
+    dueDate: existing[index]?.dueDate ?? "",
+  }));
+}
 
 type ReservationFormProps = {
   reservationId?: string;
@@ -115,6 +155,37 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   );
 
   const expectedPayable = totalPrice - discountAmount;
+
+  const hasTaksitliPayment = useMemo(
+    () => hasPartialPayment(items),
+    [items],
+  );
+
+  const installmentMismatch = installmentTotal !== expectedPayable;
+
+  const minInstallmentCount = hasTaksitliPayment ? 2 : 1;
+
+  function addInstallment() {
+    setInstallments((prev) =>
+      splitEqualInstallments(prev.length + 1, expectedPayable, prev),
+    );
+  }
+
+  function removeInstallment(index: number) {
+    setInstallments((prev) => {
+      if (prev.length <= minInstallmentCount) return prev;
+      const next = prev.filter((_, i) => i !== index);
+      return splitEqualInstallments(next.length, expectedPayable, next);
+    });
+  }
+
+  function updateInstallment(index: number, patch: Partial<Installment>) {
+    setInstallments((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }
 
   function applyPostShootSync(nextItems: SelectedItem[], forceReset = false) {
     if (!templateSettings) return;
@@ -266,10 +337,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         setItems(mapped);
         const total = mapped.reduce((sum, i) => sum + i.agreedUnitPrice, 0);
         setTotalPrice(total);
-        setInstallments([
-          { amount: Math.floor(total / 2), dueDate: "" },
-          { amount: total - Math.floor(total / 2), dueDate: "" },
-        ]);
+        setInstallments(splitEqualInstallments(2, total));
       } else if (
         prefillDateParam &&
         /^\d{4}-\d{2}-\d{2}$/.test(prefillDateParam)
@@ -304,6 +372,33 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       setTotalPrice(itemsTotal);
     }
   }, [itemsTotal, items.length, totalPriceManual]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    setInstallments((prev) => {
+      if (hasPartialPayment(items)) {
+        if (prev.length < 2) {
+          return splitEqualInstallments(2, expectedPayable, prev);
+        }
+        return prev;
+      }
+
+      if (prev.length > 1) {
+        return [{ amount: expectedPayable, dueDate: prev[0]?.dueDate ?? "" }];
+      }
+
+      if (
+        prev.length === 1 &&
+        prev[0].amount !== expectedPayable &&
+        expectedPayable >= 0
+      ) {
+        return [{ ...prev[0], amount: expectedPayable }];
+      }
+
+      return prev;
+    });
+  }, [loading, items, expectedPayable]);
 
   useEffect(() => {
     const dates = [...new Set(items.map((item) => item.shootDate).filter(Boolean))];
@@ -469,7 +564,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     }
 
     const data = await response.json();
-    router.push(`/admin/rezervasyonlar/${isEditing ? reservationId : data.id}`);
+    router.push(
+      isEditing
+        ? `/admin/rezervasyonlar/${reservationId}`
+        : `/admin/rezervasyonlar/${data.id}/ozet`,
+    );
     router.refresh();
   }
 
@@ -660,9 +759,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                   <Field label="Hazır Olma Saati">
                     <input
                       type="time"
+                      step={TIME_STEP_SECONDS}
                       value={item.readyTime}
                       onChange={(e) =>
-                        updateItem(index, { readyTime: e.target.value })
+                        updateItem(index, {
+                          readyTime: snapTimeToQuarterHour(e.target.value),
+                        })
                       }
                       className={inputClass}
                     />
@@ -721,9 +823,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       <Field label="Rize'den Çıkış">
                         <input
                           type="time"
+                          step={TIME_STEP_SECONDS}
                           value={item.departureTime}
                           onChange={(e) =>
-                            updateItem(index, { departureTime: e.target.value })
+                            updateItem(index, {
+                              departureTime: snapTimeToQuarterHour(e.target.value),
+                            })
                           }
                           className={inputClass}
                         />
@@ -731,9 +836,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       <Field label="Rize'ye Varış">
                         <input
                           type="time"
+                          step={TIME_STEP_SECONDS}
                           value={item.arrivalTime}
                           onChange={(e) =>
-                            updateItem(index, { arrivalTime: e.target.value })
+                            updateItem(index, {
+                              arrivalTime: snapTimeToQuarterHour(e.target.value),
+                            })
                           }
                           className={inputClass}
                         />
@@ -744,9 +852,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       <Field label="Başlangıç">
                         <input
                           type="time"
+                          step={TIME_STEP_SECONDS}
                           value={item.startTime}
                           onChange={(e) =>
-                            updateItem(index, { startTime: e.target.value })
+                            updateItem(index, {
+                              startTime: snapTimeToQuarterHour(e.target.value),
+                            })
                           }
                           className={inputClass}
                         />
@@ -754,9 +865,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       <Field label="Bitiş">
                         <input
                           type="time"
+                          step={TIME_STEP_SECONDS}
                           value={item.endTime}
                           onChange={(e) =>
-                            updateItem(index, { endTime: e.target.value })
+                            updateItem(index, {
+                              endTime: snapTimeToQuarterHour(e.target.value),
+                            })
                           }
                           className={inputClass}
                         />
@@ -849,9 +963,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             <h3 className="text-sm font-medium text-white">Ödeme Vadeleri</h3>
             <button
               type="button"
-              onClick={() =>
-                setInstallments((prev) => [...prev, { amount: 0, dueDate: "" }])
-              }
+              onClick={addInstallment}
               className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-white"
             >
               <Plus className="h-4 w-4" />
@@ -864,11 +976,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 <input
                   type="number"
                   value={row.amount}
-                  onChange={(e) => {
-                    const next = [...installments];
-                    next[index] = { ...next[index], amount: Number(e.target.value) };
-                    setInstallments(next);
-                  }}
+                  onChange={(e) =>
+                    updateInstallment(index, { amount: Number(e.target.value) })
+                  }
                   required
                   className={inputClass}
                 />
@@ -877,21 +987,17 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 <input
                   type="date"
                   value={row.dueDate}
-                  onChange={(e) => {
-                    const next = [...installments];
-                    next[index] = { ...next[index], dueDate: e.target.value };
-                    setInstallments(next);
-                  }}
+                  onChange={(e) =>
+                    updateInstallment(index, { dueDate: e.target.value })
+                  }
                   required
                   className={inputClass}
                 />
               </Field>
-              {installments.length > 1 ? (
+              {installments.length > minInstallmentCount ? (
                 <button
                   type="button"
-                  onClick={() =>
-                    setInstallments((prev) => prev.filter((_, i) => i !== index))
-                  }
+                  onClick={() => removeInstallment(index)}
                   className="self-end rounded-lg p-2 text-zinc-400 hover:text-red-400 sm:mt-6"
                 >
                   <X className="h-4 w-4" />
@@ -901,10 +1007,20 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               )}
             </div>
           ))}
-          <p className="text-sm text-zinc-400">
+          <p
+            className={`text-sm ${
+              installmentMismatch ? "text-amber-400" : "text-zinc-400"
+            }`}
+          >
             Beklenen ödeme: {formatPrice(expectedPayable)} — Vade toplamı:{" "}
             {formatPrice(installmentTotal)}
           </p>
+          {installmentMismatch ? (
+            <p className="text-sm text-amber-400">
+              Vade tutarları toplamı genel tutarla eşleşmiyor. Kaydetmeden önce
+              vadeleri güncelleyin veya kayıt sırasında onaylayın.
+            </p>
+          ) : null}
         </div>
 
         <div className="mt-4 flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90">

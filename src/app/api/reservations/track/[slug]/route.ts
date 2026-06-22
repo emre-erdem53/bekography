@@ -1,72 +1,8 @@
 import { NextResponse } from "next/server";
+import { buildTrackingPayloadBySlug } from "@/lib/build-tracking-payload";
+import { reservationTcMatches } from "@/lib/reservations";
 import { prisma } from "@/lib/prisma";
-import {
-  RESERVATION_STATUS_LABELS,
-  RESERVATION_STATUS_ORDER,
-} from "@/lib/constants";
-import { getPaymentTypeLabels } from "@/lib/site-settings";
-import { getSiteSettings } from "@/lib/site-settings-store";
-import {
-  formatCoupleName,
-  reservationTcMatches,
-} from "@/lib/reservations";
 import { trackReservationSchema } from "@/lib/validations";
-
-async function buildTrackingPayload(slug: string) {
-  const [reservation, siteSettings] = await Promise.all([
-    prisma.reservation.findUnique({
-      where: { trackingSlug: slug },
-      include: {
-        items: {
-          include: {
-            packageOption: { include: { category: true } },
-          },
-          orderBy: { shootDate: "asc" },
-        },
-        statusHistory: { orderBy: { changedAt: "asc" } },
-      },
-    }),
-    getSiteSettings(),
-  ]);
-  const paymentLabels = getPaymentTypeLabels(siteSettings);
-
-  if (!reservation || reservation.status === "iptal") {
-    return null;
-  }
-
-  const completedStatuses = new Set(
-    reservation.statusHistory.map((entry) => entry.status),
-  );
-  completedStatuses.add(reservation.status);
-
-  const timeline = RESERVATION_STATUS_ORDER.filter((status) =>
-    completedStatuses.has(status),
-  ).map((status) => ({
-    status,
-    label: RESERVATION_STATUS_LABELS[status],
-    isCurrent: status === reservation.status,
-  }));
-
-  const earliestShoot = reservation.items[0]?.shootDate ?? new Date();
-
-  return {
-    customerName: formatCoupleName(
-      reservation.brideName,
-      reservation.groomName,
-    ),
-    city: reservation.items[0]?.location ?? "",
-    shootDate: earliestShoot,
-    status: reservation.status,
-    statusLabel: RESERVATION_STATUS_LABELS[reservation.status],
-    timeline,
-    items: reservation.items.map((item) => ({
-      categoryTitle: item.packageOption.category.title,
-      optionLabel: item.packageOption.label,
-      paymentType: paymentLabels[item.paymentType],
-      shootDate: item.shootDate,
-    })),
-  };
-}
 
 export async function GET() {
   return NextResponse.json(
@@ -121,7 +57,7 @@ export async function POST(
       );
     }
 
-    const payload = await buildTrackingPayload(slug);
+    const payload = await buildTrackingPayloadBySlug(slug);
     if (!payload) {
       return NextResponse.json(
         { error: "Rezervasyon bulunamadı" },
