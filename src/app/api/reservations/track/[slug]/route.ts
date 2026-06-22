@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import {
-  PAYMENT_TYPE_LABELS,
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ORDER,
 } from "@/lib/constants";
+import { getPaymentTypeLabels } from "@/lib/site-settings";
+import { getSiteSettings } from "@/lib/site-settings-store";
 import {
   formatCoupleName,
   reservationTcMatches,
@@ -12,18 +13,22 @@ import {
 import { trackReservationSchema } from "@/lib/validations";
 
 async function buildTrackingPayload(slug: string) {
-  const reservation = await prisma.reservation.findUnique({
-    where: { trackingSlug: slug },
-    include: {
-      items: {
-        include: {
-          packageOption: { include: { category: true } },
+  const [reservation, siteSettings] = await Promise.all([
+    prisma.reservation.findUnique({
+      where: { trackingSlug: slug },
+      include: {
+        items: {
+          include: {
+            packageOption: { include: { category: true } },
+          },
+          orderBy: { shootDate: "asc" },
         },
-        orderBy: { shootDate: "asc" },
+        statusHistory: { orderBy: { changedAt: "asc" } },
       },
-      statusHistory: { orderBy: { changedAt: "asc" } },
-    },
-  });
+    }),
+    getSiteSettings(),
+  ]);
+  const paymentLabels = getPaymentTypeLabels(siteSettings);
 
   if (!reservation || reservation.status === "iptal") {
     return null;
@@ -57,7 +62,7 @@ async function buildTrackingPayload(slug: string) {
     items: reservation.items.map((item) => ({
       categoryTitle: item.packageOption.category.title,
       optionLabel: item.packageOption.label,
-      paymentType: PAYMENT_TYPE_LABELS[item.paymentType],
+      paymentType: paymentLabels[item.paymentType],
       shootDate: item.shootDate,
     })),
   };

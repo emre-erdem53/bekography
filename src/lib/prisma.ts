@@ -46,8 +46,37 @@ const globalForPrisma = globalThis as unknown as {
   prisma: ReturnType<typeof createPrismaClient> | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+function getPrismaClient() {
+  const cached = globalForPrisma.prisma;
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+  // Dev HMR can keep an old singleton after `prisma generate` adds new models.
+  if (cached && !cached.appSettings) {
+    void cached.$disconnect().catch(() => undefined);
+    globalForPrisma.prisma = undefined;
+  }
+
+  if (globalForPrisma.prisma) {
+    return globalForPrisma.prisma;
+  }
+
+  const client = createPrismaClient();
+
+  if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prisma = client;
+  }
+
+  return client;
 }
+
+export const prisma = new Proxy({} as ReturnType<typeof createPrismaClient>, {
+  get(_target, prop) {
+    const client = getPrismaClient();
+    const value = client[prop as keyof typeof client];
+
+    if (typeof value === "function") {
+      return (value as (...args: unknown[]) => unknown).bind(client);
+    }
+
+    return value;
+  },
+});

@@ -1,35 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import type { PackageGalleryMedia } from "@/lib/package-seed-data";
 
 type PackageGalleryCarouselProps = {
-  images: string[];
+  media: PackageGalleryMedia[];
   variant?: "detail" | "default" | "scroll";
 };
 
 export function PackageGalleryCarousel({
-  images,
+  media,
   variant = "default",
 }: PackageGalleryCarouselProps) {
-  const [index, setIndex] = useState(0);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
   const frameClass =
     variant === "scroll"
       ? "relative h-full min-h-0 w-full overflow-hidden rounded-2xl bg-[#111] sm:rounded-3xl"
       : variant === "detail"
-      ? "relative aspect-[4/5] max-h-[38vh] w-full overflow-hidden rounded-3xl bg-[#111] md:aspect-[16/10] md:max-h-[280px] lg:max-h-[320px]"
-      : "relative aspect-[4/5] overflow-hidden rounded-3xl bg-[#111]";
+        ? "relative aspect-square w-full overflow-hidden rounded-3xl bg-[#111]"
+        : "relative aspect-[4/5] overflow-hidden rounded-3xl bg-[#111]";
 
-  if (images.length === 0) {
+  useEffect(() => {
+    setCurrentIndex(0);
+    if (containerRef.current) {
+      containerRef.current.scrollLeft = 0;
+    }
+  }, [media]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || media.length <= 1) return;
+
+    let frame = 0;
+    let lastSlide = 0;
+
+    const handleScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const width = container.clientWidth;
+        if (!width) return;
+        const slide = Math.round(container.scrollLeft / width);
+        if (slide === lastSlide) return;
+        lastSlide = slide;
+        setCurrentIndex(slide);
+      });
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [media.length]);
+
+  if (media.length === 0) {
     return (
       <div
         className={`flex items-center justify-center bg-[#1a1a1a] text-xs text-zinc-500 sm:text-sm ${
           variant === "scroll"
             ? "h-full min-h-0 w-full rounded-2xl sm:rounded-3xl"
             : variant === "detail"
-            ? "aspect-[4/5] max-h-[38vh] rounded-3xl md:aspect-[16/10] md:max-h-[280px]"
-            : "aspect-[4/5] rounded-3xl"
+              ? "aspect-square w-full rounded-3xl"
+              : "aspect-[4/5] rounded-3xl"
         }`}
       >
         Görsel yakında eklenecek
@@ -37,7 +72,7 @@ export function PackageGalleryCarousel({
     );
   }
 
-  const current = images[index] ?? images[0];
+  const showCounter = media.length > 1;
 
   return (
     <div
@@ -45,59 +80,77 @@ export function PackageGalleryCarousel({
         variant === "scroll" ? "flex h-full min-h-0 flex-col" : "space-y-3"
       }
     >
-      <div className={frameClass}>
-        <Image
-          src={current}
-          alt=""
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 640px, 768px"
-          priority
-        />
-        {images.length > 1 ? (
-          <>
-            <button
-              type="button"
-              onClick={() =>
-                setIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1))
-              }
-              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white"
-              aria-label="Önceki görsel"
+      <div className={`${frameClass} relative`}>
+        <div
+          ref={containerRef}
+          className="no-scrollbar flex h-full w-full snap-x snap-mandatory overflow-x-scroll overflow-y-hidden"
+          style={{ overscrollBehaviorY: "auto" }}
+        >
+          {media.map((item, index) => (
+            <div
+              key={`${item.url}-${index}`}
+              className="relative h-full w-full shrink-0 snap-center snap-always"
             >
-              ‹
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1))
-              }
-              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white"
-              aria-label="Sonraki görsel"
-            >
-              ›
-            </button>
-          </>
+              {item.type === "video" ? (
+                <video
+                  src={item.url}
+                  className="h-full w-full object-cover"
+                  muted
+                  playsInline
+                  loop
+                  autoPlay={index === currentIndex}
+                />
+              ) : (
+                <Image
+                  src={item.url}
+                  alt={item.alt ?? ""}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 640px, 768px"
+                  priority={index === 0}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {showCounter ? (
+          <div className="pointer-events-none absolute right-3 top-3 z-10 rounded-full bg-black/55 px-3 py-1.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm sm:right-4 sm:top-4 sm:text-sm">
+            {currentIndex + 1}/{media.length}
+          </div>
         ) : null}
       </div>
-      {images.length > 1 ? (
+
+      {showCounter ? (
         <div
           className={`flex justify-center gap-2 ${
             variant === "scroll" ? "mt-1.5 shrink-0 sm:mt-2" : ""
           }`}
         >
-          {images.map((_, dotIndex) => (
-            <button
+          {media.map((_, dotIndex) => (
+            <span
               key={dotIndex}
-              type="button"
-              onClick={() => setIndex(dotIndex)}
-              className={`h-2 w-2 rounded-full ${
-                dotIndex === index ? "bg-white" : "bg-white/30"
+              className={`rounded-full transition-all duration-200 ${
+                dotIndex === currentIndex
+                  ? "h-2 w-6 bg-white"
+                  : "h-2 w-2 bg-white/45"
               }`}
-              aria-label={`Görsel ${dotIndex + 1}`}
             />
           ))}
         </div>
       ) : null}
     </div>
   );
+}
+
+/** @deprecated Pass `media` prop instead */
+export function PackageGalleryCarouselLegacy({
+  images,
+  variant = "default",
+}: {
+  images: string[];
+  variant?: "detail" | "default" | "scroll";
+}) {
+  const media = images.map((url) => ({ url, type: "image" as const }));
+  return <PackageGalleryCarousel media={media} variant={variant} />;
 }

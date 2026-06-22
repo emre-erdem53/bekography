@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
+import { SiteSettingsProvider } from "@/components/site-settings-provider";
 import { SiteShell } from "@/components/site-shell";
+import { getSiteSettings } from "@/lib/site-settings-store";
 import "./globals.css";
 
 const gilroy = localFont({
@@ -38,11 +40,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const siteSettings = await getSiteSettings();
+
   return (
     <html
       lang="tr"
@@ -51,7 +55,9 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <AuthSessionProvider>
-          <SiteShell>{children}</SiteShell>
+          <SiteSettingsProvider initialSettings={siteSettings}>
+            <SiteShell>{children}</SiteShell>
+          </SiteSettingsProvider>
         </AuthSessionProvider>
       </body>
     </html>

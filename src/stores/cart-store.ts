@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { PackageCategoryData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { defaultRequestFieldLabels } from "@/lib/package-seed-data";
+import { getOptionGalleryPreviewUrl } from "@/lib/package-media";
 
 export type CartItem = {
   packageOptionId: string;
@@ -54,7 +55,7 @@ export function buildCartItemFromCategory(
     cashPrice: option.cashPrice,
     installmentPrice: option.installmentPrice,
     accentColor: category.accentColor,
-    imageUrl: null,
+    imageUrl: getOptionGalleryPreviewUrl(category, option.id, option.label),
     dateLabel: labels.dateLabel,
     cityLabel: labels.cityLabel,
   };
@@ -106,6 +107,9 @@ export const useCartStore = create<CartState>()(
           .reduce((sum, item) => sum + item.installmentPrice, 0),
       getSelectedItems: () => get().items.filter((item) => item.selected),
     }),
-    { name: "bekography-cart-v2" },
+    {
+      name: "bekography-cart-v3",
+      skipHydration: true,
+    },
   ),
 );

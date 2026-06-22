@@ -7,7 +7,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import type {
   PackageCategoryContent,
   PackageDetailSection,
-  PackageGalleryImage,
+  PackageGalleryMedia,
 } from "@/lib/package-seed-data";
 import {
   defaultIndoorPostShootTokens,
@@ -25,7 +25,7 @@ import { HexColorInput } from "@/components/admin/hex-color-input";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
 import { isCustomPackageIcon, PackageIconDisplay } from "@/components/packages/package-icon";
 import { packageMediaUrl } from "@/lib/package-media";
-import { PAYMENT_TYPE_DESCRIPTIONS } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import {
   inferOptionIconKey,
   PACKAGE_OPTION_ICON_KEYS,
@@ -44,6 +44,7 @@ const defaultContent: PackageCategoryContent = {
   highlightTagsByOption: {},
   optionIconKeys: {},
   galleryImages: [],
+  galleryMediaByOption: {},
   detailSections: [],
   detailSectionsByOption: {},
   inspectEnabledByOption: {},
@@ -74,16 +75,19 @@ function removeOptionContentKeys(
   const nextInspectEnabled = { ...(content.inspectEnabledByOption ?? {}) };
   const nextHighlightTags = { ...(content.highlightTagsByOption ?? {}) };
   const nextOptionIconKeys = { ...(content.optionIconKeys ?? {}) };
+  const nextGalleryMedia = { ...(content.galleryMediaByOption ?? {}) };
 
   delete nextDetailSections[key];
   delete nextInspectEnabled[key];
   delete nextHighlightTags[key];
   delete nextOptionIconKeys[key];
+  delete nextGalleryMedia[key];
   if (labelKey) {
     delete nextDetailSections[labelKey];
     delete nextInspectEnabled[labelKey];
     delete nextHighlightTags[labelKey];
     delete nextOptionIconKeys[labelKey];
+    delete nextGalleryMedia[labelKey];
   }
 
   return {
@@ -92,19 +96,56 @@ function removeOptionContentKeys(
     inspectEnabledByOption: nextInspectEnabled,
     highlightTagsByOption: nextHighlightTags,
     optionIconKeys: nextOptionIconKeys,
+    galleryMediaByOption: nextGalleryMedia,
   };
 }
 
-function moveGalleryImage(
-  images: PackageGalleryImage[],
+function moveGalleryMedia(
+  media: PackageGalleryMedia[],
   index: number,
   direction: -1 | 1,
-): PackageGalleryImage[] {
+): PackageGalleryMedia[] {
   const targetIndex = index + direction;
-  if (targetIndex < 0 || targetIndex >= images.length) return images;
-  const next = [...images];
+  if (targetIndex < 0 || targetIndex >= media.length) return media;
+  const next = [...media];
   [next[index], next[targetIndex]] = [next[targetIndex], next[index]];
   return next;
+}
+
+function getOptionGalleryList(
+  content: PackageCategoryContent,
+  key: string,
+  optionLabel: string,
+): PackageGalleryMedia[] {
+  const byOption = content.galleryMediaByOption ?? {};
+  if (byOption[key]?.length) return byOption[key];
+  if (optionLabel && byOption[optionLabel]?.length) return byOption[optionLabel];
+  return [];
+}
+
+function buildGalleryMediaByOption(
+  content: PackageCategoryContent,
+  optionList: OptionForm[],
+): Record<string, PackageGalleryMedia[]> {
+  const source = content.galleryMediaByOption ?? {};
+  const result: Record<string, PackageGalleryMedia[]> = {};
+
+  optionList.forEach((option, index) => {
+    const primaryKey = getOptionDetailKey(option, index);
+    const labelKey = option.label.trim();
+    const media =
+      source[primaryKey] ??
+      (option.id ? source[option.id] : undefined) ??
+      (labelKey ? source[labelKey] : undefined) ??
+      [];
+
+    if (media.length === 0) return;
+
+    const saveKey = option.id ?? primaryKey;
+    result[saveKey] = media;
+  });
+
+  return result;
 }
 
 export function PackageForm({
@@ -128,6 +169,17 @@ export function PackageForm({
   const [templateVariables, setTemplateVariables] = useState<
     PostShootVariableDefinition[]
   >([]);
+  const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>(
+    {},
+  );
+  const { descriptions: paymentDescriptions } = usePaymentTypeCopy();
+
+  function toggleOptionExpanded(key: string) {
+    setExpandedOptions((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  }
 
   useEffect(() => {
     fetch("/api/admin/post-shoot-templates")
@@ -172,6 +224,7 @@ export function PackageForm({
           highlightTagsByOption: loadedContent.highlightTagsByOption ?? {},
           optionIconKeys: loadedContent.optionIconKeys ?? {},
           galleryImages: loadedContent.galleryImages ?? [],
+          galleryMediaByOption: loadedContent.galleryMediaByOption ?? {},
           detailSections: loadedContent.detailSections ?? [],
           detailSectionsByOption: loadedContent.detailSectionsByOption ?? {},
           inspectEnabledByOption: loadedContent.inspectEnabledByOption ?? {},
@@ -197,6 +250,7 @@ export function PackageForm({
             }),
           ),
         );
+        setExpandedOptions({});
       })
       .finally(() => setLoading(false));
   }, [packageId]);
@@ -231,16 +285,24 @@ export function PackageForm({
     if (url) setIconKey(url);
   }
 
-  async function handleGalleryUpload(file: File) {
+  async function handleOptionMediaUpload(
+    optionKey: string,
+    file: File,
+    mediaType: "image" | "video",
+  ) {
     const url = await uploadFile(file);
     if (!url) return;
 
+    const current = content.galleryMediaByOption?.[optionKey] ?? [];
     setContent({
       ...content,
-      galleryImages: [
-        ...(content.galleryImages ?? []),
-        { url, alt: title },
-      ],
+      galleryMediaByOption: {
+        ...(content.galleryMediaByOption ?? {}),
+        [optionKey]: [
+          ...current,
+          { url, alt: title, type: mediaType },
+        ],
+      },
     });
   }
 
@@ -302,6 +364,7 @@ export function PackageForm({
         optionIconKeys[mappedKey] = icon;
       }
     });
+    const galleryMediaByOption = buildGalleryMediaByOption(content, options);
 
     const {
       tagline: _legacyTagline,
@@ -318,6 +381,8 @@ export function PackageForm({
       inspectEnabledByOption,
       highlightTagsByOption,
       optionIconKeys,
+      galleryMediaByOption,
+      galleryImages: [],
       scheduleType: content.scheduleType ?? "indoor",
       postShootTokens: content.postShootTokens ?? {},
     });
@@ -399,14 +464,17 @@ export function PackageForm({
         <Field label="Paket İkonu (SVG)">
           <p className="mb-2 text-xs leading-relaxed text-zinc-500">
             Paket listesinde 20×20 px (mobil) ve 24×24 px (masaüstü) ölçülerinde
-            görünür. Kare oranlı, sade SVG yükleyin.
+            görünür. Kare oranlı, tek renkli veya siyah SVG yükleyin. İkon
+            rengi sitede paketin accent renginden gelir; SVG içine sabit renk
+            kodu yazmayın. Çok renkli SVG&apos;ler tek renge dönüşür.
           </p>
           {isCustomPackageIcon(iconKey) ? (
             <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-3">
-              <img
-                src={packageMediaUrl(iconKey) ?? iconKey}
-                alt=""
-                className="h-6 w-6 object-contain"
+              <PackageIconDisplay
+                iconKey={iconKey}
+                className="h-6 w-6"
+                style={{ color: accentColor }}
+                imageSizes="24px"
               />
               <span className="truncate text-xs text-zinc-400">{iconKey}</span>
             </div>
@@ -419,7 +487,7 @@ export function PackageForm({
             accept=".svg,image/svg+xml"
             label="SVG İkon Yükle"
             fileLabel={isCustomPackageIcon(iconKey) ? "İkonu Değiştir" : undefined}
-            hint="Yalnızca .svg dosyaları kabul edilir."
+            hint="Yalnızca .svg dosyaları kabul edilir. Tek renkli veya siyah SVG kullanın; renk accent alanından gelir."
             onFileSelect={handleIconUpload}
           />
         </Field>
@@ -447,128 +515,18 @@ export function PackageForm({
         <div>
           <h2 className="font-semibold text-white">Paket Detayı</h2>
           <p className="mt-1 text-sm text-zinc-400">
-            Müşterinin paket detay penceresinde gördüğü içerik: görseller,
-            etiketler, fiyat satırları ve İncele ekranı.
+            Müşterinin paket detay penceresinde gördüğü içerik: çekim türü
+            galerileri (1:1 kare), etiketler, fiyat satırları ve İncele ekranı.
           </p>
         </div>
-
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90">
-          <p className="font-medium text-amber-200">Galeri fotoğraf rehberi</p>
-          <p className="mt-1">
-            Önerilen boyut: 1080×1350 px (4:5 dikey), en fazla 2 MB, JPEG veya
-            WebP. Dikey odaklı görseller detay penceresindeki galeride en iyi
-            görünür.
-          </p>
-        </div>
-
-        <Field label="Galeri Görselleri">
-          <p className="mb-3 text-xs text-zinc-500">
-            Sıra, detay penceresindeki kaydırma sırasını belirler. İlk görsel
-            ilk sırada gösterilir.
-          </p>
-          <div className="space-y-3">
-            {(content.galleryImages ?? []).map((image, index) => {
-              const previewUrl = packageMediaUrl(image.url) ?? image.url;
-              const total = content.galleryImages?.length ?? 0;
-              return (
-                <div
-                  key={`${image.url}-${index}`}
-                  className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                    <div className="relative mx-auto shrink-0 sm:mx-0">
-                      <img
-                        src={previewUrl}
-                        alt={image.alt ?? `Görsel ${index + 1}`}
-                        className="h-44 w-[8.75rem] rounded-xl object-cover shadow-lg"
-                      />
-                      <span className="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-0.5 text-xs font-medium text-white">
-                        {index + 1}
-                      </span>
-                    </div>
-                    <div className="flex min-w-0 flex-1 flex-col gap-3">
-                      <input
-                        value={image.alt ?? ""}
-                        onChange={(e) => {
-                          const next = [...(content.galleryImages ?? [])];
-                          next[index] = { ...next[index], alt: e.target.value };
-                          setContent({ ...content, galleryImages: next });
-                        }}
-                        placeholder="Alt metin (opsiyonel)"
-                        className={inputClass}
-                      />
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={() =>
-                            setContent({
-                              ...content,
-                              galleryImages: moveGalleryImage(
-                                content.galleryImages ?? [],
-                                index,
-                                -1,
-                              ),
-                            })
-                          }
-                          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <ChevronUp className="h-3.5 w-3.5" />
-                          Yukarı
-                        </button>
-                        <button
-                          type="button"
-                          disabled={index === total - 1}
-                          onClick={() =>
-                            setContent({
-                              ...content,
-                              galleryImages: moveGalleryImage(
-                                content.galleryImages ?? [],
-                                index,
-                                1,
-                              ),
-                            })
-                          }
-                          className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <ChevronDown className="h-3.5 w-3.5" />
-                          Aşağı
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = (content.galleryImages ?? []).filter(
-                              (_, i) => i !== index,
-                            );
-                            setContent({ ...content, galleryImages: next });
-                          }}
-                          className="ml-auto text-sm text-red-400 hover:text-red-300"
-                        >
-                          Sil
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            <AdminFileUpload
-              accept="image/jpeg,image/webp,image/png"
-              label="Galeriye Görsel Ekle"
-              hint="Önerilen 1080×1350 px (4:5), max 2 MB, JPEG/WebP."
-              onFileSelect={handleGalleryUpload}
-            />
-          </div>
-        </Field>
 
         <div className="space-y-4 border-t border-white/10 pt-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-sm font-medium text-white">Çekim Türleri</h3>
               <p className="mt-1 text-xs text-zinc-500">
-                Müşteri pakete tıkladığında açılan menüde görünen seçenekler.
-                Her çekim türünün adını, ikonunu, fiyatlarını ve detaylarını
-                buradan yönetin.
+                Her çekim türünün galerisi, fiyatı ve detayları birbirinden
+                bağımsızdır. Düzenlemek için türü açın.
               </p>
             </div>
             <button
@@ -597,39 +555,62 @@ export function PackageForm({
               content.detailSectionsByOption?.[key] ??
               content.detailSectionsByOption?.[option.label.trim()] ??
               [];
+            const optionGallery = getOptionGalleryList(content, key, option.label.trim());
             const selectedIconKey =
               content.optionIconKeys?.[key] ??
               content.optionIconKeys?.[option.label.trim()] ??
               "";
+            const isExpanded = expandedOptions[key] ?? false;
 
             return (
               <div
                 key={option.id ?? `option-${index}`}
-                className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      {optionLabel}
-                    </p>
-                    <p className="mt-1 text-xs text-zinc-500">
-                      Paket listesindeki açılır menüde görünür
-                    </p>
-                  </div>
+                <div className="flex items-start gap-2 p-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleOptionExpanded(key)}
+                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                    aria-expanded={isExpanded}
+                  >
+                    <ChevronDown
+                      className={`mt-0.5 h-5 w-5 shrink-0 text-zinc-400 transition-transform duration-200 ${
+                        isExpanded ? "rotate-180" : ""
+                      }`}
+                      aria-hidden
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-white">
+                        {optionLabel}
+                      </span>
+                      <span className="mt-1 block text-xs text-zinc-500">
+                        {optionGallery.length} galeri medyası · Hemen ödeme{" "}
+                        {option.cashPrice.toLocaleString("tr-TR")} ₺
+                      </span>
+                    </span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       if (options.length <= 1) return;
                       setContent(removeOptionContentKeys(content, option, index));
                       setOptions(options.filter((_, i) => i !== index));
+                      setExpandedOptions((prev) => {
+                        const next = { ...prev };
+                        delete next[key];
+                        return next;
+                      });
                     }}
                     disabled={options.length <= 1}
-                    className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="shrink-0 rounded-lg border border-red-500/30 px-3 py-1.5 text-xs text-red-400 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     Kaldır
                   </button>
                 </div>
 
+                {isExpanded ? (
+                  <div className="space-y-4 border-t border-white/10 p-4 pt-4">
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-zinc-500">
@@ -689,7 +670,7 @@ export function PackageForm({
                       Hemen Ödeme (₺)
                     </label>
                     <p className="mb-2 text-[11px] leading-relaxed text-zinc-600">
-                      ({PAYMENT_TYPE_DESCRIPTIONS.pesin})
+                      ({paymentDescriptions.pesin})
                     </p>
                     <input
                       type="number"
@@ -711,7 +692,7 @@ export function PackageForm({
                       Parçalı Ödeme (₺)
                     </label>
                     <p className="mb-2 text-[11px] leading-relaxed text-zinc-600">
-                      ({PAYMENT_TYPE_DESCRIPTIONS.taksitli})
+                      ({paymentDescriptions.taksitli})
                     </p>
                     <input
                       type="number"
@@ -743,6 +724,161 @@ export function PackageForm({
                     })
                   }
                 />
+
+                <div className="space-y-3 border-t border-white/10 pt-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">
+                      Galeri Medyaları
+                    </h4>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Yalnızca bu çekim türüne ait görseller ve videolar.
+                      Diğer türlerle paylaşılmaz. Tüm medya dosyaları 1:1 kare
+                      oranında olmalıdır; detay penceresinde bu oranda
+                      gösterilir. Sıra, kaydırma sırasını belirler.
+                    </p>
+                  </div>
+                  {optionGallery.map((media, mediaIndex) => {
+                    const previewUrl = packageMediaUrl(media.url) ?? media.url;
+                    const isVideo = media.type === "video";
+                    const total = optionGallery.length;
+                    return (
+                      <div
+                        key={`${media.url}-${mediaIndex}`}
+                        className="rounded-xl border border-white/10 bg-white/[0.03] p-3"
+                      >
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                          <div className="relative mx-auto aspect-square h-44 w-44 shrink-0 sm:mx-0">
+                            {isVideo ? (
+                              <video
+                                src={previewUrl}
+                                className="h-full w-full rounded-xl object-cover shadow-lg"
+                                muted
+                                playsInline
+                                loop
+                                autoPlay
+                              />
+                            ) : (
+                              <img
+                                src={previewUrl}
+                                alt={media.alt ?? `Görsel ${mediaIndex + 1}`}
+                                className="h-full w-full rounded-xl object-cover shadow-lg"
+                              />
+                            )}
+                            <span className="absolute left-2 top-2 rounded-full bg-black/75 px-2 py-0.5 text-xs font-medium text-white">
+                              {mediaIndex + 1}
+                            </span>
+                            {isVideo ? (
+                              <span className="absolute right-2 top-2 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-medium text-white">
+                                Video
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex min-w-0 flex-1 flex-col gap-3">
+                            <input
+                              value={media.alt ?? ""}
+                              onChange={(e) => {
+                                const next = [...optionGallery];
+                                next[mediaIndex] = {
+                                  ...next[mediaIndex],
+                                  alt: e.target.value,
+                                };
+                                setContent({
+                                  ...content,
+                                  galleryMediaByOption: {
+                                    ...(content.galleryMediaByOption ?? {}),
+                                    [key]: next,
+                                  },
+                                });
+                              }}
+                              placeholder="Alt metin (opsiyonel)"
+                              className={inputClass}
+                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={mediaIndex === 0}
+                                onClick={() =>
+                                  setContent({
+                                    ...content,
+                                    galleryMediaByOption: {
+                                      ...(content.galleryMediaByOption ?? {}),
+                                      [key]: moveGalleryMedia(
+                                        optionGallery,
+                                        mediaIndex,
+                                        -1,
+                                      ),
+                                    },
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <ChevronUp className="h-3.5 w-3.5" />
+                                Yukarı
+                              </button>
+                              <button
+                                type="button"
+                                disabled={mediaIndex === total - 1}
+                                onClick={() =>
+                                  setContent({
+                                    ...content,
+                                    galleryMediaByOption: {
+                                      ...(content.galleryMediaByOption ?? {}),
+                                      [key]: moveGalleryMedia(
+                                        optionGallery,
+                                        mediaIndex,
+                                        1,
+                                      ),
+                                    },
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <ChevronDown className="h-3.5 w-3.5" />
+                                Aşağı
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const next = optionGallery.filter(
+                                    (_, i) => i !== mediaIndex,
+                                  );
+                                  setContent({
+                                    ...content,
+                                    galleryMediaByOption: {
+                                      ...(content.galleryMediaByOption ?? {}),
+                                      [key]: next,
+                                    },
+                                  });
+                                }}
+                                className="ml-auto text-sm text-red-400 hover:text-red-300"
+                              >
+                                Sil
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <AdminFileUpload
+                      accept="image/jpeg,image/webp,image/png"
+                      label="Görsel Ekle"
+                      hint="1:1 kare oran zorunludur. Önerilen 1080×1080 px, max 2 MB."
+                      onFileSelect={(file) =>
+                        handleOptionMediaUpload(key, file, "image")
+                      }
+                    />
+                    <AdminFileUpload
+                      accept="video/mp4,video/webm"
+                      label="Video Ekle"
+                      hint="1:1 kare oran zorunludur. MP4 veya WebM formatında video."
+                      onFileSelect={(file) =>
+                        handleOptionMediaUpload(key, file, "video")
+                      }
+                    />
+                  </div>
+                </div>
 
                 <div className="space-y-3 border-t border-white/10 pt-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -885,6 +1021,8 @@ export function PackageForm({
                       </div>
                     ))}
                 </div>
+                  </div>
+                ) : null}
               </div>
             );
           })}

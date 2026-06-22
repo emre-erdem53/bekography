@@ -8,6 +8,7 @@ export async function GET() {
 
   try {
     const requests = await prisma.request.findMany({
+      where: { status: { not: "iptal" } },
       orderBy: { createdAt: "desc" },
       include: {
         items: {

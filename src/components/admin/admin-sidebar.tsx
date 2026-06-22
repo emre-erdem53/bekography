@@ -10,6 +10,7 @@ import {
   LogOut,
   Package,
   CalendarCheck,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -32,6 +33,7 @@ export const adminNavItems: AdminNavItem[] = [
   { href: "/admin/talepler", label: "Talepler", icon: ClipboardList },
   { href: "/admin/takvim", label: "Takvimim", icon: CalendarDays },
   { href: "/admin/rezervasyonlar", label: "Rezervasyonlar", icon: CalendarCheck },
+  { href: "/admin/ayarlar", label: "Ayarlar", icon: Settings },
 ];
 
 export function getAdminPageTitle(pathname: string) {
@@ -50,6 +52,7 @@ export function getAdminPageTitle(pathname: string) {
   if (pathname.includes("/duzenle")) return "Rezervasyon Düzenle";
   if (pathname.match(/^\/admin\/rezervasyonlar\/[^/]+$/)) return "Rezervasyon";
   if (pathname.startsWith("/admin/rezervasyonlar")) return "Rezervasyonlar";
+  if (pathname.startsWith("/admin/ayarlar")) return "Ayarlar";
   return "Yönetim Paneli";
 }
 

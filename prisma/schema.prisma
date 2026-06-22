@@ -171,3 +171,9 @@ model PostShootTemplateSettings {
   noPrintingText String   @default("Baskı yok")
   updatedAt      DateTime @updatedAt
 }
+
+model AppSettings {
+  id        String   @id @default("default")
+  settings  Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}

@@ -6,7 +6,8 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { RequestStatus } from "@prisma/client";
 import { StatusSelect } from "@/components/admin/status-select";
-import { REQUEST_STATUS_LABELS, PAYMENT_TYPE_LABELS } from "@/lib/constants";
+import { REQUEST_STATUS_LABELS } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
 type RequestItem = {
   id: string;
@@ -27,18 +28,19 @@ type RequestItem = {
   reservation: { id: string } | null;
 };
 
-function formatPackages(request: RequestItem) {
-  return request.items
-    .map(
-      (item) =>
-        `${item.packageOption.category.title} - ${item.packageOption.label} (${PAYMENT_TYPE_LABELS[item.paymentType]})`,
-    )
-    .join(", ");
-}
-
 export function RequestsAdminClient() {
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { labels: paymentLabels } = usePaymentTypeCopy();
+
+  function formatPackages(request: RequestItem) {
+    return request.items
+      .map(
+        (item) =>
+          `${item.packageOption.category.title} - ${item.packageOption.label} (${paymentLabels[item.paymentType]})`,
+      )
+      .join(", ");
+  }
 
   useEffect(() => {
     fetch("/api/admin/requests")
@@ -55,9 +57,13 @@ export function RequestsAdminClient() {
     });
 
     if (response.ok) {
-      setRequests((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, status } : item)),
-      );
+      if (status === "iptal") {
+        setRequests((prev) => prev.filter((item) => item.id !== id));
+      } else {
+        setRequests((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, status } : item)),
+        );
+      }
     }
   }
 
@@ -90,7 +96,11 @@ export function RequestsAdminClient() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium text-white">{request.customerName}</p>
-                    <p className="text-xs text-zinc-500">{request.customerPhone}</p>
+                    <p className="text-xs text-zinc-500">
+                      {request.customerPhone && request.customerPhone !== "—"
+                        ? request.customerPhone
+                        : "—"}
+                    </p>
                   </div>
                   <Link
                     href={`/admin/talepler/${request.id}`}
@@ -145,7 +155,11 @@ export function RequestsAdminClient() {
                   <tr key={request.id} className="border-t border-white/5">
                     <td className="px-4 py-3 text-white">
                       <p>{request.customerName}</p>
-                      <p className="text-xs text-zinc-500">{request.customerPhone}</p>
+                      <p className="text-xs text-zinc-500">
+                      {request.customerPhone && request.customerPhone !== "—"
+                        ? request.customerPhone
+                        : "—"}
+                    </p>
                     </td>
                     <td className="px-4 py-3 text-zinc-300">
                       {format(new Date(request.shootDate), "d MMM yyyy", {

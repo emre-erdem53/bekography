@@ -11,6 +11,12 @@ export type PackageGalleryImage = {
   alt?: string;
 };
 
+export type PackageGalleryMedia = {
+  url: string;
+  alt?: string;
+  type?: "image" | "video";
+};
+
 export type PackageDetailSection = {
   id: string;
   title: string;
@@ -40,6 +46,7 @@ export type PackageCategoryContent = {
   highlightTagsByOption?: Record<string, string[]>;
   optionIconKeys?: Record<string, string>;
   galleryImages?: PackageGalleryImage[];
+  galleryMediaByOption?: Record<string, PackageGalleryMedia[]>;
   detailSections?: PackageDetailSection[];
   detailSectionsByOption?: Record<string, PackageDetailSection[]>;
   inspectEnabledByOption?: Record<string, boolean>;

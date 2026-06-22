@@ -8,6 +8,7 @@ type CartItemForMessage = {
   categoryTitle: string;
   optionLabel: string;
   shootDate: string;
+  city: string;
 };
 
 function formatShootDate(shootDate: string) {
@@ -26,7 +27,7 @@ export function buildRequestWhatsAppMessage(
   const packageLines = items
     .map(
       (item) =>
-        `•${item.categoryTitle} - ${item.optionLabel} (${formatShootDate(item.shootDate)})`,
+        `•${item.categoryTitle} - ${item.optionLabel} (${formatShootDate(item.shootDate)}, ${item.city})`,
     )
     .join("\n");
 

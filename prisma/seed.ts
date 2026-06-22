@@ -10,13 +10,25 @@ function enrichContent(
   category: (typeof seedPackageCategories)[number],
 ): Prisma.InputJsonValue {
   const scheduleType = category.content.scheduleType ?? "indoor";
+  const galleryImages = category.content.galleryImages ?? [];
+  const galleryMedia = galleryImages.map((image) => ({
+    url: image.url,
+    alt: image.alt,
+    type: "image" as const,
+  }));
+  const galleryMediaByOption = Object.fromEntries(
+    category.options.map((option) => [option.label, galleryMedia]),
+  );
+
   return {
     ...category.content,
     requestFieldLabels:
       category.content.requestFieldLabels ??
       defaultRequestFieldLabels(category.title, scheduleType),
     highlightTags: category.content.highlightTags ?? [],
-    galleryImages: category.content.galleryImages ?? [],
+    galleryImages,
+    galleryMediaByOption:
+      category.content.galleryMediaByOption ?? galleryMediaByOption,
     detailSections: category.content.detailSections ?? [],
   } as Prisma.InputJsonValue;
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { PackageIconDisplay } from "@/components/packages/package-icon";
 import { getOptionIconKey } from "@/lib/package-option-icon";
-import { PaymentTypePrice } from "@/components/packages/payment-type-price";
+import { formatPrice } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
 type PackagesCategoryAccordionProps = {
   categories: PackageCategoryData[];
@@ -18,7 +19,7 @@ type PackagesCategoryAccordionProps = {
   ) => void;
 };
 
-function OptionRow({
+function AccordionOptionRow({
   category,
   option,
   onSelect,
@@ -27,6 +28,7 @@ function OptionRow({
   option: PackageOptionData;
   onSelect: () => void;
 }) {
+  const { labels: paymentLabels } = usePaymentTypeCopy();
   const content = category.content as PackageCategoryContent;
   const iconKey = getOptionIconKey(option, content);
   const tags =
@@ -38,7 +40,7 @@ function OptionRow({
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-[#0a0a0a] px-3 py-3 text-left transition-colors hover:border-white/20 hover:bg-[#111] sm:gap-4 sm:px-4 sm:py-3.5"
+      className="group flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-[#0a0a0a] px-3 py-2.5 text-left transition-colors hover:border-white/20 hover:bg-[#111] sm:gap-3 sm:px-4 sm:py-3"
     >
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
@@ -52,16 +54,16 @@ function OptionRow({
         />
       </span>
 
-      <span className="min-w-0 flex-1">
-        <span
-          className="block text-sm font-semibold sm:text-base"
+      <div className="min-w-0 flex-1">
+        <p
+          className="truncate text-sm font-semibold leading-tight sm:text-base"
           style={{ color: category.accentColor }}
         >
           {option.label}
-        </span>
+        </p>
         {tags.length > 0 ? (
-          <span className="mt-1 flex flex-wrap gap-1">
-            {tags.slice(0, 3).map((tag) => (
+          <div className="mt-1 flex flex-wrap gap-1">
+            {tags.map((tag) => (
               <span
                 key={tag}
                 className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-zinc-400"
@@ -69,24 +71,41 @@ function OptionRow({
                 {tag}
               </span>
             ))}
-          </span>
+          </div>
         ) : null}
-      </span>
+      </div>
 
-      <span className="grid shrink-0 grid-cols-2 gap-3 sm:gap-5">
-        <PaymentTypePrice
-          type="pesin"
-          price={option.cashPrice}
-          variant="minimal"
-          align="right"
-        />
-        <PaymentTypePrice
-          type="taksitli"
-          price={option.installmentPrice}
-          variant="minimal"
-          align="right"
-        />
-      </span>
+      <div className="flex shrink-0 flex-col items-end justify-center gap-2">
+        <div className="flex flex-col gap-1.5 text-right">
+          <div>
+            <p className="text-[10px] leading-none text-zinc-500">
+              {paymentLabels.pesin}
+            </p>
+            <p className="mt-0.5 text-xs font-bold leading-none text-white sm:text-sm">
+              {formatPrice(option.cashPrice)}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] leading-none text-zinc-500">
+              {paymentLabels.taksitli}
+            </p>
+            <p className="mt-0.5 text-xs font-semibold leading-none text-zinc-400 sm:text-sm">
+              {formatPrice(option.installmentPrice)}
+            </p>
+          </div>
+        </div>
+
+        <span
+          className="inline-flex items-center gap-0.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors group-hover:bg-white/5 sm:text-xs"
+          style={{
+            borderColor: `${category.accentColor}66`,
+            color: category.accentColor,
+          }}
+        >
+          İncele
+          <ChevronRight className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden />
+        </span>
+      </div>
     </button>
   );
 }
@@ -148,7 +167,7 @@ export function PackagesCategoryAccordion({
                 >
                   <div className="space-y-2 border-t border-white/10 px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
                     {category.options.map((option) => (
-                      <OptionRow
+                      <AccordionOptionRow
                         key={option.id}
                         category={category}
                         option={option}

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
-import { PackageCartBar } from "@/components/packages/package-cart-bar";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { PackagesCategoryAccordion } from "@/components/packages/packages-category-accordion";
-import { useCartStore } from "@/stores/cart-store";
+
+const pageMainClass = "flex-1 bg-black pt-24 pb-10 text-white";
+const sectionClass = "scroll-mt-24 bg-black pb-6 text-white";
 
 export function PackagesHero({
   categories,
@@ -20,12 +21,6 @@ export function PackagesHero({
   const [detailCategory, setDetailCategory] =
     useState<PackageCategoryData | null>(null);
   const [detailOptionId, setDetailOptionId] = useState<string | null>(null);
-  const [cartReady, setCartReady] = useState(false);
-  const cartCount = useCartStore((state) => state.items.length);
-
-  useEffect(() => {
-    setCartReady(true);
-  }, []);
 
   function handleToggleCategory(categoryId: string) {
     setExpandedCategoryId((current) =>
@@ -46,19 +41,8 @@ export function PackagesHero({
     setDetailOptionId(null);
   }
 
-  const Tag = variant === "section" ? "section" : "main";
-  const cartPadding =
-    cartReady && cartCount > 0 ? "pb-28" : variant === "section" ? "pb-6" : "pb-10";
-  const outerClass =
-    variant === "section"
-      ? `scroll-mt-24 bg-black text-white ${cartPadding}`
-      : `flex-1 bg-black pt-24 text-white ${cartReady && cartCount > 0 ? "pb-28" : "pb-10"}`;
-
-  return (
-    <Tag
-      id={variant === "section" ? "paket-olustur" : undefined}
-      className={outerClass}
-    >
+  const inner = (
+    <>
       <div
         className={`mx-auto w-full max-w-2xl px-4 sm:max-w-3xl sm:px-6 lg:max-w-3xl ${
           variant === "section" ? "pb-6 pt-16" : "pb-16 pt-4"
@@ -89,8 +73,16 @@ export function PackagesHero({
         initialOptionId={detailOptionId}
         onClose={handleCloseDetail}
       />
-
-      <PackageCartBar />
-    </Tag>
+    </>
   );
+
+  if (variant === "section") {
+    return (
+      <section id="paket-olustur" className={sectionClass}>
+        {inner}
+      </section>
+    );
+  }
+
+  return <main className={pageMainClass}>{inner}</main>;
 }

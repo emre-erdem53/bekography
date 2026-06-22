@@ -10,9 +10,9 @@ import { StatusSelect } from "@/components/admin/status-select";
 import { changeReservationStatus } from "@/components/admin/reservation-status-actions";
 import {
   RESERVATION_STATUS_LABELS,
-  PAYMENT_TYPE_LABELS,
   formatPrice,
 } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { formatCoupleName } from "@/lib/reservation-utils";
 import { parsePostShootSnapshot } from "@/lib/post-shoot";
 
@@ -59,6 +59,7 @@ export function ReservationDetailClient({
   reservationId: string;
 }) {
   const router = useRouter();
+  const { labels: paymentLabels } = usePaymentTypeCopy();
   const [reservation, setReservation] = useState<ReservationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -202,7 +203,7 @@ export function ReservationDetailClient({
                   Fiyat:{" "}
                   <span className="text-white">
                     {formatPrice(item.agreedUnitPrice)} (
-                    {PAYMENT_TYPE_LABELS[item.paymentType]})
+                    {paymentLabels[item.paymentType]})
                   </span>
                 </p>
                 {item.readyTime ? (

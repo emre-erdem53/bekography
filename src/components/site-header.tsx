@@ -103,7 +103,7 @@ export function SiteHeader() {
         >
           <Link
             href="/"
-            className="flex items-center gap-3 transition-opacity hover:opacity-70 sm:gap-3.5"
+            className="flex items-start gap-2.5 transition-opacity hover:opacity-70 sm:gap-3"
             aria-label="bekography Ana Sayfa"
           >
             <Image
@@ -111,11 +111,16 @@ export function SiteHeader() {
               alt=""
               width={260}
               height={58}
-              className="h-7 w-auto shrink-0 md:h-9"
+              className="h-[1.65rem] w-auto shrink-0 md:h-[2.1rem]"
               priority
             />
-            <span className="font-brand flex h-7 items-center text-[1.75rem] leading-none lowercase tracking-wide text-white md:h-9 md:text-[2.25rem]">
-              bekography
+            <span className="flex min-w-0 flex-col gap-1 pt-px">
+              <span className="font-brand text-[1.65rem] leading-none lowercase tracking-wide text-white md:text-[2.1rem]">
+                bekography
+              </span>
+              <span className="text-[8px] font-medium uppercase tracking-[0.34em] text-white/40 md:text-[9px]">
+                Fotoğraf &amp; Film
+              </span>
             </span>
           </Link>
         </motion.div>

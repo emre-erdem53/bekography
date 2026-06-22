@@ -3,8 +3,11 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 import { AlertTriangle, Plus, X } from "lucide-react";
 import { formatPrice } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
   emptyPostShootSnapshot,
@@ -70,7 +73,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestId = searchParams.get("requestId");
+  const prefillDateParam = searchParams.get("date");
   const isEditing = Boolean(reservationId);
+  const { labels: paymentLabels } = usePaymentTypeCopy();
 
   const [brideName, setBrideName] = useState("");
   const [brideTc, setBrideTc] = useState("");
@@ -97,6 +102,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [totalPriceManual, setTotalPriceManual] = useState(false);
   const [templateSettings, setTemplateSettings] =
     useState<PostShootTemplateSettingsData | null>(null);
+  const [defaultShootDate, setDefaultShootDate] = useState("");
 
   const itemsTotal = useMemo(
     () => items.reduce((sum, item) => sum + item.agreedUnitPrice, 0),
@@ -210,7 +216,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         const requestRes = await fetch(`/api/admin/requests/${requestId}`);
         const request = await requestRes.json();
         setGroomName(request.customerName);
-        setGroomPhone(request.customerPhone);
+        if (request.customerPhone && request.customerPhone !== "—") {
+          setGroomPhone(request.customerPhone);
+        }
         const defaultDate = request.shootDate.split("T")[0];
         const mapped: SelectedItem[] = request.items.map(
           (item: {
@@ -262,13 +270,18 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           { amount: Math.floor(total / 2), dueDate: "" },
           { amount: total - Math.floor(total / 2), dueDate: "" },
         ]);
+      } else if (
+        prefillDateParam &&
+        /^\d{4}-\d{2}-\d{2}$/.test(prefillDateParam)
+      ) {
+        setDefaultShootDate(prefillDateParam);
       }
 
       setLoading(false);
     }
 
     load();
-  }, [requestId, reservationId]);
+  }, [requestId, reservationId, prefillDateParam]);
 
   useEffect(() => {
     if (!templateSettings || categories.length === 0 || items.length === 0) {
@@ -338,7 +351,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       categoryTitle: category.title,
       categorySlug: category.slug,
       accentColor: category.accentColor,
-      shootDate: "",
+      shootDate: defaultShootDate,
       shootContent:
         packageContent?.shootDescription?.trim() || option.label,
       readyTime: "",
@@ -480,6 +493,16 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         <h1 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
           {isEditing ? `${coupleTitle} — Düzenle` : "Yeni Rezervasyon"}
         </h1>
+        {defaultShootDate && !isEditing ? (
+          <p className="mt-3 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-zinc-300">
+            Seçilen çekim tarihi:{" "}
+            <span className="font-semibold text-white">
+              {format(new Date(`${defaultShootDate}T12:00:00`), "d MMMM yyyy", {
+                locale: tr,
+              })}
+            </span>
+          </p>
+        ) : null}
       </div>
 
       {dateConflicts.length > 0 ? (
@@ -688,8 +711,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       }}
                       className={inputClass}
                     >
-                      <option value="pesin">Hemen Ödeme</option>
-                      <option value="taksitli">Parçalı Ödeme</option>
+                      <option value="pesin">{paymentLabels.pesin}</option>
+                      <option value="taksitli">{paymentLabels.taksitli}</option>
                     </select>
                   </Field>
 

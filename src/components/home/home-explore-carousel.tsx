@@ -16,6 +16,7 @@ import {
   BEKOGRAPHY_INSTAGRAM_URL,
 } from "@/lib/site-location";
 import { GridMediaTile } from "@/components/home/grid-media-tile";
+import { useCartOverlayBottomPadding } from "@/components/packages/package-cart-bar";
 import {
   getExploreLoadMoreCount,
   getInitialExploreVisibleCount,
@@ -71,7 +72,8 @@ export function HomeExploreCarousel({
     Record<number, number>
   >({});
   const [readyCount, setReadyCount] = useState(0);
-  const [isFeedLoading, setIsFeedLoading] = useState(true);
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   // True while any modal image is being pinch-zoomed; we use this to
   // freeze both the vertical scroller and any active inner carousel so
   // the user can pan within the zoomed image without the page snapping.
@@ -82,10 +84,11 @@ export function HomeExploreCarousel({
   const [userMuted, setUserMuted] = useState(false);
   const [dismissOffset, setDismissOffset] = useState(0);
   const [dismissTransition, setDismissTransition] = useState(true);
+  const cartOverlayBottomPadding = useCartOverlayBottomPadding();
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const readyCountRef = useRef(readyCount);
-  const isFeedLoadingRef = useRef(isFeedLoading);
+  const isLoadingRef = useRef(false);
   const hasUserScrolledRef = useRef(false);
   const canLoadMoreRef = useRef(false);
   const lastScrollYRef = useRef(0);
@@ -124,8 +127,8 @@ export function HomeExploreCarousel({
     lastScrollYRef.current = 0;
 
     async function bootstrapFeed() {
-      isFeedLoadingRef.current = true;
-      setIsFeedLoading(true);
+      isLoadingRef.current = true;
+      setIsBootstrapping(true);
       setReadyCount(0);
 
       const target = getInitialExploreVisibleCount(items);
@@ -133,8 +136,8 @@ export function HomeExploreCarousel({
 
       if (cancelled) return;
       setReadyCount(target);
-      isFeedLoadingRef.current = false;
-      setIsFeedLoading(false);
+      isLoadingRef.current = false;
+      setIsBootstrapping(false);
     }
 
     void bootstrapFeed();
@@ -146,10 +149,6 @@ export function HomeExploreCarousel({
   useEffect(() => {
     readyCountRef.current = readyCount;
   }, [readyCount]);
-
-  useEffect(() => {
-    isFeedLoadingRef.current = isFeedLoading;
-  }, [isFeedLoading]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -166,32 +165,8 @@ export function HomeExploreCarousel({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Yükleme bitene kadar sayfa scroll'unu kilitle.
-  useEffect(() => {
-    if (!isFeedLoading) return;
-
-    const scrollY = window.scrollY;
-    const { style } = document.body;
-    style.position = "fixed";
-    style.top = `-${scrollY}px`;
-    style.left = "0";
-    style.right = "0";
-    style.width = "100%";
-    style.overflow = "hidden";
-
-    return () => {
-      style.position = "";
-      style.top = "";
-      style.left = "";
-      style.right = "";
-      style.width = "";
-      style.overflow = "";
-      window.scrollTo(0, scrollY);
-    };
-  }, [isFeedLoading]);
-
   const loadNextBatch = useCallback(async () => {
-    if (isFeedLoadingRef.current) return;
+    if (isLoadingRef.current) return;
 
     const current = readyCountRef.current;
     if (current >= media.length) return;
@@ -200,14 +175,14 @@ export function HomeExploreCarousel({
     const next = Math.min(current + step, media.length);
     if (next <= current) return;
 
-    isFeedLoadingRef.current = true;
-    setIsFeedLoading(true);
+    isLoadingRef.current = true;
+    setIsLoadingMore(true);
     try {
       await preloadExploreBatch(media, current, next);
       setReadyCount(next);
     } finally {
-      isFeedLoadingRef.current = false;
-      setIsFeedLoading(false);
+      isLoadingRef.current = false;
+      setIsLoadingMore(false);
     }
   }, [media]);
 
@@ -225,22 +200,49 @@ export function HomeExploreCarousel({
   // "Load more" — scroll sonrası; medya önce indirilir, sonra DOM'a eklenir.
   useEffect(() => {
     const target = loadMoreRef.current;
-    if (!target || readyCount >= media.length || isFeedLoading) return;
+    if (!target || readyCount >= media.length || isLoadingRef.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting) return;
         if (!hasUserScrolledRef.current) return;
         if (!canLoadMoreRef.current) return;
-        if (isFeedLoadingRef.current) return;
+        if (isLoadingRef.current) return;
         canLoadMoreRef.current = false;
         void loadNextBatch();
       },
-      { rootMargin: "80px 0px 0px 0px" },
+      { rootMargin: "120px 0px 0px 0px" },
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [media, readyCount, media.length, isFeedLoading, loadNextBatch]);
+  }, [media, readyCount, media.length, isLoadingMore, isBootstrapping, loadNextBatch]);
+
+  // Yeni batch yüklendikten sonra görünür grid videolarını oynat.
+  useEffect(() => {
+    if (isBootstrapping || isLoadingMore) return;
+
+    const frame = requestAnimationFrame(() => {
+      for (const tile of Object.values(tilesRef.current)) {
+        if (!tile || tile.getAttribute("data-media-type") !== "video") continue;
+        const rect = tile.getBoundingClientRect();
+        const inView =
+          rect.bottom > 0 &&
+          rect.top < window.innerHeight &&
+          rect.width > 0 &&
+          rect.height > 0;
+        if (!inView) continue;
+        const id = tile.getAttribute("data-media-id");
+        const video = id ? gridVideoRefs.current[id] : null;
+        if (!video) continue;
+        if (video.preload === "none") {
+          video.preload = "auto";
+        }
+        void video.play().catch(() => {});
+      }
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [readyCount, isBootstrapping, isLoadingMore]);
 
   // Grid videoları: görünürken loop oynat, çıkınca duraklat — React state güncellemesi yok.
   useEffect(() => {
@@ -500,67 +502,75 @@ export function HomeExploreCarousel({
 
   return (
     <>
-      {isFeedLoading ? (
-        <div
-          className="fixed inset-0 z-[65] flex items-center justify-center bg-black/80 backdrop-blur-sm"
-          aria-live="polite"
-          aria-busy="true"
-        >
-          <Loader2
-            className="h-10 w-10 animate-spin text-white"
-            aria-label="İçerik yükleniyor"
-          />
-        </div>
-      ) : null}
-
-      <section className="relative w-full bg-black pt-24">
+      <section
+        className={`relative w-full bg-black pt-24 ${
+          isBootstrapping && arrangedFeedItems.length === 0 ? "min-h-[50vh]" : ""
+        }`}
+      >
         <div className="relative z-10 w-full">
-          <div
-            className="grid w-full auto-flow-dense grid-cols-3 gap-[1px]"
-            style={{ gridAutoRows: "30vw" }}
-          >
-            {arrangedFeedItems.map((item, tileIndex) => {
-              const pattern = item.displayPattern ?? { colSpan: 1, rowSpan: 1 };
-              const hasExplicitPlacement =
-                pattern.colStart !== undefined && pattern.rowStart !== undefined;
-              const colClass = hasExplicitPlacement
-                ? ""
-                : COL_SPAN_CLASS[pattern.colSpan];
-              const rowClass = hasExplicitPlacement
-                ? ""
-                : ROW_SPAN_CLASS[pattern.rowSpan];
-              const gridPlacementStyle = hasExplicitPlacement
-                ? {
-                    gridColumn: `${pattern.colStart} / span ${pattern.colSpan}`,
-                    gridRow: `${pattern.rowStart} / span ${pattern.rowSpan}`,
-                  }
-                : undefined;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  ref={(node) => registerGridTile(item, node)}
-                  data-media-id={item.id}
-                  data-media-type={item.type}
-                  onClick={() => openModal(tileIndex)}
-                  style={gridPlacementStyle}
-                  className={`group relative overflow-hidden bg-black text-left ${colClass} ${rowClass}`}
-                  aria-label={`Open ${item.title}`}
-                >
-                  <GridMediaTile
-                    item={item}
-                    priority={tileIndex < PRIORITY_TILE_COUNT}
-                    videoRef={(node) => {
-                      gridVideoRefs.current[item.id] = node;
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
-                </button>
-              );
-            })}
-          </div>
-          {readyCount < media.length ? (
-            <div ref={loadMoreRef} className="h-px w-full" aria-hidden />
+          {arrangedFeedItems.length > 0 ? (
+            <div
+              className="grid w-full auto-flow-dense grid-cols-3 gap-[1px]"
+              style={{ gridAutoRows: "30vw" }}
+            >
+              {arrangedFeedItems.map((item, tileIndex) => {
+                const pattern = item.displayPattern ?? { colSpan: 1, rowSpan: 1 };
+                const hasExplicitPlacement =
+                  pattern.colStart !== undefined && pattern.rowStart !== undefined;
+                const colClass = hasExplicitPlacement
+                  ? ""
+                  : COL_SPAN_CLASS[pattern.colSpan];
+                const rowClass = hasExplicitPlacement
+                  ? ""
+                  : ROW_SPAN_CLASS[pattern.rowSpan];
+                const gridPlacementStyle = hasExplicitPlacement
+                  ? {
+                      gridColumn: `${pattern.colStart} / span ${pattern.colSpan}`,
+                      gridRow: `${pattern.rowStart} / span ${pattern.rowSpan}`,
+                    }
+                  : undefined;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    ref={(node) => registerGridTile(item, node)}
+                    data-media-id={item.id}
+                    data-media-type={item.type}
+                    onClick={() => openModal(tileIndex)}
+                    style={gridPlacementStyle}
+                    className={`group relative overflow-hidden bg-black text-left ${colClass} ${rowClass}`}
+                    aria-label={`Open ${item.title}`}
+                  >
+                    <GridMediaTile
+                      item={item}
+                      priority={tileIndex < PRIORITY_TILE_COUNT}
+                      videoRef={(node) => {
+                        gridVideoRefs.current[item.id] = node;
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {readyCount < media.length || isBootstrapping ? (
+            <div
+              ref={loadMoreRef}
+              className="flex min-h-[4.5rem] items-center justify-center py-8 pb-12"
+              aria-live="polite"
+              aria-busy={isBootstrapping || isLoadingMore}
+            >
+              {isBootstrapping || isLoadingMore ? (
+                <Loader2
+                  className="h-7 w-7 animate-spin text-zinc-500"
+                  aria-label="İçerik yükleniyor"
+                />
+              ) : (
+                <span className="sr-only">Daha fazla içerik yüklenecek</span>
+              )}
+            </div>
           ) : null}
         </div>
       </section>
@@ -646,7 +656,10 @@ export function HomeExploreCarousel({
                 </div>
               ) : null}
 
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[80] px-4 pb-[max(env(safe-area-inset-bottom),1.75rem)] pt-16 sm:px-6">
+              <div
+                className="pointer-events-none absolute inset-x-0 bottom-0 z-[80] px-4 pt-16 transition-[padding] duration-200 sm:px-6"
+                style={{ paddingBottom: cartOverlayBottomPadding }}
+              >
                 {activeHasCarousel && activeItem.carouselItems ? (
                   <div className="mb-5 flex items-center justify-center gap-2">
                     {activeItem.carouselItems.map((slide, slideIdx) => (
@@ -669,18 +682,18 @@ export function HomeExploreCarousel({
                     rel="noopener noreferrer"
                     className="pointer-events-auto inline-flex min-w-0 max-w-[calc(100%-4rem)] items-center gap-2.5"
                   >
-                    <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-white/80">
+                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-black ring-2 ring-white/80">
                       <Image
                         src={BEKOGRAPHY_INSTAGRAM_PROFILE_IMAGE}
                         alt=""
                         width={36}
                         height={36}
-                        className="h-full w-full object-cover"
+                        className="h-[68%] w-[68%] object-contain"
                       />
                     </span>
                     <span className="flex min-w-0 items-center gap-1.5">
                       <span className="truncate text-sm font-semibold text-white">
-                        @{BEKOGRAPHY_INSTAGRAM_HANDLE}
+                        {BEKOGRAPHY_INSTAGRAM_HANDLE}
                       </span>
                       <VerifiedBadge />
                     </span>

@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { RequestStatus } from "@prisma/client";
 import { StatusSelect } from "@/components/admin/status-select";
 import {
   REQUEST_STATUS_LABELS,
-  PAYMENT_TYPE_LABELS,
   formatPrice,
 } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
 type RequestDetail = {
   id: string;
@@ -35,6 +36,8 @@ type RequestDetail = {
 };
 
 export function RequestDetailClient({ requestId }: { requestId: string }) {
+  const router = useRouter();
+  const { labels: paymentLabels } = usePaymentTypeCopy();
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,6 +56,10 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
     });
 
     if (response.ok) {
+      if (status === "iptal") {
+        router.push("/admin/talepler");
+        return;
+      }
       setRequest((prev) => (prev ? { ...prev, status } : prev));
     }
   }
@@ -90,7 +97,14 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
 
       <div className="grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
         <Info label="İletişim" value={request.customerName} />
-        <Info label="Telefon" value={request.customerPhone} />
+        <Info
+          label="Telefon"
+          value={
+            request.customerPhone && request.customerPhone !== "—"
+              ? request.customerPhone
+              : "—"
+          }
+        />
         <Info label="Şehir" value={request.city} />
         <Info
           label="Çekim Tarihi"
@@ -111,7 +125,7 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <span className="text-zinc-300">
                   {item.packageOption.category.title} — {item.packageOption.label}{" "}
-                  ({PAYMENT_TYPE_LABELS[item.paymentType]})
+                  ({paymentLabels[item.paymentType]})
                 </span>
                 <span className="shrink-0 text-white">
                   {formatPrice(item.unitPrice)}

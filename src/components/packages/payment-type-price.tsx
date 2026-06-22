@@ -1,9 +1,7 @@
-import {
-  PAYMENT_TYPE_DESCRIPTIONS,
-  PAYMENT_TYPE_LABELS,
-  formatPrice,
-  type PaymentType,
-} from "@/lib/constants";
+"use client";
+
+import { formatPrice, type PaymentType } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
 type PaymentTypePriceProps = {
   type: PaymentType;
@@ -20,8 +18,9 @@ export function PaymentTypePrice({
   align = "left",
   className = "",
 }: PaymentTypePriceProps) {
-  const label = PAYMENT_TYPE_LABELS[type];
-  const description = PAYMENT_TYPE_DESCRIPTIONS[type];
+  const { labels, descriptions } = usePaymentTypeCopy();
+  const label = labels[type];
+  const description = descriptions[type];
   const emphasized = type === "pesin";
   const alignClass = align === "right" ? "text-right" : "text-left";
 
@@ -58,11 +57,11 @@ export function PaymentTypePrice({
   return (
     <div className={`${alignClass} ${className}`}>
       <p className="text-[11px] font-medium text-zinc-400 sm:text-xs">{label}</p>
-      <p className="text-[10px] leading-snug text-zinc-600 sm:text-[11px]">
-        ({description})
-      </p>
       <p className={`mt-0.5 text-lg sm:text-xl ${priceClass}`}>
         {formatPrice(price)}
+      </p>
+      <p className="mt-0.5 text-[10px] leading-snug text-zinc-600 sm:text-[11px]">
+        ({description})
       </p>
     </div>
   );
@@ -70,32 +69,43 @@ export function PaymentTypePrice({
 
 export function PaymentTypeOptionButton({
   type,
+  price,
   selected,
   onSelect,
 }: {
   type: PaymentType;
+  price: number;
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { labels, descriptions } = usePaymentTypeCopy();
+  const label = labels[type];
+  const description = descriptions[type];
+
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`flex-1 rounded-lg border px-3 py-2.5 text-left ${
+      className={`flex-1 rounded-lg border px-3 py-2.5 text-left transition-colors ${
         selected
-          ? "border-white bg-white text-black"
+          ? "border-[#93f8b6] bg-[#93f8b6] text-black"
           : "border-white/20 text-zinc-400"
       }`}
     >
-      <span className="block text-xs font-semibold">
-        {PAYMENT_TYPE_LABELS[type]}
+      <span className="block text-xs font-semibold">{label}</span>
+      <span
+        className={`mt-1 block text-sm font-bold ${
+          selected ? "text-black" : "text-white"
+        }`}
+      >
+        {formatPrice(price)}
       </span>
       <span
         className={`mt-1 block text-[10px] leading-snug ${
-          selected ? "text-zinc-600" : "text-zinc-500"
+          selected ? "text-zinc-700" : "text-zinc-500"
         }`}
       >
-        ({PAYMENT_TYPE_DESCRIPTIONS[type]})
+        ({description})
       </span>
     </button>
   );

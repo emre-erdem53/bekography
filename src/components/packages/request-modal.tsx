@@ -9,24 +9,28 @@ import {
   type CartItemInput,
 } from "@/stores/cart-store";
 import { formatPrice } from "@/lib/constants";
+import { TURKISH_PROVINCES } from "@/lib/turkish-provinces";
 import { PaymentTypeOptionButton } from "@/components/packages/payment-type-price";
+import { RequestActionLabel } from "@/components/packages/request-action-label";
 import {
   buildRequestWhatsAppMessage,
   buildWhatsAppUrl,
 } from "@/lib/whatsapp";
+import {
+  canCreateRequestForItems,
+  getCompanionRequirementMessage,
+} from "@/lib/cart-companion-rules";
 
 type RequestModalProps = {
   open: boolean;
   onClose: () => void;
   itemsOverride?: CartItemInput[];
-  clearCartOnSuccess?: boolean;
 };
 
 type CategoryFields = Record<string, { shootDate: string; city: string }>;
 
 const emptyForm = {
   contactName: "",
-  contactPhone: "",
   contactRole: null as "gelin" | "damat" | null,
 };
 
@@ -34,10 +38,8 @@ export function RequestModal({
   open,
   onClose,
   itemsOverride,
-  clearCartOnSuccess = true,
 }: RequestModalProps) {
   const cartItems = useCartStore((state) => state.items);
-  const clearCart = useCartStore((state) => state.clearCart);
 
   const selectedCartItems = useMemo(
     () => cartItems.filter((item) => item.selected),
@@ -77,8 +79,17 @@ export function RequestModal({
     return [...map.values()];
   }, [items]);
 
+  const totalCash = useMemo(
+    () => items.reduce((sum, item) => sum + item.cashPrice, 0),
+    [items],
+  );
+  const totalInstallment = useMemo(
+    () => items.reduce((sum, item) => sum + item.installmentPrice, 0),
+    [items],
+  );
+  const requestAllowed = canCreateRequestForItems(items);
+
   const [contactName, setContactName] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
   const [contactRole, setContactRole] = useState<"gelin" | "damat" | null>(
     null,
   );
@@ -104,7 +115,6 @@ export function RequestModal({
 
   function resetForm() {
     setContactName(emptyForm.contactName);
-    setContactPhone(emptyForm.contactPhone);
     setContactRole(emptyForm.contactRole);
     setCategoryFields({});
     setPaymentType("pesin");
@@ -116,6 +126,18 @@ export function RequestModal({
     event.preventDefault();
     setLoading(true);
     setError("");
+
+    if (items.length === 0) {
+      setLoading(false);
+      setError("En az bir paket seçin.");
+      return;
+    }
+
+    if (!canCreateRequestForItems(items)) {
+      setLoading(false);
+      setError(getCompanionRequirementMessage());
+      return;
+    }
 
     const missingCategory = categories.find((category) => {
       const fields = categoryFields[category.categoryId];
@@ -135,7 +157,7 @@ export function RequestModal({
     }
 
     const payloadItems = items.map((item) => {
-      const category = categoryFields[item.categoryId];
+      const category = categoryFields[item.categoryId]!;
       return {
         packageOptionId: item.packageOptionId,
         paymentType,
@@ -149,7 +171,6 @@ export function RequestModal({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contactName: contactName.trim(),
-        contactPhone: contactPhone.trim(),
         contactRole,
         items: payloadItems,
       }),
@@ -163,18 +184,23 @@ export function RequestModal({
       return;
     }
 
+    const whatsAppItems = items.map((item) => {
+      const fields = categoryFields[item.categoryId]!;
+      return {
+        categoryTitle: item.categoryTitle,
+        optionLabel: item.optionLabel,
+        shootDate: fields.shootDate,
+        city: fields.city.trim(),
+      };
+    });
+
     const message = buildRequestWhatsAppMessage(
       contactName.trim(),
       contactRole,
-      items.map((item) => ({
-        categoryTitle: item.categoryTitle,
-        optionLabel: item.optionLabel,
-        shootDate: categoryFields[item.categoryId]!.shootDate,
-      })),
+      whatsAppItems,
     );
 
     setSuccess(true);
-    if (clearCartOnSuccess) clearCart();
     window.open(buildWhatsAppUrl(message), "_blank", "noopener,noreferrer");
   }
 
@@ -239,16 +265,6 @@ export function RequestModal({
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Telefon" required>
-                      <input
-                        type="tel"
-                        value={contactPhone}
-                        onChange={(e) => setContactPhone(e.target.value)}
-                        required
-                        minLength={10}
-                        className={inputClass}
-                      />
-                    </Field>
                     <div className="flex flex-wrap gap-4">
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-white">
                         <input
@@ -276,7 +292,7 @@ export function RequestModal({
                   <FormSection key={category.categoryId} title={category.title}>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <Field label={category.cityLabel} required>
-                        <input
+                        <select
                           value={categoryFields[category.categoryId]?.city ?? ""}
                           onChange={(e) =>
                             setCategoryFields((prev) => ({
@@ -289,9 +305,15 @@ export function RequestModal({
                             }))
                           }
                           required
-                          minLength={2}
                           className={inputClass}
-                        />
+                        >
+                          <option value="">İl seçin</option>
+                          {TURKISH_PROVINCES.map((province) => (
+                            <option key={province} value={province}>
+                              {province}
+                            </option>
+                          ))}
+                        </select>
                       </Field>
                       <Field label={category.dateLabel} required>
                         <input
@@ -321,60 +343,45 @@ export function RequestModal({
                     Tüm paketler için geçerli olacak ödeme planını seçin.
                   </p>
                   <div className="flex gap-2">
-                    {(["pesin", "taksitli"] as const).map((type) => (
-                      <PaymentTypeOptionButton
-                        key={type}
-                        type={type}
-                        selected={paymentType === type}
-                        onSelect={() => setPaymentType(type)}
-                      />
-                    ))}
+                    <PaymentTypeOptionButton
+                      type="pesin"
+                      price={totalCash}
+                      selected={paymentType === "pesin"}
+                      onSelect={() => setPaymentType("pesin")}
+                    />
+                    <PaymentTypeOptionButton
+                      type="taksitli"
+                      price={totalInstallment}
+                      selected={paymentType === "taksitli"}
+                      onSelect={() => setPaymentType("taksitli")}
+                    />
                   </div>
-                  <div className="space-y-2 border-t border-white/10 pt-3">
-                    {items.map((item) => {
-                      const price =
-                        paymentType === "pesin"
-                          ? item.cashPrice
-                          : item.installmentPrice;
-
-                      return (
-                        <div
-                          key={item.packageOptionId}
-                          className="flex items-center justify-between gap-3 text-sm"
-                        >
-                          <p className="text-zinc-300">
-                            {item.categoryTitle} — {item.optionLabel}
-                          </p>
-                          <p className="shrink-0 font-semibold text-white">
-                            {formatPrice(price)}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="border-t border-white/10 pt-3 text-sm font-semibold text-white">
                     Toplam:{" "}
                     {formatPrice(
-                      items.reduce(
-                        (sum, item) =>
-                          sum +
-                          (paymentType === "pesin"
-                            ? item.cashPrice
-                            : item.installmentPrice),
-                        0,
-                      ),
+                      paymentType === "pesin" ? totalCash : totalInstallment,
                     )}
                   </p>
                 </FormSection>
+
+                {!requestAllowed ? (
+                  <p className="rounded-xl border border-amber-400/25 bg-amber-950/50 px-4 py-3 text-sm leading-relaxed text-amber-100">
+                    {getCompanionRequirementMessage()}
+                  </p>
+                ) : null}
 
                 {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
                 <button
                   type="submit"
-                  disabled={loading || items.length === 0}
+                  disabled={loading || items.length === 0 || !requestAllowed}
                   className="w-full rounded-xl bg-[#93f8b6] py-3 text-sm font-semibold text-black disabled:opacity-50"
                 >
-                  {loading ? "Gönderiliyor..." : "Talep Oluştur"}
+                  {loading ? (
+                    "Gönderiliyor..."
+                  ) : (
+                    <RequestActionLabel>Talep Oluştur</RequestActionLabel>
+                  )}
                 </button>
               </form>
             )}

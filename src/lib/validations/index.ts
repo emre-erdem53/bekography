@@ -21,7 +21,7 @@ const tcSchema = z
 
 export const createRequestSchema = z.object({
   contactName: z.string().min(2, "Ad soyad en az 2 karakter olmalı"),
-  contactPhone: z.string().min(10, "Telefon en az 10 haneli olmalı"),
+  contactPhone: z.string().optional().default(""),
   contactRole: z.enum(["gelin", "damat"], {
     message: "Gelin veya damat seçin",
   }),
@@ -44,6 +44,12 @@ export const updateRequestStatusSchema = z.object({
 const packageGalleryImageSchema = z.object({
   url: z.string().min(1),
   alt: z.string().optional(),
+});
+
+const packageGalleryMediaSchema = z.object({
+  url: z.string().min(1),
+  alt: z.string().optional(),
+  type: z.enum(["image", "video"]).optional(),
 });
 
 const packageDetailSectionSchema = z.object({
@@ -82,6 +88,9 @@ export const packageCategorySchema = z.object({
       highlightTags: z.array(z.string()).optional(),
       highlightTagsByOption: z.record(z.string(), z.array(z.string())).optional(),
       galleryImages: z.array(packageGalleryImageSchema).optional(),
+      galleryMediaByOption: z
+        .record(z.string(), z.array(packageGalleryMediaSchema))
+        .optional(),
       detailSections: z.array(packageDetailSectionSchema).optional(),
       requestFieldLabels: packageRequestFieldLabelsSchema.optional(),
       services: z.array(packageServiceItemSchema).optional(),

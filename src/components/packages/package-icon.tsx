@@ -63,6 +63,50 @@ type PackageIconDisplayProps = {
   imageSizes?: string;
 };
 
+function CustomPackageIcon({
+  src,
+  className,
+  color,
+  imageSizes,
+}: {
+  src: string;
+  className: string;
+  color?: string;
+  imageSizes: string;
+}) {
+  if (color) {
+    return (
+      <span
+        aria-hidden
+        className={`inline-block shrink-0 ${className}`}
+        style={{
+          backgroundColor: color,
+          maskImage: `url("${src}")`,
+          WebkitMaskImage: `url("${src}")`,
+          maskRepeat: "no-repeat",
+          WebkitMaskRepeat: "no-repeat",
+          maskPosition: "center",
+          WebkitMaskPosition: "center",
+          maskSize: "contain",
+          WebkitMaskSize: "contain",
+        }}
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={src}
+      alt=""
+      width={24}
+      height={24}
+      className={`${className} object-contain`}
+      sizes={imageSizes}
+      unoptimized
+    />
+  );
+}
+
 export function PackageIconDisplay({
   iconKey,
   className = "h-5 w-5",
@@ -71,16 +115,15 @@ export function PackageIconDisplay({
 }: PackageIconDisplayProps) {
   if (isCustomPackageIcon(iconKey)) {
     const src = packageMediaUrl(iconKey) ?? iconKey;
+    const color =
+      typeof style?.color === "string" ? style.color : undefined;
+
     return (
-      <Image
+      <CustomPackageIcon
         src={src}
-        alt=""
-        width={24}
-        height={24}
-        className={`${className} object-contain`}
-        style={style}
-        sizes={imageSizes}
-        unoptimized
+        className={className}
+        color={color}
+        imageSizes={imageSizes}
       />
     );
   }

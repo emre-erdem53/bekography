@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  PAYMENT_TYPE_DESCRIPTIONS,
-  PAYMENT_TYPE_LABELS,
-  formatPrice,
-} from "@/lib/constants";
+import { formatPrice } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import type { PackageCategoryData } from "@/lib/package-types";
 
@@ -14,6 +11,7 @@ export function PackagePricingTable({
   category: PackageCategoryData;
 }) {
   const { options, accentColor } = category;
+  const { labels, descriptions } = usePaymentTypeCopy();
 
   return (
     <div className="space-y-3">
@@ -21,10 +19,10 @@ export function PackagePricingTable({
         {(["pesin", "taksitli"] as const).map((type) => (
           <div key={type}>
             <p className="text-sm font-semibold text-white">
-              {PAYMENT_TYPE_LABELS[type]}
+              {labels[type]}
             </p>
             <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-              ({PAYMENT_TYPE_DESCRIPTIONS[type]})
+              ({descriptions[type]})
             </p>
           </div>
         ))}
@@ -38,10 +36,10 @@ export function PackagePricingTable({
               className="w-[5.5rem] text-center text-[11px] leading-tight md:w-[6.5rem] md:text-xs"
               style={{ color: accentColor }}
             >
-              {PAYMENT_TYPE_LABELS.pesin}
+              {labels.pesin}
             </span>
             <span className="w-[5.5rem] text-center text-[11px] leading-tight text-zinc-500 md:w-[6.5rem] md:text-xs">
-              {PAYMENT_TYPE_LABELS.taksitli}
+              {labels.taksitli}
             </span>
           </div>
         </div>

@@ -3,6 +3,10 @@ import { nanoid } from "nanoid";
 import { startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { createRequestSchema } from "@/lib/validations";
+import {
+  cartRequiresAdditionalPackage,
+  getCompanionRequirementMessage,
+} from "@/lib/cart-companion-rules";
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +23,7 @@ export async function POST(request: Request) {
     const { contactName, contactPhone, contactRole, items } = parsed.data;
     const roleLabel = contactRole === "gelin" ? "Gelin" : "Damat";
     const customerName = `${contactName} (${roleLabel})`;
-    const customerPhone = contactPhone;
+    const customerPhone = contactPhone?.trim() || "—";
 
     const options = await prisma.packageOption.findMany({
       where: {
@@ -32,6 +36,17 @@ export async function POST(request: Request) {
     if (options.length !== items.length) {
       return NextResponse.json(
         { error: "Seçilen paketlerden biri geçersiz" },
+        { status: 400 },
+      );
+    }
+
+    const requestSlugs = options.map((option) => ({
+      categorySlug: option.category.slug,
+    }));
+
+    if (cartRequiresAdditionalPackage(requestSlugs)) {
+      return NextResponse.json(
+        { error: getCompanionRequirementMessage() },
         { status: 400 },
       );
     }

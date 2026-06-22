@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Pencil, Trash2 } from "lucide-react";
-import { formatPrice, PAYMENT_TYPE_LABELS } from "@/lib/constants";
+import { formatPrice } from "@/lib/constants";
+import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
 type PackageCategory = {
   id: string;
@@ -18,6 +19,7 @@ export function PackagesAdminClient() {
   const [packages, setPackages] = useState<PackageCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const { labels: paymentLabels } = usePaymentTypeCopy();
 
   useEffect(() => {
     fetch("/api/admin/packages")
@@ -95,9 +97,9 @@ export function PackagesAdminClient() {
                       key={option.label}
                       className="rounded-lg bg-white/5 px-2 py-1 text-xs text-zinc-300"
                     >
-                      {option.label}: {PAYMENT_TYPE_LABELS.pesin}{" "}
+                      {option.label}: {paymentLabels.pesin}{" "}
                       {formatPrice(option.cashPrice)} /{" "}
-                      {PAYMENT_TYPE_LABELS.taksitli}{" "}
+                      {paymentLabels.taksitli}{" "}
                       {formatPrice(option.installmentPrice)}
                     </span>
                   ))}
