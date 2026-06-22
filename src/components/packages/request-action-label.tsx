@@ -8,7 +8,7 @@ type RequestActionLabelProps = {
 
 export function RequestActionLabel({
   children,
-  iconVariant = "monochrome",
+  iconVariant: _iconVariant = "brand",
 }: RequestActionLabelProps) {
   return (
     <span className="inline-flex items-center justify-center gap-2">

@@ -141,7 +141,8 @@ export function ContactPageClient({
                     width={24}
                     height={24}
                     loading="eager"
-                    className="h-6 w-6 brightness-0 invert"
+                    unoptimized
+                    className="h-6 w-6"
                     aria-hidden
                   />
                   Whatsapp
