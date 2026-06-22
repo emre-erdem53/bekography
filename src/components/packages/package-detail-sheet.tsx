@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronDown, ChevronLeft } from "lucide-react";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { getOptionGalleryMedia } from "@/lib/package-media";
@@ -20,7 +20,7 @@ import {
   isCompanionOnlyCategorySlug,
 } from "@/lib/cart-companion-rules";
 import { RequestModal } from "@/components/packages/request-modal";
-import { RequestActionLabel } from "@/components/packages/request-action-label";
+import { RequestActionLabel, requestActionSurfaceClassFull } from "@/components/packages/request-action-label";
 import { useCartBottomInset } from "@/components/packages/package-cart-bar";
 
 type PackageDetailSheetProps = {
@@ -50,17 +50,20 @@ function PackageOptionDetails({
 
   return (
     <section className="mt-8 border-t border-white/10 pt-8 sm:mt-10 sm:pt-10">
-      <h3 className="text-lg font-semibold text-white sm:text-xl">Detaylar</h3>
+      <div className="flex items-center gap-1.5 text-sm text-zinc-500">
+        <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+        <span>Açıklama</span>
+      </div>
 
       {sections.length === 0 ? (
         <p className="mt-4 text-sm text-zinc-500">
           Bu çekim türü için detay bilgisi yakında eklenecek.
         </p>
       ) : (
-        <div className="mt-5 space-y-5 sm:mt-6">
+        <div className="mt-5 space-y-6 sm:mt-6 sm:space-y-7">
           {sections.map((section) => (
             <div key={section.id}>
-              <h4 className="text-sm font-semibold uppercase tracking-wide text-white">
+              <h4 className="text-lg font-bold uppercase tracking-wide text-white sm:text-xl">
                 {section.title}
               </h4>
               {section.tags && section.tags.length > 0 ? (
@@ -150,7 +153,7 @@ function PackageOptionDetailView({
           type="button"
           onClick={onQuickRequest}
           disabled={quickRequestDisabled}
-          className="w-full rounded-2xl border border-white/25 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-45 sm:py-3.5 sm:text-sm"
+          className={`${requestActionSurfaceClassFull} rounded-2xl border border-white/25 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-45 sm:py-3.5 sm:text-sm`}
         >
           <RequestActionLabel iconVariant="brand">
             Hemen Talep Oluştur

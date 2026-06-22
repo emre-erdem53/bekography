@@ -6,11 +6,18 @@ type RequestActionLabelProps = {
   iconVariant?: "brand" | "monochrome" | "onDark";
 };
 
+/** Ortak buton hizası — ikon + metin tek satırda tam ortada. */
+export const requestActionSurfaceClass =
+  "inline-flex items-center justify-center gap-2 leading-none";
+
+export const requestActionSurfaceClassFull =
+  "flex w-full items-center justify-center gap-2 leading-none";
+
 export function RequestActionLabel({ children }: RequestActionLabelProps) {
   return (
-    <span className="inline-flex items-center justify-center gap-2">
+    <>
       <WhatsAppIcon />
       <span>{children}</span>
-    </span>
+    </>
   );
 }

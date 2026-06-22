@@ -34,6 +34,18 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
 
   const allSelected = items.length > 0 && items.every((item) => item.selected);
 
+  const cartTotals = useMemo(() => {
+    const selected = items.filter((item) => item.selected);
+    return {
+      cash: selected.reduce((sum, item) => sum + item.cashPrice, 0),
+      installment: selected.reduce(
+        (sum, item) => sum + item.installmentPrice,
+        0,
+      ),
+      selectedCount: selected.length,
+    };
+  }, [items]);
+
   function openItemDetail(categoryId: string, packageOptionId: string) {
     const category = categoryMap.get(categoryId);
     if (!category) return;
@@ -119,7 +131,7 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
                     className="flex w-full gap-3 text-left"
                   >
                     <div
-                      className="relative h-[4.5rem] w-12 shrink-0 overflow-hidden rounded-lg bg-[#1a1a1a] sm:h-20 sm:w-14"
+                      className="relative aspect-square w-12 shrink-0 overflow-hidden rounded-lg bg-[#1a1a1a] sm:w-14"
                       onClick={(event) => event.stopPropagation()}
                     >
                       {previewUrl ? (
@@ -181,6 +193,38 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
             })}
           </ul>
         )}
+
+        {items.length > 1 ? (
+          <div className="mt-6 rounded-2xl border border-white/15 bg-[#0a0a0a] p-4 md:p-5">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h2 className="text-base font-semibold text-white sm:text-lg">
+                Sepet Toplamı
+              </h2>
+              {cartTotals.selectedCount < items.length ? (
+                <p className="text-xs text-zinc-500">
+                  Seçili {cartTotals.selectedCount} / {items.length} ürün
+                </p>
+              ) : null}
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-6">
+              <PaymentTypePrice
+                type="pesin"
+                price={cartTotals.cash}
+                variant="stacked"
+              />
+              <PaymentTypePrice
+                type="taksitli"
+                price={cartTotals.installment}
+                variant="stacked"
+              />
+            </div>
+            {cartTotals.selectedCount === 0 ? (
+              <p className="mt-3 text-xs text-zinc-500">
+                Toplamı görmek için en az bir ürün seçin.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </section>
 
       <PackageDetailSheet

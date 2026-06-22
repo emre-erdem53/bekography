@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { RequestActionLabel } from "@/components/packages/request-action-label";
+import { RequestActionLabel, requestActionSurfaceClass } from "@/components/packages/request-action-label";
 import {
   canCreateRequestForItems,
   cartRequiresAdditionalPackage,
@@ -118,14 +118,14 @@ export function PackageCartBar() {
               type="button"
               onClick={openRequestModal}
               disabled={!canRequest}
-              className="shrink-0 rounded-2xl bg-[#93f8b6] px-6 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-45"
+              className={`${requestActionSurfaceClass} shrink-0 rounded-2xl bg-[#93f8b6] px-6 py-3 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-45`}
             >
               <RequestActionLabel>Talep Oluştur</RequestActionLabel>
             </button>
           ) : (
             <Link
               href="/paketler/sepet"
-              className="shrink-0 rounded-2xl bg-[#93f8b6] px-6 py-3 text-sm font-semibold text-black"
+              className={`${requestActionSurfaceClass} shrink-0 rounded-2xl bg-[#93f8b6] px-6 py-3 text-sm font-semibold text-black`}
             >
               Sepete Git
             </Link>

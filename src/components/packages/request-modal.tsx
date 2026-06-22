@@ -11,7 +11,7 @@ import {
 import { formatPrice } from "@/lib/constants";
 import { TURKISH_PROVINCES } from "@/lib/turkish-provinces";
 import { PaymentTypeOptionButton } from "@/components/packages/payment-type-price";
-import { RequestActionLabel } from "@/components/packages/request-action-label";
+import { RequestActionLabel, requestActionSurfaceClassFull } from "@/components/packages/request-action-label";
 import {
   buildRequestWhatsAppMessage,
   buildWhatsAppUrl,
@@ -375,7 +375,7 @@ export function RequestModal({
                 <button
                   type="submit"
                   disabled={loading || items.length === 0 || !requestAllowed}
-                  className="w-full rounded-xl bg-[#93f8b6] py-3 text-sm font-semibold text-black disabled:opacity-50"
+                  className={`${requestActionSurfaceClassFull} rounded-xl bg-[#93f8b6] py-3 text-sm font-semibold text-black disabled:opacity-50`}
                 >
                   {loading ? (
                     "Gönderiliyor..."
