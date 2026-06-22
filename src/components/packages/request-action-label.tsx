@@ -12,8 +12,8 @@ export function RequestActionLabel({
 }: RequestActionLabelProps) {
   return (
     <span className="inline-flex items-center justify-center gap-2">
-      <span>{children}</span>
       <WhatsAppIcon variant={iconVariant} />
+      <span>{children}</span>
     </span>
   );
 }

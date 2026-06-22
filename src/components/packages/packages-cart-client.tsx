@@ -158,7 +158,7 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
                         event.stopPropagation();
                         removeItem(item.packageOptionId);
                       }}
-                      className="shrink-0 text-zinc-500 hover:text-white"
+                      className="shrink-0 text-red-500 hover:text-red-400"
                       aria-label="Kaldır"
                     >
                       <Trash2 className="h-4 w-4" />

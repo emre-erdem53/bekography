@@ -103,22 +103,24 @@ export function SiteHeader() {
         >
           <Link
             href="/"
-            className="flex items-start gap-2.5 transition-opacity hover:opacity-70 sm:gap-3"
+            className="inline-flex items-stretch gap-2.5 transition-opacity hover:opacity-70 sm:gap-3"
             aria-label="bekography Ana Sayfa"
           >
-            <Image
-              src="/logo/logo-white.svg"
-              alt=""
-              width={260}
-              height={58}
-              className="h-[1.65rem] w-auto shrink-0 md:h-[2.1rem]"
-              priority
-            />
-            <span className="flex min-w-0 flex-col gap-1 pt-px">
+            <span className="flex shrink-0 items-stretch">
+              <Image
+                src="/logo/logo-white.svg"
+                alt=""
+                width={260}
+                height={58}
+                className="h-full w-auto object-contain"
+                priority
+              />
+            </span>
+            <span className="flex min-w-0 flex-col justify-center gap-1">
               <span className="font-brand text-[1.65rem] leading-none lowercase tracking-wide text-white md:text-[2.1rem]">
                 bekography
               </span>
-              <span className="text-[8px] font-medium uppercase tracking-[0.34em] text-white/40 md:text-[9px]">
+              <span className="text-[8px] font-medium uppercase leading-none tracking-[0.34em] text-white/40 md:text-[9px]">
                 Fotoğraf &amp; Film
               </span>
             </span>
