@@ -149,7 +149,7 @@ export function PackagesCategoryAccordion({
                 />
               </span>
               <span
-                className="min-w-0 flex-1 text-base font-semibold sm:text-lg"
+                className="min-w-0 flex-1 text-xl font-semibold sm:text-2xl md:text-3xl"
                 style={{ color: category.accentColor }}
               >
                 {category.title}
