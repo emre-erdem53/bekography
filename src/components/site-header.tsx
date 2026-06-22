@@ -7,10 +7,10 @@ import {
   useMotionValue,
   useReducedMotion,
 } from "framer-motion";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { BekographyBrand } from "@/components/bekography-brand";
 import { EASE_OUT, duration } from "@/lib/motion";
 
 const links: {
@@ -101,30 +101,7 @@ export function SiteHeader() {
           whileTap={{ scale: 0.98 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
         >
-          <Link
-            href="/"
-            className="inline-flex items-stretch gap-2.5 transition-opacity hover:opacity-70 sm:gap-3"
-            aria-label="bekography Ana Sayfa"
-          >
-            <span className="flex shrink-0 items-stretch">
-              <Image
-                src="/logo/logo-white.svg"
-                alt=""
-                width={260}
-                height={58}
-                className="h-full w-auto object-contain"
-                priority
-              />
-            </span>
-            <span className="flex min-w-0 flex-col justify-center gap-1">
-              <span className="font-brand text-[1.65rem] leading-none lowercase tracking-wide text-white md:text-[2.1rem]">
-                bekography
-              </span>
-              <span className="text-[8px] font-medium uppercase leading-none tracking-[0.34em] text-white/40 md:text-[9px]">
-                Fotoğraf &amp; Film
-              </span>
-            </span>
-          </Link>
+          <BekographyBrand />
         </motion.div>
         <nav className="hidden items-center gap-12 md:flex">
           {links.map(({ href, label }, i) => {

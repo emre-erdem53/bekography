@@ -8,6 +8,7 @@ import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { getOptionGalleryMedia } from "@/lib/package-media";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
 import { PackageGalleryCarousel } from "@/components/packages/package-gallery-carousel";
+import { BekographyBrand } from "@/components/bekography-brand";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import {
@@ -120,11 +121,8 @@ function PackageOptionDetailView({
     >
       <header className="mb-4 sm:mb-5">
         <h2 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-          {category.title}
+          {category.title} {option.label}
         </h2>
-        <p className="mt-0.5 text-base text-white/90 sm:text-lg">
-          {option.label}
-        </p>
         {tags.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
             {tags.map((tag) => (
@@ -220,19 +218,22 @@ export function PackageDetailSheet({
         <header
           className={
             presentation === "inline"
-              ? "shrink-0 px-4 pb-3 pt-1 sm:px-6"
-              : "shrink-0 px-4 pb-2 pt-[max(env(safe-area-inset-top),0.75rem)] sm:px-6"
+              ? "shrink-0 border-b border-white/10 px-4 pb-3 pt-1 sm:px-6"
+              : "shrink-0 border-b border-white/10 px-4 pb-3 pt-[max(env(safe-area-inset-top),0.75rem)] sm:px-6"
           }
         >
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-            aria-label="Paket listesine dön"
-          >
-            <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
-            Paketler
-          </button>
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+              aria-label="Paket listesine dön"
+            >
+              <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+              Paketler
+            </button>
+            <BekographyBrand size="sm" href={null} className="hover:opacity-100" />
+          </div>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
