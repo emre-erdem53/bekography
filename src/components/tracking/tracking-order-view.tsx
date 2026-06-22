@@ -43,7 +43,7 @@ export const ReservationOrderDocument = forwardRef<
         <p className="text-xs font-medium uppercase tracking-[0.28em] text-zinc-500">
           {data.formYear} / bekography — Sipariş Formu
         </p>
-        <h1 className="font-brand mt-4 text-4xl leading-tight text-white sm:text-5xl md:text-6xl">
+        <h1 className="mt-4 text-3xl font-semibold leading-tight text-white sm:text-4xl md:text-5xl">
           {data.coupleName}
         </h1>
 
@@ -279,7 +279,7 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
       <h3
-        className="font-brand text-3xl leading-none sm:text-4xl"
+        className="text-2xl font-semibold leading-none sm:text-3xl"
         style={{ color: item.accentColor }}
       >
         {item.categoryTitle}
