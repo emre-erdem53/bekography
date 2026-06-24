@@ -345,6 +345,7 @@ function stageDefaultLabel(
   id: TrackingWorkflowStageId,
   state: TrackingWorkflowStageState,
 ): string {
+  if (state === "upcoming") return stageUpcomingLabel(id);
   if (id === "cekim" && state === "current") return "Çekim Bekleniyor";
   if (id === "cekim" && state === "completed") return "Çekim Yapıldı";
   if (id === "dijital" && state === "current") return "Dijital Teslimat";
@@ -356,7 +357,26 @@ function stageDefaultLabel(
   if (id === "baski" && state === "current") return "Baskı";
   if (id === "baski" && state === "completed") return "Baskı Tamamlandı";
   if (id === "rezervasyon") return "Rezervasyon";
-  return id;
+  return stageUpcomingLabel(id);
+}
+
+function stageUpcomingLabel(id: TrackingWorkflowStageId): string {
+  switch (id) {
+    case "rezervasyon":
+      return "Rezervasyon";
+    case "cekim":
+      return "Çekim";
+    case "dijital":
+      return "Dijital Teslimat";
+    case "secim":
+      return "Seçim";
+    case "duzenleme":
+      return "Düzenleme";
+    case "baski":
+      return "Baskı";
+    default:
+      return id;
+  }
 }
 
 function buildStageStates(input: {
