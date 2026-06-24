@@ -3,7 +3,7 @@
 import { forwardRef, type Ref } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AlertTriangle, BadgeCheck, Check } from "lucide-react";
+import { AlertTriangle, Check } from "lucide-react";
 import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ORDER,
@@ -13,10 +13,6 @@ import type { PostShootSection } from "@/lib/post-shoot";
 import type { TrackingData } from "@/lib/tracking-types";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
-import {
-  BrideIcon,
-  GroomIcon,
-} from "@/components/tracking/couple-person-icon";
 import { TrackingPurchasedProducts } from "@/components/tracking/tracking-purchased-products";
 
 const CANCELLATION_POLICY =
@@ -51,17 +47,19 @@ export const ReservationOrderDocument = forwardRef<
           {data.formYear} / bekography — Sipariş Formu
         </p>
 
-        <div className="mt-8 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-10 md:gap-14">
+        <div className="mt-8 flex flex-row items-end justify-center gap-3 px-2 sm:gap-8 md:gap-12">
           <CoupleName
             label="Gelin"
             name={data.brideName}
-            icon={<BrideIcon className="h-6 w-6 text-rose-300/90" />}
+            iconSrc="/bride.svg"
           />
-          <span className="font-couple text-2xl text-zinc-600 sm:text-3xl">&</span>
+          <span className="font-couple mb-8 shrink-0 text-xl text-zinc-600 sm:text-2xl md:text-3xl">
+            &
+          </span>
           <CoupleName
             label="Damat"
             name={data.groomName}
-            icon={<GroomIcon className="h-6 w-6 text-zinc-300" />}
+            iconSrc="/groom.svg"
           />
         </div>
       </header>
@@ -138,24 +136,6 @@ export const ReservationOrderDocument = forwardRef<
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
         <p>{CANCELLATION_POLICY}</p>
       </div>
-
-      <section className="mt-10 border-t border-white/10 pt-8">
-        <SectionHeading>İletişim Bilgileri</SectionHeading>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <ContactCard
-            label="Gelin"
-            name={data.brideName}
-            phone={data.bridePhone}
-            tc={data.brideTc}
-          />
-          <ContactCard
-            label="Damat"
-            name={data.groomName}
-            phone={data.groomPhone}
-            tc={data.groomTc}
-          />
-        </div>
-      </section>
     </div>
   );
 });
@@ -277,65 +257,29 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 function CoupleName({
   label,
   name,
-  icon,
+  iconSrc,
 }: {
   label: string;
   name: string;
-  icon: React.ReactNode;
+  iconSrc: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
-        {icon}
+    <div className="flex min-w-0 flex-1 flex-col items-center gap-2.5 sm:gap-3">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 p-2 sm:h-12 sm:w-12">
+        <img
+          src={iconSrc}
+          alt=""
+          className="h-full w-full object-contain brightness-0 invert"
+        />
       </span>
-      <div>
+      <div className="w-full text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
           {label}
         </p>
-        <p className="font-couple mt-1 text-3xl leading-none text-white sm:text-4xl md:text-5xl">
+        <p className="font-couple mt-1 break-words text-2xl leading-tight text-white sm:text-3xl md:text-4xl">
           {name}
         </p>
       </div>
-    </div>
-  );
-}
-
-function ContactCard({
-  label,
-  name,
-  phone,
-  tc,
-}: {
-  label: string;
-  name: string;
-  phone: string;
-  tc: string;
-}) {
-  const icon =
-    label === "Gelin" ? (
-      <BrideIcon className="h-5 w-5 text-rose-300/90" />
-    ) : (
-      <GroomIcon className="h-5 w-5 text-zinc-300" />
-    );
-
-  return (
-    <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3.5">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5">
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
-          {label}
-        </p>
-        <p className="truncate text-sm font-semibold text-white">{name}</p>
-        <p className="truncate text-sm text-zinc-400">{phone || "—"}</p>
-      </div>
-      {tc ? (
-        <div className="flex shrink-0 items-center gap-1.5 text-xs text-zinc-400">
-          <span className="hidden sm:inline">{tc}</span>
-          <BadgeCheck className="h-4 w-4 text-emerald-400" />
-        </div>
-      ) : null}
     </div>
   );
 }
