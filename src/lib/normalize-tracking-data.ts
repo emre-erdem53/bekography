@@ -7,12 +7,6 @@ import {
   emptyTrackingWorkflowFlags,
 } from "@/lib/tracking-workflow";
 
-function isCompleteWorkflow(
-  workflow: TrackingData["workflow"] | undefined,
-): workflow is TrackingData["workflow"] {
-  return Boolean(workflow && Array.isArray(workflow.stages));
-}
-
 /** Eski önbellek / eksik API yanıtlarında workflow alanını tamamlar. */
 export function normalizeTrackingData(
   value: Partial<TrackingData> & Pick<TrackingData, "coupleName" | "items">,
@@ -24,13 +18,11 @@ export function normalizeTrackingData(
     value.shootDate ??
     value.items[0]?.shootDate ??
     new Date().toISOString();
-  const workflow = isCompleteWorkflow(value.workflow)
-    ? value.workflow
-    : buildTrackingWorkflowView({
-        shootDate: new Date(shootDate),
-        postShoot,
-        workflow: workflowFlags,
-      });
+  const workflow = buildTrackingWorkflowView({
+    shootDate: new Date(shootDate),
+    postShoot,
+    workflow: workflowFlags,
+  });
 
   const items = value.items.map((item) => ({
     shootTypeLabel: item.shootTypeLabel ?? item.optionLabel ?? "",

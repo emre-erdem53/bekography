@@ -341,6 +341,13 @@ function stageCompletedLabel(id: TrackingWorkflowStageId): string {
   }
 }
 
+export function getTrackingStageLabel(
+  id: TrackingWorkflowStageId,
+  state: TrackingWorkflowStageState,
+): string {
+  return stageDefaultLabel(id, state);
+}
+
 function stageDefaultLabel(
   id: TrackingWorkflowStageId,
   state: TrackingWorkflowStageState,

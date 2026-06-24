@@ -3,7 +3,10 @@
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Check } from "lucide-react";
-import type { TrackingWorkflowView } from "@/lib/tracking-workflow";
+import {
+  getTrackingStageLabel,
+  type TrackingWorkflowView,
+} from "@/lib/tracking-workflow";
 
 export function TrackingWorkflowTimeline({
   workflow,
@@ -145,7 +148,7 @@ export function TrackingWorkflowTimeline({
                         : `text-[10px] sm:text-xs ${toneClass}`
                   }`}
                 >
-                  {stage.label}
+                  {getTrackingStageLabel(stage.id, stage.state)}
                 </p>
               </li>
             );
@@ -155,7 +158,11 @@ export function TrackingWorkflowTimeline({
 
       {!compact && currentStages.length > 1 ? (
         <p className="mt-4 text-xs text-zinc-500">
-          Şu anda {currentStages.map((stage) => stage.label).join(" ve ")} aşamaları
+          Şu anda{" "}
+          {currentStages
+            .map((stage) => getTrackingStageLabel(stage.id, stage.state))
+            .join(" ve ")}{" "}
+          aşamaları
           aktif.
         </p>
       ) : null}
