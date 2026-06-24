@@ -15,6 +15,7 @@ import {
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { formatCoupleName } from "@/lib/reservation-utils";
 import { parsePostShootSnapshot } from "@/lib/post-shoot";
+import { ReservationWorkflowActions } from "@/components/admin/reservation-workflow-actions";
 
 type ReservationDetail = {
   id: string;
@@ -86,10 +87,7 @@ export function ReservationDetailClient({
       return;
     }
 
-    if (result.kind === "deleted") {
-      router.push("/admin/rezervasyonlar");
-      return;
-    }
+    if (result.kind !== "updated") return;
 
     setReservation((prev) =>
       prev
@@ -157,6 +155,17 @@ export function ReservationDetailClient({
           />
         </div>
       </div>
+
+      <ReservationWorkflowActions
+        reservationId={reservationId}
+        postShoot={postShoot}
+        shootDate={reservation.items[0]?.shootDate ?? new Date().toISOString()}
+        onWorkflowChange={(nextPostShoot) =>
+          setReservation((prev) =>
+            prev ? { ...prev, postShoot: nextPostShoot } : prev,
+          )
+        }
+      />
 
       <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 sm:flex-row sm:items-center">
         <p className="min-w-0 flex-1 break-all text-sm text-zinc-400 sm:truncate">

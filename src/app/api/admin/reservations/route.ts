@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { ReservationStatus } from "@prisma/client";
 import { nanoid } from "nanoid";
-import { startOfDay } from "date-fns";
+import { parseDateOnlyInput } from "@/lib/date-only";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -10,36 +10,10 @@ import {
   getTrackingUrl,
 } from "@/lib/reservations";
 import { createReservationSchema } from "@/lib/validations";
-
-function mapItemCreate(item: {
-  packageOptionId: string;
-  paymentType: "pesin" | "taksitli";
-  unitPrice: number;
-  shootDate: string;
-  shootContent: string;
-  readyTime?: string;
-  location?: string;
-  agreedUnitPrice: number;
-  departureTime?: string | null;
-  arrivalTime?: string | null;
-  startTime?: string | null;
-  endTime?: string | null;
-}) {
-  return {
-    packageOptionId: item.packageOptionId,
-    paymentType: item.paymentType,
-    unitPrice: item.unitPrice,
-    shootDate: startOfDay(new Date(item.shootDate)),
-    shootContent: item.shootContent,
-    readyTime: item.readyTime ?? "",
-    location: item.location ?? "",
-    agreedUnitPrice: item.agreedUnitPrice,
-    departureTime: item.departureTime ?? null,
-    arrivalTime: item.arrivalTime ?? null,
-    startTime: item.startTime ?? null,
-    endTime: item.endTime ?? null,
-  };
-}
+import {
+  loadProductSnapshotsForItems,
+  mapReservationItemCreatesForNewReservation,
+} from "@/lib/reservation-item-snapshots";
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -52,13 +26,21 @@ export async function GET(request: Request) {
     const inactiveStatuses: ReservationStatus[] = ["iptal", "teslim_edildi"];
 
     const where =
-      view === "past"
-        ? { status: "teslim_edildi" as ReservationStatus }
-        : { status: { notIn: inactiveStatuses } };
+      view === "deleted"
+        ? { deletedAt: { not: null } }
+        : view === "past"
+          ? { status: "teslim_edildi" as ReservationStatus, deletedAt: null }
+          : {
+              status: { notIn: inactiveStatuses },
+              deletedAt: null,
+            };
 
     const reservations = await prisma.reservation.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy:
+        view === "deleted"
+          ? { deletedAt: "desc" }
+          : { createdAt: "desc" },
       include: {
         items: {
           include: {
@@ -112,6 +94,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const productSnapshots = await loadProductSnapshotsForItems(data.items);
+
     const reservation = await prisma.reservation.create({
       data: {
         trackingSlug: nanoid(12),
@@ -128,12 +112,15 @@ export async function POST(request: Request) {
         postShoot: data.postShoot,
         notes: data.notes ?? null,
         items: {
-          create: data.items.map(mapItemCreate),
+          create: mapReservationItemCreatesForNewReservation(
+            data.items,
+            productSnapshots,
+          ),
         },
         installments: {
           create: data.installments.map((installment, index) => ({
             amount: installment.amount,
-            dueDate: startOfDay(new Date(installment.dueDate)),
+            dueDate: parseDateOnlyInput(installment.dueDate),
             sortOrder: index,
           })),
         },

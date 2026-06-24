@@ -6,6 +6,8 @@ import {
   buildCartItemFromCategory,
   useCartStore,
 } from "@/stores/cart-store";
+import { isCompanionOnlyAddBlocked } from "@/lib/cart-companion-rules";
+import { useCartUiStore } from "@/stores/cart-ui-store";
 
 type PackageCartToggleButtonProps = {
   category: PackageCategoryData;
@@ -21,12 +23,20 @@ export function PackageCartToggleButton({
   const inCart = useCartStore((state) =>
     state.items.some((item) => item.packageOptionId === option.id),
   );
+  const cartItems = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const removeItem = useCartStore((state) => state.removeItem);
+  const showCompanionWarning = useCartUiStore(
+    (state) => state.showCompanionWarning,
+  );
 
   function handleClick() {
     if (inCart) {
       removeItem(option.id);
+      return;
+    }
+    if (isCompanionOnlyAddBlocked(cartItems, category.slug)) {
+      showCompanionWarning();
       return;
     }
     addItem(buildCartItemFromCategory(category, option));

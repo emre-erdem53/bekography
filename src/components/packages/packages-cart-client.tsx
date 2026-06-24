@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import type { PackageCategoryData } from "@/lib/package-types";
 import { useCartStore } from "@/stores/cart-store";
-import { getOptionGalleryPreviewMedia } from "@/lib/package-media";
+import { getOptionGalleryPreviewMedia, isVideoMediaUrl } from "@/lib/package-media";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { CartItemThumbnail } from "@/components/packages/cart-item-thumbnail";
@@ -68,7 +68,12 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
       );
       if (preview) return preview;
     }
-    if (storedUrl) return { url: storedUrl, type: "image" as const };
+    if (storedUrl) {
+      return {
+        url: storedUrl,
+        type: isVideoMediaUrl(storedUrl) ? ("video" as const) : ("image" as const),
+      };
+    }
     return null;
   }
 

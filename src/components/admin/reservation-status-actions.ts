@@ -3,13 +3,48 @@ import type { ReservationStatus } from "@prisma/client";
 export const RESERVATION_DELIVERED_CONFIRM =
   "Bu rezervasyonu teslim edildi olarak işaretlediğinizde tamamlandı olarak müşteri bilgilendirilecektir. Onaylıyor musunuz?";
 
-export const RESERVATION_CANCEL_CONFIRM =
-  "Bu rezervasyonu iptal ettiğinizde kayıt kalıcı olarak silinecektir. Onaylıyor musunuz?";
+export const RESERVATION_DELETE_CONFIRM =
+  "Bu rezervasyonu silmek istediğinize emin misiniz? Silinen rezervasyonlar 30 gün boyunca geri getirilebilir.";
+
+export const RESERVATION_RESTORE_CONFIRM =
+  "Bu rezervasyonu geri getirmek istediğinize emin misiniz?";
 
 export type ReservationStatusChangeResult =
   | { kind: "updated"; status: ReservationStatus }
   | { kind: "delivered" }
   | { kind: "deleted" };
+
+export async function deleteReservation(id: string): Promise<boolean> {
+  if (!window.confirm(RESERVATION_DELETE_CONFIRM)) return false;
+
+  const response = await fetch(`/api/admin/reservations/${id}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    window.alert(data.error ?? "Rezervasyon silinemedi");
+    return false;
+  }
+
+  return true;
+}
+
+export async function restoreReservation(id: string): Promise<boolean> {
+  if (!window.confirm(RESERVATION_RESTORE_CONFIRM)) return false;
+
+  const response = await fetch(`/api/admin/reservations/${id}/restore`, {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    window.alert(data.error ?? "Rezervasyon geri getirilemedi");
+    return false;
+  }
+
+  return true;
+}
 
 export async function changeReservationStatus(
   id: string,
@@ -34,22 +69,6 @@ export async function changeReservationStatus(
     }
 
     return { kind: "delivered" };
-  }
-
-  if (nextStatus === "iptal") {
-    if (!window.confirm(RESERVATION_CANCEL_CONFIRM)) return null;
-
-    const response = await fetch(`/api/admin/reservations/${id}`, {
-      method: "DELETE",
-    });
-
-    if (!response.ok) {
-      const data = await response.json();
-      window.alert(data.error ?? "Rezervasyon silinemedi");
-      return null;
-    }
-
-    return { kind: "deleted" };
   }
 
   const response = await fetch(`/api/admin/reservations/${id}`, {

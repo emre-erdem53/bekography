@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
+import { ReorderableTagsEditor } from "@/components/admin/reorderable-tags-editor";
 import {
   defaultPostShootTemplateSettings,
   POST_SHOOT_MERGE_STRATEGY_LABELS,
@@ -330,15 +331,6 @@ function TemplateSectionEditor({
   variableKeys: string[];
   onChange: (section: PostShootTemplateSection) => void;
 }) {
-  const [pillInput, setPillInput] = useState("");
-
-  function addPill() {
-    const value = pillInput.trim();
-    if (!value) return;
-    onChange({ ...section, pills: [...section.pills, value] });
-    setPillInput("");
-  }
-
   function insertVariable(key: string) {
     onChange({
       ...section,
@@ -365,12 +357,11 @@ function TemplateSectionEditor({
         </div>
       ) : null}
 
-      <PillsEditor
-        pills={section.pills}
+      <ReorderableTagsEditor
+        title="Etiketler"
+        tags={section.pills}
         onChange={(pills) => onChange({ ...section, pills })}
-        pillInput={pillInput}
-        setPillInput={setPillInput}
-        onAddPill={addPill}
+        placeholder="Etiket veya {{değişken}}"
       />
 
       <label className="block">
@@ -388,64 +379,6 @@ function TemplateSectionEditor({
   );
 }
 
-function PillsEditor({
-  pills,
-  onChange,
-  pillInput,
-  setPillInput,
-  onAddPill,
-}: {
-  pills: string[];
-  onChange: (pills: string[]) => void;
-  pillInput: string;
-  setPillInput: (value: string) => void;
-  onAddPill: () => void;
-}) {
-  return (
-    <div>
-      <span className="mb-2 block text-xs text-zinc-500">Etiketler</span>
-      <div className="flex flex-wrap gap-2">
-        {pills.map((pill, index) => (
-          <span
-            key={`${pill}-${index}`}
-            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-200"
-          >
-            {pill}
-            <button
-              type="button"
-              onClick={() => onChange(pills.filter((_, i) => i !== index))}
-              className="text-zinc-400 hover:text-white"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="mt-2 flex gap-2">
-        <input
-          value={pillInput}
-          onChange={(e) => setPillInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              onAddPill();
-            }
-          }}
-          placeholder="Etiket veya {{değişken}}"
-          className={inputClass}
-        />
-        <button
-          type="button"
-          onClick={onAddPill}
-          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white"
-        >
-          Ekle
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function PostShootSectionEditor({
   title,
   section,
@@ -455,24 +388,14 @@ export function PostShootSectionEditor({
   section: PostShootSection;
   onChange: (section: PostShootSection) => void;
 }) {
-  const [pillInput, setPillInput] = useState("");
-
-  function addPill() {
-    const value = pillInput.trim();
-    if (!value) return;
-    onChange({ ...section, pills: [...section.pills, value] });
-    setPillInput("");
-  }
-
   return (
     <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
       <h3 className="text-sm font-medium text-white">{title}</h3>
-      <PillsEditor
-        pills={section.pills}
+      <ReorderableTagsEditor
+        title="Etiketler"
+        tags={section.pills}
         onChange={(pills) => onChange({ ...section, pills })}
-        pillInput={pillInput}
-        setPillInput={setPillInput}
-        onAddPill={addPill}
+        placeholder="Etiket veya {{değişken}}"
       />
       <label className="block">
         <span className="mb-2 block text-xs text-zinc-500">Açıklama</span>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { parseDateOnlyInput } from "@/lib/date-only";
 import { formatCoupleName } from "@/lib/reservations";
 
 export async function GET(request: Request) {
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
 
     const items = await prisma.reservationItem.findMany({
       where: {
-        reservation: { status: { notIn: ["iptal", "teslim_edildi"] } },
+        reservation: { status: { notIn: ["iptal", "teslim_edildi"] }, deletedAt: null },
         ...(start && end
           ? {
               shootDate: {
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
 
     const existing = await prisma.reservationItem.findFirst({
       where: {
-        shootDate: new Date(shootDate),
+        shootDate: parseDateOnlyInput(shootDate),
         reservation: {
           status: { notIn: ["iptal", "teslim_edildi"] },
           ...(excludeReservationId

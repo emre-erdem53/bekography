@@ -7,6 +7,10 @@ export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   iptal: "İptal",
 };
 
+export const OUTDOOR_DEFAULT_DEPARTURE_TIME = "13:00";
+export const OUTDOOR_DEFAULT_ARRIVAL_TIME = "17:00";
+export const RESERVATION_RESTORE_DAYS = 30;
+
 export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
   planlandi: "Planlandı",
   cekim_yapildi: "Çekim Yapıldı",

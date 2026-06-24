@@ -3,7 +3,7 @@
 import { forwardRef, type Ref } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AlertTriangle, BadgeCheck, Check, UserRound } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Check } from "lucide-react";
 import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ORDER,
@@ -11,6 +11,12 @@ import {
 } from "@/lib/constants";
 import type { PostShootSection } from "@/lib/post-shoot";
 import type { TrackingData } from "@/lib/tracking-types";
+import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
+import {
+  BrideIcon,
+  GroomIcon,
+} from "@/components/tracking/couple-person-icon";
+import { TrackingPurchasedProducts } from "@/components/tracking/tracking-purchased-products";
 
 const CANCELLATION_POLICY =
   "30 günden fazla süre kalan bir çekimi iptal eden taraf karşı tarafa toplam ücretin %50'sini cayma bedeli olarak öder. 30 günden daha az bir süre varsa bu oran %75'tir. Sözleşmedeki mücbir sebeplerle iptal olursa oran %25'tir.";
@@ -39,26 +45,22 @@ export const ReservationOrderDocument = forwardRef<
 >(function ReservationOrderDocument({ data }, ref) {
   return (
     <div ref={ref} className="mx-auto max-w-5xl">
-      <header className="border-b border-white/10 pb-8">
+      <header className="border-b border-white/10 pb-8 text-center">
         <p className="text-xs font-medium uppercase tracking-[0.28em] text-zinc-500">
           {data.formYear} / bekography — Sipariş Formu
         </p>
-        <h1 className="mt-4 text-3xl font-semibold leading-tight text-white sm:text-4xl md:text-5xl">
-          {data.coupleName}
-        </h1>
 
-        <div className="mt-8 grid gap-3 md:grid-cols-2">
-          <ContactCard
+        <div className="mt-8 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-10 md:gap-14">
+          <CoupleName
             label="Gelin"
             name={data.brideName}
-            phone={data.bridePhone}
-            tc={data.brideTc}
+            icon={<BrideIcon className="h-6 w-6 text-rose-300/90" />}
           />
-          <ContactCard
+          <span className="font-couple text-2xl text-zinc-600 sm:text-3xl">&</span>
+          <CoupleName
             label="Damat"
             name={data.groomName}
-            phone={data.groomPhone}
-            tc={data.groomTc}
+            icon={<GroomIcon className="h-6 w-6 text-zinc-300" />}
           />
         </div>
       </header>
@@ -129,10 +131,30 @@ export const ReservationOrderDocument = forwardRef<
         </div>
       </section>
 
+      <TrackingPurchasedProducts products={data.purchasedProducts} />
+
       <div className="mt-8 flex gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm leading-relaxed text-amber-100/90">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
         <p>{CANCELLATION_POLICY}</p>
       </div>
+
+      <section className="mt-10 border-t border-white/10 pt-8">
+        <SectionHeading>İletişim Bilgileri</SectionHeading>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <ContactCard
+            label="Gelin"
+            name={data.brideName}
+            phone={data.bridePhone}
+            tc={data.brideTc}
+          />
+          <ContactCard
+            label="Damat"
+            name={data.groomName}
+            phone={data.groomPhone}
+            tc={data.groomTc}
+          />
+        </div>
+      </section>
     </div>
   );
 });
@@ -205,8 +227,7 @@ export function TrackingProcessSection({ data }: { data: TrackingData }) {
 export function CustomerTrackingView({ data }: { data: TrackingData }) {
   return (
     <TrackingPageShell>
-      <ReservationOrderDocument data={data} />
-      <TrackingProcessSection data={data} />
+      <TrackingOrderBody data={data} />
     </TrackingPageShell>
   );
 }
@@ -220,8 +241,25 @@ export function TrackingOrderView({
 }) {
   return (
     <TrackingPageShell>
-      <ReservationOrderDocument ref={exportRef} data={data} />
+      <TrackingOrderBody data={data} exportRef={exportRef} />
     </TrackingPageShell>
+  );
+}
+
+function TrackingOrderBody({
+  data,
+  exportRef,
+}: {
+  data: TrackingData;
+  exportRef?: Ref<HTMLDivElement>;
+}) {
+  return (
+    <div ref={exportRef}>
+      <div className="mx-auto max-w-5xl">
+        <TrackingWorkflowTimeline workflow={data.workflow} />
+      </div>
+      <ReservationOrderDocument data={data} />
+    </div>
   );
 }
 
@@ -230,6 +268,32 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
     <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-zinc-400">
       {children}
     </h2>
+  );
+}
+
+function CoupleName({
+  label,
+  name,
+  icon,
+}: {
+  label: string;
+  name: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5">
+        {icon}
+      </span>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
+          {label}
+        </p>
+        <p className="font-couple mt-1 text-3xl leading-none text-white sm:text-4xl md:text-5xl">
+          {name}
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -244,10 +308,17 @@ function ContactCard({
   phone: string;
   tc: string;
 }) {
+  const icon =
+    label === "Gelin" ? (
+      <BrideIcon className="h-5 w-5 text-rose-300/90" />
+    ) : (
+      <GroomIcon className="h-5 w-5 text-zinc-300" />
+    );
+
   return (
     <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-[#0a0a0a] px-4 py-3.5">
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-zinc-300">
-        <UserRound className="h-5 w-5" />
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5">
+        {icon}
       </span>
       <div className="min-w-0 flex-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-500">
@@ -267,68 +338,64 @@ function ContactCard({
 }
 
 function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
-  const shootDateLabel = format(new Date(item.shootDate), "d MMMM", {
+  const shootDateLabel = format(new Date(item.shootDate), "d MMMM yyyy", {
     locale: tr,
   });
+  const timeLabel = item.isOutdoor
+    ? `${item.departureTime || "—"} — ${item.arrivalTime || "—"}`
+    : `${item.startTime || "—"} — ${item.endTime || "—"}`;
+  const timeCaption = item.isOutdoor ? "Rize Çıkış — Varış" : "Başlangıç — Bitiş";
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
       <h3
-        className="text-2xl font-semibold leading-none sm:text-3xl"
+        className="text-xl font-semibold leading-none sm:text-2xl"
         style={{ color: item.accentColor }}
       >
         {item.categoryTitle}
       </h3>
 
-      <div className="mt-5 grid gap-4 border-y border-white/10 py-4 sm:grid-cols-4">
-        <ShootMeta label="Tarih" value={shootDateLabel} />
-        <ShootMeta label="İçerik" value={item.shootContent} />
-        {item.isOutdoor ? (
-          <>
-            <ShootMeta
-              label="Rize'den Çıkış"
-              value={item.departureTime || "—"}
-            />
-            <ShootMeta label="Rize'ye Varış" value={item.arrivalTime || "—"} />
-          </>
-        ) : (
-          <>
-            <ShootMeta label="Başlangıç" value={item.startTime || "—"} />
-            <ShootMeta label="Bitiş" value={item.endTime || "—"} />
-          </>
-        )}
+      <div className="mt-6 grid gap-5 border-y border-white/10 py-5 sm:grid-cols-3">
+        <ShootMetaLarge label="Tarih" value={shootDateLabel} />
+        <ShootMetaLarge label={timeCaption} value={timeLabel} />
+        <ShootMetaLarge label="Çekim Türü" value={item.shootTypeLabel} />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-400">
+      <div className="mt-4 space-y-1.5 text-sm text-zinc-500">
+        {item.shootContent ? (
+          <p>
+            İçerik: <span className="text-zinc-300">{item.shootContent}</span>
+          </p>
+        ) : null}
         {item.readyTime ? (
           <p>
-            Hazır Olma: <span className="text-white">{item.readyTime}</span>
+            Hazır Olma: <span className="text-zinc-300">{item.readyTime}</span>
           </p>
         ) : null}
         {item.location ? (
           <p>
-            Çekim Yeri: <span className="text-white">{item.location}</span>
+            Çekim Yeri: <span className="text-zinc-300">{item.location}</span>
           </p>
         ) : null}
         <p>
           B. Fiyat:{" "}
-          <span className="font-semibold text-white">
-            {formatPrice(item.agreedUnitPrice)}
-          </span>
+          <span className="text-zinc-300">{formatPrice(item.agreedUnitPrice)}</span>
         </p>
         <p>
-          Ödeme: <span className="text-white">{item.paymentType}</span>
+          Ödeme: <span className="text-zinc-300">{item.paymentType}</span>
         </p>
       </div>
     </article>
   );
 }
 
-function ShootMeta({ label, value }: { label: string; value: string }) {
+function ShootMetaLarge({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="mt-1 text-sm font-medium text-white">{value}</p>
+      <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+      <p className="mt-2 text-xl font-semibold leading-tight text-white sm:text-2xl md:text-3xl">
+        {value}
+      </p>
     </div>
   );
 }

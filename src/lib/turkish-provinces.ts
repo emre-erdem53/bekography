@@ -86,10 +86,11 @@ export type TurkishProvince = (typeof TURKISH_PROVINCES)[number];
 
 export const DEFAULT_REQUEST_CITY = "Rize";
 
-/** Talep formu il listesi — Trabzon en üstte, geri kalanı alfabetik. */
+/** Talep formu il listesi — Rize, Trabzon, ardından plaka sırası. */
 export const REQUEST_CITY_OPTIONS = [
+  "Rize",
   "Trabzon",
-  ...TURKISH_PROVINCES.filter((province) => province !== "Trabzon").sort(
-    (a, b) => a.localeCompare(b, "tr"),
+  ...TURKISH_PROVINCES.filter(
+    (province) => province !== "Rize" && province !== "Trabzon",
   ),
 ] as const;

@@ -1,4 +1,9 @@
 import type { PostShootSnapshot } from "@/lib/post-shoot";
+import type { ReservationProductSnapshot } from "@/lib/reservation-product-snapshot";
+import type {
+  TrackingWorkflowFlags,
+  TrackingWorkflowView,
+} from "@/lib/tracking-workflow";
 import type { ReservationStatus } from "@prisma/client";
 
 export type TrackingTimelineStep = {
@@ -11,6 +16,7 @@ export type TrackingShootItem = {
   categoryTitle: string;
   accentColor: string;
   optionLabel: string;
+  shootTypeLabel: string;
   shootContent: string;
   shootDate: string;
   readyTime: string;
@@ -22,6 +28,7 @@ export type TrackingShootItem = {
   arrivalTime: string | null;
   startTime: string | null;
   endTime: string | null;
+  productSnapshot: ReservationProductSnapshot;
 };
 
 export type TrackingInstallment = {
@@ -47,6 +54,9 @@ export type TrackingData = {
   cancellationFeeMax: number;
   discountAmount: number;
   postShoot: PostShootSnapshot;
+  workflow: TrackingWorkflowView;
+  workflowFlags: TrackingWorkflowFlags;
   installments: TrackingInstallment[];
   items: TrackingShootItem[];
+  purchasedProducts: ReservationProductSnapshot[];
 };

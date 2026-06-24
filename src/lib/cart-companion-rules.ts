@@ -41,3 +41,14 @@ export function getCompanionRequirementMessage(): string {
 export function canCreateRequestForItems(items: CartSlugItem[]): boolean {
   return items.length > 0 && !cartRequiresAdditionalPackage(items);
 }
+
+/** Eşlik paketi, sepette ana paket yokken sepete eklenemez. */
+export function isCompanionOnlyAddBlocked(
+  currentItems: CartSlugItem[],
+  categorySlug: string,
+): boolean {
+  if (!isCompanionOnlyCategorySlug(categorySlug)) return false;
+  return !currentItems.some(
+    (item) => !isCompanionOnlyCategorySlug(item.categorySlug),
+  );
+}

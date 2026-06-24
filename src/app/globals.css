@@ -64,6 +64,10 @@ body {
   font-family: var(--font-family-brand);
 }
 
+.font-couple {
+  font-family: var(--font-couple), var(--font-family-brand), ui-serif, Georgia, serif;
+}
+
 /* Hide scrollbars on scroll-snap containers (modal swipe).
    We rely on touch/wheel for navigation so the scrollbar adds noise. */
 .no-scrollbar {

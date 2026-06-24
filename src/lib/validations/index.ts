@@ -134,11 +134,19 @@ const installmentSchema = z.object({
   dueDate: z.string().min(1, "Vade tarihi seçin"),
 });
 
+const trackingWorkflowFlagsSchema = z.object({
+  digitalDeliveredAt: z.string().nullable().optional(),
+  selectionCompletedAt: z.string().nullable().optional(),
+  editingCompletedAt: z.string().nullable().optional(),
+  printingCompletedAt: z.string().nullable().optional(),
+});
+
 const postShootSnapshotSchema = z.object({
   digital: postShootSectionSchema,
   editing: postShootSectionSchema,
   printing: postShootSectionSchema,
   source: z.enum(["template", "manual"]).optional(),
+  workflow: trackingWorkflowFlagsSchema.optional(),
 });
 
 export const createReservationSchema = z.object({

@@ -8,7 +8,17 @@ import { getPaymentTypeLabels } from "@/lib/site-settings";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import { formatCoupleName } from "@/lib/reservation-utils";
 import { isOutdoorCategory, parsePostShootSnapshot } from "@/lib/post-shoot";
+import {
+  buildProductSnapshotFromOption,
+  getShootTypeLabel,
+  isProductSnapshotComplete,
+  parseProductSnapshot,
+} from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
+import {
+  buildTrackingWorkflowView,
+  emptyTrackingWorkflowFlags,
+} from "@/lib/tracking-workflow";
 
 const reservationInclude = {
   items: {
@@ -48,6 +58,12 @@ function buildPayloadFromReservation(
 
   const earliestShoot = reservation.items[0]?.shootDate ?? new Date();
   const postShoot = parsePostShootSnapshot(reservation.postShoot);
+  const workflowFlags = postShoot.workflow ?? emptyTrackingWorkflowFlags();
+  const workflow = buildTrackingWorkflowView({
+    shootDate: earliestShoot,
+    postShoot,
+    workflow: workflowFlags,
+  });
 
   return {
     coupleName: formatCoupleName(
@@ -70,6 +86,8 @@ function buildPayloadFromReservation(
     cancellationFeeMax: reservation.cancellationFeeMax,
     discountAmount: reservation.discountAmount,
     postShoot,
+    workflow,
+    workflowFlags,
     installments: reservation.installments.map((row) => ({
       amount: row.amount,
       dueDate: row.dueDate.toISOString(),
@@ -81,11 +99,18 @@ function buildPayloadFromReservation(
           ? (category.content as Record<string, unknown>)
           : {};
       const outdoor = isOutdoorCategory(category.slug, content);
+      const storedSnapshot = parseProductSnapshot(item.productSnapshot);
+      const snapshot = isProductSnapshotComplete(storedSnapshot)
+        ? storedSnapshot
+        : buildProductSnapshotFromOption(item.packageOption);
 
       return {
-        categoryTitle: category.title,
-        accentColor: category.accentColor,
-        optionLabel: item.packageOption.label,
+        categoryTitle: snapshot.categoryTitle || category.title,
+        accentColor: snapshot.accentColor || category.accentColor,
+        optionLabel: snapshot.optionLabel || item.packageOption.label,
+        shootTypeLabel:
+          snapshot.shootTypeLabel ||
+          getShootTypeLabel(item.packageOption.label),
         shootContent: item.shootContent,
         shootDate: item.shootDate.toISOString(),
         readyTime: item.readyTime,
@@ -97,7 +122,14 @@ function buildPayloadFromReservation(
         arrivalTime: item.arrivalTime,
         startTime: item.startTime,
         endTime: item.endTime,
+        productSnapshot: snapshot,
       };
+    }),
+    purchasedProducts: reservation.items.map((item) => {
+      const storedSnapshot = parseProductSnapshot(item.productSnapshot);
+      return isProductSnapshotComplete(storedSnapshot)
+        ? storedSnapshot
+        : buildProductSnapshotFromOption(item.packageOption);
     }),
   };
 }
@@ -113,7 +145,7 @@ export async function buildTrackingPayloadBySlug(
     getSiteSettings(),
   ]);
 
-  if (!reservation || reservation.status === "iptal") {
+  if (!reservation || reservation.status === "iptal" || reservation.deletedAt) {
     return null;
   }
 
@@ -134,7 +166,7 @@ export async function buildTrackingPayloadById(
     getSiteSettings(),
   ]);
 
-  if (!reservation || reservation.status === "iptal") {
+  if (!reservation || reservation.status === "iptal" || reservation.deletedAt) {
     return null;
   }
 

@@ -1,5 +1,10 @@
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
+  emptyTrackingWorkflowFlags,
+  parseTrackingWorkflowFlags,
+  type TrackingWorkflowFlags,
+} from "@/lib/tracking-workflow";
+import {
   getDefaultPostShootTokensForCategory,
   type PostShootTemplateSettingsData,
   type PostShootVariableDefinition,
@@ -22,6 +27,7 @@ export type PostShootSnapshot = {
   editing: PostShootSection;
   printing: PostShootSection;
   source?: "template" | "manual";
+  workflow?: TrackingWorkflowFlags;
 };
 
 type PackageLike = {
@@ -102,6 +108,7 @@ export function emptyPostShootSnapshot(): PostShootSnapshot {
     editing: { pills: [], description: "" },
     printing: { pills: [], description: "" },
     source: "template",
+    workflow: emptyTrackingWorkflowFlags(),
   };
 }
 
@@ -114,6 +121,7 @@ export function parsePostShootSnapshot(value: unknown): PostShootSnapshot {
     digital?: unknown;
     editing?: unknown;
     printing?: unknown;
+    workflow?: unknown;
   };
 
   const digital = data.digital
@@ -131,6 +139,7 @@ export function parsePostShootSnapshot(value: unknown): PostShootSnapshot {
     editing,
     printing,
     source: data.source === "manual" ? "manual" : "template",
+    workflow: parseTrackingWorkflowFlags(data.workflow),
   };
 }
 
@@ -326,7 +335,11 @@ export function syncPostShootWithItems(
     return current;
   }
 
-  return buildPostShootSnapshot(items, categories, settings);
+  const built = buildPostShootSnapshot(items, categories, settings);
+  return {
+    ...built,
+    workflow: current.workflow ?? emptyTrackingWorkflowFlags(),
+  };
 }
 
 export function getPackagePostShootTokens(

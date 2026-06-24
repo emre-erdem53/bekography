@@ -109,6 +109,7 @@ model Reservation {
   postShoot           Json                         @default("{}")
   status              ReservationStatus            @default(planlandi)
   notes               String?
+  deletedAt           DateTime?
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
   request             Request?                     @relation(fields: [requestId], references: [id], onDelete: SetNull)
@@ -134,6 +135,7 @@ model ReservationItem {
   arrivalTime     String?
   startTime       String?
   endTime         String?
+  productSnapshot Json          @default("{}")
   reservation     Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
   packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
 

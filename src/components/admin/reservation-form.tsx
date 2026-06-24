@@ -6,7 +6,8 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { AlertTriangle, Plus, X } from "lucide-react";
-import { formatPrice } from "@/lib/constants";
+import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME } from "@/lib/constants";
+import { toDateInputValue } from "@/lib/date-only";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
@@ -252,7 +253,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               arrivalTime: string | null;
               startTime: string | null;
               endTime: string | null;
-            }) => ({
+            }) => {
+              const outdoor = isOutdoorCategory(
+                item.packageOption.category.slug,
+                {},
+              );
+              return {
               packageOptionId: item.packageOption.id,
               categoryId: item.packageOption.category.id,
               paymentType: item.paymentType,
@@ -261,16 +267,21 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               categoryTitle: item.packageOption.category.title,
               categorySlug: item.packageOption.category.slug,
               accentColor: item.packageOption.category.accentColor,
-              shootDate: item.shootDate.split("T")[0],
+              shootDate: toDateInputValue(item.shootDate),
               shootContent: item.shootContent,
               readyTime: item.readyTime,
               location: item.location,
               agreedUnitPrice: item.agreedUnitPrice,
-              departureTime: item.departureTime ?? "",
-              arrivalTime: item.arrivalTime ?? "",
+              departureTime:
+                item.departureTime ??
+                (outdoor ? OUTDOOR_DEFAULT_DEPARTURE_TIME : ""),
+              arrivalTime:
+                item.arrivalTime ??
+                (outdoor ? OUTDOOR_DEFAULT_ARRIVAL_TIME : ""),
               startTime: item.startTime ?? "",
               endTime: item.endTime ?? "",
-            }),
+            };
+            },
           ),
         );
         setInstallments(
@@ -278,7 +289,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             ? reservation.installments.map(
                 (row: { amount: number; dueDate: string }) => ({
                   amount: row.amount,
-                  dueDate: row.dueDate.split("T")[0],
+                  dueDate: toDateInputValue(row.dueDate),
                 }),
               )
             : [{ amount: 0, dueDate: "" }],
@@ -290,7 +301,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         if (request.customerPhone && request.customerPhone !== "—") {
           setGroomPhone(request.customerPhone);
         }
-        const defaultDate = request.shootDate.split("T")[0];
+        const defaultDate = toDateInputValue(request.shootDate);
         const mapped: SelectedItem[] = request.items.map(
           (item: {
             packageOption: {
@@ -321,14 +332,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               categorySlug: item.packageOption.category.slug,
               accentColor: item.packageOption.category.accentColor,
               shootDate: defaultDate,
-              shootContent:
-                item.packageOption.category.content?.shootDescription?.trim() ||
-                item.packageOption.label,
+              shootContent: item.packageOption.label,
               readyTime: "",
               location: request.city ?? "",
               agreedUnitPrice: item.unitPrice,
-              departureTime: outdoor ? "" : "",
-              arrivalTime: outdoor ? "" : "",
+              departureTime: outdoor ? OUTDOOR_DEFAULT_DEPARTURE_TIME : "",
+              arrivalTime: outdoor ? OUTDOOR_DEFAULT_ARRIVAL_TIME : "",
               startTime: outdoor ? "" : "",
               endTime: outdoor ? "" : "",
             };
@@ -437,6 +446,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
     const packageContent = category.content as PackageCategoryContent | undefined;
 
+    const outdoor = isOutdoorCategory(
+      category.slug,
+      packageContent ?? {},
+    );
+
     const newItem: SelectedItem = {
       packageOptionId: option.id,
       categoryId: category.id,
@@ -447,13 +461,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       categorySlug: category.slug,
       accentColor: category.accentColor,
       shootDate: defaultShootDate,
-      shootContent:
-        packageContent?.shootDescription?.trim() || option.label,
+      shootContent: option.label,
       readyTime: "",
       location: "",
       agreedUnitPrice: option.cashPrice,
-      departureTime: "",
-      arrivalTime: "",
+      departureTime: outdoor ? OUTDOOR_DEFAULT_DEPARTURE_TIME : "",
+      arrivalTime: outdoor ? OUTDOOR_DEFAULT_ARRIVAL_TIME : "",
       startTime: "",
       endTime: "",
     };
@@ -524,7 +537,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           paymentType: item.paymentType,
           unitPrice: item.unitPrice,
           shootDate: item.shootDate,
-          shootContent: item.shootContent,
+          shootContent: item.label,
           readyTime: item.readyTime,
           location: item.location,
           agreedUnitPrice: item.agreedUnitPrice,
@@ -741,16 +754,6 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       value={item.shootDate}
                       onChange={(e) =>
                         updateItem(index, { shootDate: e.target.value })
-                      }
-                      required
-                      className={inputClass}
-                    />
-                  </Field>
-                  <Field label="Çekim İçeriği">
-                    <input
-                      value={item.shootContent}
-                      onChange={(e) =>
-                        updateItem(index, { shootContent: e.target.value })
                       }
                       required
                       className={inputClass}

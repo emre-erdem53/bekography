@@ -12,6 +12,10 @@ export function packageMediaUrl(fileName: string | null | undefined): string | n
   return blobBaseUrl ? `${blobBaseUrl}/${fileName}` : `/reels/${fileName}`;
 }
 
+export function isVideoMediaUrl(url: string): boolean {
+  return /\.(mp4|webm|mov|m4v|ogv)(\?|#|$)/i.test(url);
+}
+
 
 function resolveOptionMediaList(
   content: PackageCategoryContent,

@@ -12,6 +12,12 @@ const gilroy = localFont({
   display: "swap",
 });
 
+const operetta = localFont({
+  src: "../../public/fonts/operetta-18-bold.ttf",
+  variable: "--font-couple",
+  display: "swap",
+});
+
 const andes = localFont({
   src: "../../public/fonts/andes.ttf",
   variable: "--font-andes",
@@ -50,7 +56,7 @@ export default async function RootLayout({
   return (
     <html
       lang="tr"
-      className={`${gilroy.variable} ${andes.variable} dark h-full antialiased`}
+      className={`${gilroy.variable} ${andes.variable} ${operetta.variable} dark h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">

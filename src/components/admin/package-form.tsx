@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { ReorderableTagsEditor } from "@/components/admin/reorderable-tags-editor";
 import type {
   PackageCategoryContent,
   PackageDetailSection,
@@ -711,7 +712,7 @@ export function PackageForm({
                   </div>
                 </div>
 
-                <TagsEditor
+                <ReorderableTagsEditor
                   title="Detay Etiketleri"
                   tags={optionTags}
                   onChange={(tags) =>
@@ -962,7 +963,7 @@ export function PackageForm({
                           placeholder="Başlık"
                           className={inputClass}
                         />
-                        <TagsEditor
+                        <ReorderableTagsEditor
                           title="Etiketler"
                           tags={section.tags ?? []}
                           onChange={(tags) => {
@@ -1131,69 +1132,6 @@ export function PackageForm({
         {saving ? "Kaydediliyor..." : "Kaydet"}
       </button>
     </form>
-  );
-}
-
-function TagsEditor({
-  title,
-  tags,
-  onChange,
-}: {
-  title: string;
-  tags: string[];
-  onChange: (tags: string[]) => void;
-}) {
-  const [input, setInput] = useState("");
-
-  function addTag() {
-    const value = input.trim();
-    if (!value) return;
-    onChange([...tags, value]);
-    setInput("");
-  }
-
-  return (
-    <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
-      <h3 className="text-sm font-medium text-white">{title}</h3>
-      <div className="flex flex-wrap gap-2">
-        {tags.map((tag, index) => (
-          <span
-            key={`${tag}-${index}`}
-            className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-200"
-          >
-            {tag}
-            <button
-              type="button"
-              onClick={() => onChange(tags.filter((_, i) => i !== index))}
-              className="text-zinc-400 hover:text-white"
-            >
-              ×
-            </button>
-          </span>
-        ))}
-      </div>
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addTag();
-            }
-          }}
-          placeholder="Etiket ekle..."
-          className={inputClass}
-        />
-        <button
-          type="button"
-          onClick={addTag}
-          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white"
-        >
-          Ekle
-        </button>
-      </div>
-    </div>
   );
 }
 

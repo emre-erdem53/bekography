@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { ReservationStatus } from "@prisma/client";
-import { startOfDay } from "date-fns";
+import { parseDateOnlyInput, toDateInputValue } from "@/lib/date-only";
 
 export {
   formatCoupleName,
@@ -9,19 +9,25 @@ export {
   reservationTcMatches,
 } from "@/lib/reservation-utils";
 
+function normalizeShootDateInput(shootDate: Date | string): Date {
+  if (typeof shootDate === "string") {
+    return parseDateOnlyInput(shootDate);
+  }
+  return parseDateOnlyInput(toDateInputValue(shootDate));
+}
+
 export async function isShootDateTaken(
   shootDate: Date | string,
   excludeReservationId?: string,
 ) {
-  const date = startOfDay(
-    typeof shootDate === "string" ? new Date(shootDate) : shootDate,
-  );
+  const date = normalizeShootDateInput(shootDate);
 
   const existing = await prisma.reservationItem.findFirst({
     where: {
       shootDate: date,
       reservation: {
         status: { notIn: ["iptal", "teslim_edildi"] },
+        deletedAt: null,
         ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
       },
     },
@@ -38,10 +44,7 @@ export async function findShootDateConflicts(
 
   for (const shootDate of shootDates) {
     if (await isShootDateTaken(shootDate, excludeReservationId)) {
-      const date = startOfDay(
-        typeof shootDate === "string" ? new Date(shootDate) : shootDate,
-      );
-      conflicts.push(date.toISOString().split("T")[0]);
+      conflicts.push(toDateInputValue(normalizeShootDateInput(shootDate)));
     }
   }
 

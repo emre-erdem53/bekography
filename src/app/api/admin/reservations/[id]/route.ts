@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { startOfDay } from "date-fns";
+import { parseDateOnlyInput } from "@/lib/date-only";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -11,40 +11,7 @@ import {
   updateReservationSchema,
   updateReservationStatusSchema,
 } from "@/lib/validations";
-
-function mapItemCreate(
-  reservationId: string,
-  item: {
-    packageOptionId: string;
-    paymentType: "pesin" | "taksitli";
-    unitPrice: number;
-    shootDate: string;
-    shootContent: string;
-    readyTime?: string;
-    location?: string;
-    agreedUnitPrice: number;
-    departureTime?: string | null;
-    arrivalTime?: string | null;
-    startTime?: string | null;
-    endTime?: string | null;
-  },
-) {
-  return {
-    reservationId,
-    packageOptionId: item.packageOptionId,
-    paymentType: item.paymentType,
-    unitPrice: item.unitPrice,
-    shootDate: startOfDay(new Date(item.shootDate)),
-    shootContent: item.shootContent,
-    readyTime: item.readyTime ?? "",
-    location: item.location ?? "",
-    agreedUnitPrice: item.agreedUnitPrice,
-    departureTime: item.departureTime ?? null,
-    arrivalTime: item.arrivalTime ?? null,
-    startTime: item.startTime ?? null,
-    endTime: item.endTime ?? null,
-  };
-}
+import { buildReservationItemCreates } from "@/lib/reservation-item-snapshots";
 
 export async function GET(
   _request: Request,
@@ -194,9 +161,22 @@ export async function PATCH(
     }
 
     if (data.items) {
+      const existingItems = await prisma.reservationItem.findMany({
+        where: { reservationId: id },
+        select: { packageOptionId: true, productSnapshot: true },
+      });
+      const preservedSnapshots = new Map(
+        existingItems.map((item) => [item.packageOptionId, item.productSnapshot]),
+      );
+
       await prisma.reservationItem.deleteMany({ where: { reservationId: id } });
+      const itemCreates = await buildReservationItemCreates(
+        id,
+        data.items,
+        preservedSnapshots,
+      );
       await prisma.reservationItem.createMany({
-        data: data.items.map((item) => mapItemCreate(id, item)),
+        data: itemCreates,
       });
     }
 
@@ -208,7 +188,7 @@ export async function PATCH(
         data: data.installments.map((installment, index) => ({
           reservationId: id,
           amount: installment.amount,
-          dueDate: startOfDay(new Date(installment.dueDate)),
+          dueDate: parseDateOnlyInput(installment.dueDate),
           sortOrder: index,
         })),
       });
@@ -255,7 +235,10 @@ export async function DELETE(
       );
     }
 
-    await prisma.reservation.delete({ where: { id } });
+    await prisma.reservation.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

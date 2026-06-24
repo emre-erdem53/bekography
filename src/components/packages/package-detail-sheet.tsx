@@ -115,11 +115,8 @@ function PackageOptionDetailView({
   return (
     <div
       className={`mx-auto w-full max-w-lg px-4 pt-2 sm:px-6 ${
-        cartBottomInset === "pb-44"
-          ? "pb-44"
-          : cartBottomInset === "pb-28"
-            ? "pb-28"
-            : "pb-[max(env(safe-area-inset-bottom),1.5rem)] sm:pb-8"
+        cartBottomInset ??
+        "pb-[max(env(safe-area-inset-bottom),1.5rem)] sm:pb-8"
       }`}
     >
       <header className="mb-4 sm:mb-5">
