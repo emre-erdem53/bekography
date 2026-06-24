@@ -34,7 +34,7 @@ export function PaymentTypePrice({
         <p className="text-[10px] text-zinc-500 sm:text-xs">{label}</p>
         <p className={`text-xs sm:text-sm ${priceClass}`}>{formatPrice(price)}</p>
         <p className="mt-0.5 hidden max-w-[9rem] text-[9px] leading-tight text-zinc-600 sm:block">
-          ({description})
+          {description}
         </p>
       </div>
     );
@@ -48,7 +48,7 @@ export function PaymentTypePrice({
           {formatPrice(price)}
         </p>
         <p className="mt-0.5 hidden text-[10px] leading-tight text-zinc-600 sm:block">
-          ({description})
+          {description}
         </p>
       </div>
     );
@@ -61,7 +61,7 @@ export function PaymentTypePrice({
         {formatPrice(price)}
       </p>
       <p className="mt-0.5 text-[10px] leading-snug text-zinc-600 sm:text-[11px]">
-        ({description})
+        {description}
       </p>
     </div>
   );
@@ -86,13 +86,20 @@ export function PaymentTypeOptionButton({
     <button
       type="button"
       onClick={onSelect}
-      className={`flex-1 rounded-lg border px-3 py-2.5 text-left transition-colors ${
+      className={`flex flex-1 flex-col rounded-lg border px-3 py-2.5 text-left transition-colors ${
         selected
           ? "border-[#93f8b6] bg-[#93f8b6] text-black"
           : "border-white/20 text-zinc-400"
       }`}
     >
-      <span className="block text-xs font-semibold">{label}</span>
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold">{label}</span>
+        {!selected ? (
+          <span className="shrink-0 rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-300">
+            Seç
+          </span>
+        ) : null}
+      </span>
       <span
         className={`mt-1 block text-sm font-bold ${
           selected ? "text-black" : "text-white"
@@ -105,7 +112,7 @@ export function PaymentTypeOptionButton({
           selected ? "text-zinc-700" : "text-zinc-500"
         }`}
       >
-        ({description})
+        {description}
       </span>
     </button>
   );

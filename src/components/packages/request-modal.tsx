@@ -8,10 +8,15 @@ import {
   type CartItem,
   type CartItemInput,
 } from "@/stores/cart-store";
-import { formatPrice } from "@/lib/constants";
-import { TURKISH_PROVINCES } from "@/lib/turkish-provinces";
+import {
+  DEFAULT_REQUEST_CITY,
+  REQUEST_CITY_OPTIONS,
+} from "@/lib/turkish-provinces";
 import { PaymentTypeOptionButton } from "@/components/packages/payment-type-price";
-import { RequestActionLabel, requestActionSurfaceClassFull } from "@/components/packages/request-action-label";
+import {
+  RequestActionLabel,
+  requestActionSurfaceClassFull,
+} from "@/components/packages/request-action-label";
 import {
   buildRequestWhatsAppMessage,
   buildWhatsAppUrl,
@@ -33,6 +38,62 @@ const emptyForm = {
   contactName: "",
   contactRole: null as "gelin" | "damat" | null,
 };
+
+function buildDefaultCategoryFields(categoryIds: string[]): CategoryFields {
+  return Object.fromEntries(
+    categoryIds.map((categoryId) => [
+      categoryId,
+      { city: DEFAULT_REQUEST_CITY, shootDate: "" },
+    ]),
+  );
+}
+
+function CityPicker({
+  value,
+  onChange,
+  required,
+}: {
+  value: string;
+  onChange: (city: string) => void;
+  required?: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const displayValue = value.trim() || DEFAULT_REQUEST_CITY;
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#1a1a1a] px-4 py-3">
+        <span className="text-white">{displayValue}</span>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="shrink-0 text-sm font-medium text-[#93f8b6] hover:text-[#b8ffd0]"
+        >
+          Değiştir
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <select
+      value={displayValue}
+      onChange={(event) => {
+        onChange(event.target.value);
+        setEditing(false);
+      }}
+      required={required}
+      autoFocus
+      className={inputClass}
+    >
+      {REQUEST_CITY_OPTIONS.map((province) => (
+        <option key={province} value={province}>
+          {province}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function RequestModal({
   open,
@@ -88,12 +149,17 @@ export function RequestModal({
     [items],
   );
   const requestAllowed = canCreateRequestForItems(items);
+  const hasMultipleItems = items.length > 1;
 
   const [contactName, setContactName] = useState("");
   const [contactRole, setContactRole] = useState<"gelin" | "damat" | null>(
     null,
   );
   const [categoryFields, setCategoryFields] = useState<CategoryFields>({});
+  const [sameDay, setSameDay] = useState(false);
+  const [sameCity, setSameCity] = useState(false);
+  const [globalShootDate, setGlobalShootDate] = useState("");
+  const [globalCity, setGlobalCity] = useState(DEFAULT_REQUEST_CITY);
   const [paymentType, setPaymentType] = useState<"pesin" | "taksitli">("pesin");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -111,15 +177,47 @@ export function RequestModal({
   useEffect(() => {
     if (!open) return;
     setPaymentType("pesin");
-  }, [open, itemIdsKey]);
+    setSameDay(false);
+    setSameCity(false);
+    setGlobalShootDate("");
+    setGlobalCity(DEFAULT_REQUEST_CITY);
+    setCategoryFields(
+      buildDefaultCategoryFields(categories.map((category) => category.categoryId)),
+    );
+  }, [open, itemIdsKey, categories]);
 
   function resetForm() {
     setContactName(emptyForm.contactName);
     setContactRole(emptyForm.contactRole);
     setCategoryFields({});
+    setSameDay(false);
+    setSameCity(false);
+    setGlobalShootDate("");
+    setGlobalCity(DEFAULT_REQUEST_CITY);
     setPaymentType("pesin");
     setError("");
     setSuccess(false);
+  }
+
+  function resolveCategoryFields(): CategoryFields {
+    const resolved = { ...categoryFields };
+
+    for (const category of categories) {
+      const current = resolved[category.categoryId] ?? {
+        city: DEFAULT_REQUEST_CITY,
+        shootDate: "",
+      };
+      resolved[category.categoryId] = {
+        city:
+          hasMultipleItems && sameCity
+            ? globalCity.trim() || DEFAULT_REQUEST_CITY
+            : current.city.trim() || DEFAULT_REQUEST_CITY,
+        shootDate:
+          hasMultipleItems && sameDay ? globalShootDate : current.shootDate,
+      };
+    }
+
+    return resolved;
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -139,8 +237,10 @@ export function RequestModal({
       return;
     }
 
+    const resolvedFields = resolveCategoryFields();
+
     const missingCategory = categories.find((category) => {
-      const fields = categoryFields[category.categoryId];
+      const fields = resolvedFields[category.categoryId];
       return !fields?.city?.trim() || !fields?.shootDate;
     });
 
@@ -157,7 +257,7 @@ export function RequestModal({
     }
 
     const payloadItems = items.map((item) => {
-      const category = categoryFields[item.categoryId]!;
+      const category = resolvedFields[item.categoryId]!;
       return {
         packageOptionId: item.packageOptionId,
         paymentType,
@@ -185,7 +285,7 @@ export function RequestModal({
     }
 
     const whatsAppItems = items.map((item) => {
-      const fields = categoryFields[item.categoryId]!;
+      const fields = resolvedFields[item.categoryId]!;
       return {
         categoryTitle: item.categoryTitle,
         optionLabel: item.optionLabel,
@@ -288,55 +388,104 @@ export function RequestModal({
                   </div>
                 </FormSection>
 
-                {categories.map((category) => (
-                  <FormSection key={category.categoryId} title={category.title}>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Field label={category.cityLabel} required>
-                        <select
-                          value={categoryFields[category.categoryId]?.city ?? ""}
-                          onChange={(e) =>
-                            setCategoryFields((prev) => ({
-                              ...prev,
-                              [category.categoryId]: {
-                                shootDate:
-                                  prev[category.categoryId]?.shootDate ?? "",
-                                city: e.target.value,
-                              },
-                            }))
-                          }
-                          required
-                          className={inputClass}
-                        >
-                          <option value="">İl seçin</option>
-                          {TURKISH_PROVINCES.map((province) => (
-                            <option key={province} value={province}>
-                              {province}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label={category.dateLabel} required>
+                {hasMultipleItems ? (
+                  <FormSection title="Çekim Bilgileri">
+                    <div className="flex flex-wrap gap-2">
+                      <ToggleChip
+                        active={sameDay}
+                        onClick={() => setSameDay((value) => !value)}
+                        label="Tümü Aynı Gün"
+                      />
+                      <ToggleChip
+                        active={sameCity}
+                        onClick={() => setSameCity((value) => !value)}
+                        label="Tümü Aynı Şehirde"
+                      />
+                    </div>
+
+                    {sameDay ? (
+                      <Field label="Çekim Tarihi" required>
                         <input
                           type="date"
-                          value={
-                            categoryFields[category.categoryId]?.shootDate ?? ""
-                          }
-                          onChange={(e) =>
-                            setCategoryFields((prev) => ({
-                              ...prev,
-                              [category.categoryId]: {
-                                city: prev[category.categoryId]?.city ?? "",
-                                shootDate: e.target.value,
-                              },
-                            }))
+                          value={globalShootDate}
+                          onChange={(event) =>
+                            setGlobalShootDate(event.target.value)
                           }
                           required
                           className={inputClass}
                         />
                       </Field>
-                    </div>
+                    ) : null}
+
+                    {sameCity ? (
+                      <Field label="Şehir" required>
+                        <CityPicker
+                          value={globalCity}
+                          onChange={setGlobalCity}
+                          required
+                        />
+                      </Field>
+                    ) : null}
                   </FormSection>
-                ))}
+                ) : null}
+
+                {categories.map((category) => {
+                  const hideDate = hasMultipleItems && sameDay;
+                  const hideCity = hasMultipleItems && sameCity;
+                  if (hideDate && hideCity) return null;
+
+                  return (
+                    <FormSection key={category.categoryId} title={category.title}>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {hideCity ? null : (
+                          <Field label={category.cityLabel} required>
+                            <CityPicker
+                              value={
+                                categoryFields[category.categoryId]?.city ??
+                                DEFAULT_REQUEST_CITY
+                              }
+                              onChange={(city) =>
+                                setCategoryFields((prev) => ({
+                                  ...prev,
+                                  [category.categoryId]: {
+                                    shootDate:
+                                      prev[category.categoryId]?.shootDate ?? "",
+                                    city,
+                                  },
+                                }))
+                              }
+                              required
+                            />
+                          </Field>
+                        )}
+                        {hideDate ? null : (
+                          <Field label={category.dateLabel} required>
+                            <input
+                              type="date"
+                              value={
+                                categoryFields[category.categoryId]?.shootDate ??
+                                ""
+                              }
+                              onChange={(e) =>
+                                setCategoryFields((prev) => ({
+                                  ...prev,
+                                  [category.categoryId]: {
+                                    city:
+                                      prev[category.categoryId]?.city ??
+                                      DEFAULT_REQUEST_CITY,
+                                    shootDate: e.target.value,
+                                  },
+                                }))
+                              }
+                              required
+                              className={inputClass}
+                            />
+                          </Field>
+                        )}
+                      </div>
+                    </FormSection>
+                  );
+                })}
 
                 <FormSection title="Ödeme Tipi">
                   <p className="text-xs leading-relaxed text-zinc-500">
@@ -356,12 +505,6 @@ export function RequestModal({
                       onSelect={() => setPaymentType("taksitli")}
                     />
                   </div>
-                  <p className="border-t border-white/10 pt-3 text-sm font-semibold text-white">
-                    Toplam:{" "}
-                    {formatPrice(
-                      paymentType === "pesin" ? totalCash : totalInstallment,
-                    )}
-                  </p>
                 </FormSection>
 
                 {!requestAllowed ? (
@@ -389,6 +532,30 @@ export function RequestModal({
         </motion.div>
       ) : null}
     </AnimatePresence>
+  );
+}
+
+function ToggleChip({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? "border-[#93f8b6] bg-[#93f8b6] text-black"
+          : "border-white/20 text-zinc-300 hover:border-white/35"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -71,9 +71,12 @@ export const useCartStore = create<CartState>()(
             (existing) => existing.packageOptionId === item.packageOptionId,
           );
           if (exists) return state;
+          const withoutSameCategory = state.items.filter(
+            (existing) => existing.categoryId !== item.categoryId,
+          );
           return {
             items: [
-              ...state.items,
+              ...withoutSameCategory,
               { ...item, selected: item.selected ?? true },
             ],
           };

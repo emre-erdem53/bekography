@@ -1,7 +1,4 @@
-import { HomeExploreCarousel } from "@/components/home/home-explore-carousel";
-import { AboutPageContent } from "@/components/about/about-page-content";
-import { ContactPageClient } from "@/components/contact/contact-page-client";
-import { PackagesHero } from "@/components/packages/packages-hero";
+import { HomePageClient } from "@/components/home/home-page-client";
 import { exploreMediaItems } from "@/lib/explore-media";
 import {
   getActivePackages,
@@ -26,13 +23,6 @@ export default async function HomePage() {
   }
 
   return (
-    <main className="flex-1">
-      <div id="kesfet">
-        <HomeExploreCarousel feedKey="home" items={exploreMediaItems} />
-      </div>
-      <PackagesHero categories={categories} variant="section" />
-      <AboutPageContent variant="section" />
-      <ContactPageClient variant="section" />
-    </main>
+    <HomePageClient exploreItems={exploreMediaItems} categories={categories} />
   );
 }

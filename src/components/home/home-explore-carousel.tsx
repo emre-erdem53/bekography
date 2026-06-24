@@ -20,6 +20,7 @@ import { useCartOverlayBottomPadding } from "@/components/packages/package-cart-
 import {
   getExploreLoadMoreCount,
   getInitialExploreVisibleCount,
+  exploreGridHeightPx,
 } from "@/lib/explore-grid-viewport";
 import { preloadExploreBatch } from "@/lib/explore-media-preload";
 import type {
@@ -59,11 +60,13 @@ type HomeExploreCarouselProps = {
   items: ExploreMediaItem[];
   /** Sayfa bazlı feed kimliği — geçişlerde ön yükleme döngüsünü sıfırlar. */
   feedKey?: string;
+  onBootstrapComplete?: () => void;
 };
 
 export function HomeExploreCarousel({
   items,
   feedKey = "home",
+  onBootstrapComplete,
 }: HomeExploreCarouselProps) {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(0);
@@ -131,6 +134,15 @@ export function HomeExploreCarousel({
       setIsBootstrapping(true);
       setReadyCount(0);
 
+      if (items.length === 0) {
+        if (!cancelled) {
+          isLoadingRef.current = false;
+          setIsBootstrapping(false);
+          onBootstrapComplete?.();
+        }
+        return;
+      }
+
       const target = getInitialExploreVisibleCount(items);
       await preloadExploreBatch(items, 0, target);
 
@@ -138,13 +150,14 @@ export function HomeExploreCarousel({
       setReadyCount(target);
       isLoadingRef.current = false;
       setIsBootstrapping(false);
+      onBootstrapComplete?.();
     }
 
     void bootstrapFeed();
     return () => {
       cancelled = true;
     };
-  }, [items, feedKey]);
+  }, [items, feedKey, onBootstrapComplete]);
 
   useEffect(() => {
     readyCountRef.current = readyCount;
@@ -498,14 +511,25 @@ export function HomeExploreCarousel({
       ? Math.max(0.35, 1 - dismissOffset / 420)
       : 1;
 
+  const bootstrapMinHeightPx = useMemo(() => {
+    if (items.length === 0) return 0;
+    const target = getInitialExploreVisibleCount(items);
+    const viewportWidth =
+      typeof window !== "undefined" ? window.innerWidth : 440;
+    return exploreGridHeightPx(items, target, viewportWidth);
+  }, [items]);
+
   // ----------------------------- RENDER ----------------------------------
 
   return (
     <>
       <section
-        className={`relative w-full bg-black pt-24 ${
-          isBootstrapping && arrangedFeedItems.length === 0 ? "min-h-[50vh]" : ""
-        }`}
+        className="relative w-full bg-black pt-24"
+        style={
+          isBootstrapping && arrangedFeedItems.length === 0 && bootstrapMinHeightPx
+            ? { minHeight: bootstrapMinHeightPx + 96 }
+            : undefined
+        }
       >
         <div className="relative z-10 w-full">
           {arrangedFeedItems.length > 0 ? (

@@ -9,6 +9,43 @@ type PackageGalleryCarouselProps = {
   variant?: "detail" | "default" | "scroll";
 };
 
+function CarouselVideoSlide({
+  src,
+  isActive,
+}: {
+  src: string;
+  isActive: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (isActive) {
+      if (video.preload === "none") {
+        video.preload = "metadata";
+      }
+      void video.play().catch(() => {});
+      return;
+    }
+
+    video.pause();
+  }, [isActive]);
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      className="h-full w-full object-cover"
+      muted
+      playsInline
+      loop
+      preload="metadata"
+    />
+  );
+}
+
 export function PackageGalleryCarousel({
   media,
   variant = "default",
@@ -92,13 +129,9 @@ export function PackageGalleryCarousel({
               className="relative h-full w-full shrink-0 snap-center snap-always"
             >
               {item.type === "video" ? (
-                <video
+                <CarouselVideoSlide
                   src={item.url}
-                  className="h-full w-full object-cover"
-                  muted
-                  playsInline
-                  loop
-                  autoPlay={index === currentIndex}
+                  isActive={index === currentIndex}
                 />
               ) : (
                 <Image

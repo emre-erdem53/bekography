@@ -46,10 +46,21 @@ export function getOptionGalleryPreviewUrl(
   optionId: string,
   optionLabel?: string,
 ): string | null {
+  const preview = getOptionGalleryPreviewMedia(category, optionId, optionLabel);
+  return preview?.type === "image" ? preview.url : null;
+}
+
+export function getOptionGalleryPreviewMedia(
+  category: PackageCategoryData,
+  optionId: string,
+  optionLabel?: string,
+): { url: string; type: "image" | "video" } | null {
   const media = getOptionGalleryMedia(category, optionId, optionLabel);
   const firstImage = media.find((item) => item.type !== "video");
-  const first = firstImage ?? media[0];
-  return first?.url ?? null;
+  if (firstImage) return { url: firstImage.url, type: "image" };
+  const firstVideo = media.find((item) => item.type === "video");
+  if (firstVideo) return { url: firstVideo.url, type: "video" };
+  return null;
 }
 
 /** @deprecated Use getOptionGalleryMedia instead */

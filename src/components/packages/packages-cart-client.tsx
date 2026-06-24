@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
 import type { PackageCategoryData } from "@/lib/package-types";
 import { useCartStore } from "@/stores/cart-store";
-import { getOptionGalleryPreviewUrl } from "@/lib/package-media";
+import { getOptionGalleryPreviewMedia } from "@/lib/package-media";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
+import { CartItemThumbnail } from "@/components/packages/cart-item-thumbnail";
 
 const contentWidth =
   "mx-auto w-full max-w-2xl px-4 sm:max-w-3xl sm:px-6 lg:max-w-4xl xl:max-w-5xl";
@@ -53,16 +53,23 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
     setDetailOptionId(packageOptionId);
   }
 
-  function getItemPreviewUrl(
+  function getItemPreviewMedia(
     categoryId: string,
     packageOptionId: string,
     optionLabel: string,
     storedUrl: string | null,
   ) {
-    if (storedUrl) return storedUrl;
     const category = categoryMap.get(categoryId);
-    if (!category) return null;
-    return getOptionGalleryPreviewUrl(category, packageOptionId, optionLabel);
+    if (category) {
+      const preview = getOptionGalleryPreviewMedia(
+        category,
+        packageOptionId,
+        optionLabel,
+      );
+      if (preview) return preview;
+    }
+    if (storedUrl) return { url: storedUrl, type: "image" as const };
+    return null;
   }
 
   return (
@@ -111,7 +118,7 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
         ) : (
           <ul className="mt-8 space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
             {items.map((item) => {
-              const previewUrl = getItemPreviewUrl(
+              const preview = getItemPreviewMedia(
                 item.categoryId,
                 item.packageOptionId,
                 item.optionLabel,
@@ -130,23 +137,15 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
                     }
                     className="flex w-full gap-3 text-left"
                   >
-                    <div
-                      className="relative aspect-square w-12 shrink-0 overflow-hidden rounded-lg bg-[#1a1a1a] sm:w-14"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {previewUrl ? (
-                        <Image
-                          src={previewUrl}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes="56px"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[10px] text-zinc-600">
-                          —
-                        </div>
-                      )}
+                    <div onClick={(event) => event.stopPropagation()}>
+                      <CartItemThumbnail
+                        imageUrl={
+                          preview?.type === "image" ? preview.url : null
+                        }
+                        videoUrl={
+                          preview?.type === "video" ? preview.url : null
+                        }
+                      />
                     </div>
                     <input
                       type="checkbox"
@@ -195,7 +194,7 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
         )}
 
         {items.length > 1 ? (
-          <div className="mt-6 rounded-2xl border border-white/15 bg-[#0a0a0a] p-4 md:p-5">
+          <div className="mt-6 rounded-2xl border border-[#93f8b6]/25 bg-[#93f8b6]/10 p-4 md:p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-base font-semibold text-white sm:text-lg">
                 Sepet Toplamı

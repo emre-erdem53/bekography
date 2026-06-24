@@ -67,6 +67,9 @@ export function PackageCartBar() {
 
   const isCartPage = pathname === "/paketler/sepet";
   const itemCount = items.length;
+  const itemNameSummary = items
+    .map((item) => item.categoryTitle)
+    .join(" · ");
   const needsCompanion = cartRequiresAdditionalPackage(items);
   const canRequest = canCreateRequestForItems(
     selectedItems.length > 0 ? selectedItems : items,
@@ -92,7 +95,7 @@ export function PackageCartBar() {
               </span>
               <span className="truncate text-sm font-medium">
                 Sepetim{" "}
-                <span className="text-zinc-400">({itemCount} ürün)</span>
+                <span className="text-zinc-400">{itemNameSummary}</span>
               </span>
             </div>
           ) : (
@@ -108,7 +111,7 @@ export function PackageCartBar() {
               </span>
               <span className="truncate text-sm font-medium">
                 Sepetim{" "}
-                <span className="text-zinc-400">({itemCount} ürün)</span>
+                <span className="text-zinc-400">{itemNameSummary}</span>
               </span>
             </Link>
           )}

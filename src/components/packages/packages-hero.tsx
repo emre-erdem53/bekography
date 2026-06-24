@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { PackagesCategoryAccordion } from "@/components/packages/packages-category-accordion";
@@ -11,9 +12,11 @@ const sectionClass = "scroll-mt-24 bg-black pb-6 text-white";
 export function PackagesHero({
   categories,
   variant = "page",
+  visible = true,
 }: {
   categories: PackageCategoryData[];
   variant?: "page" | "section";
+  visible?: boolean;
 }) {
   const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
     null,
@@ -43,10 +46,19 @@ export function PackagesHero({
 
   const inner = (
     <>
-      <div
+      <motion.div
+        initial={variant === "section" && !visible ? { opacity: 0, y: 24 } : false}
+        animate={
+          variant === "section"
+            ? visible
+              ? { opacity: 1, y: 0 }
+              : { opacity: 0, y: 24 }
+            : { opacity: 1, y: 0 }
+        }
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         className={`mx-auto w-full max-w-2xl px-4 sm:max-w-3xl sm:px-6 lg:max-w-3xl ${
           variant === "section" ? "pb-6 pt-16" : "pb-16 pt-4"
-        }`}
+        } ${variant === "section" && !visible ? "pointer-events-none" : ""}`}
       >
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
@@ -66,7 +78,7 @@ export function PackagesHero({
           onToggleCategory={handleToggleCategory}
           onSelectOption={handleSelectOption}
         />
-      </div>
+      </motion.div>
 
       <PackageDetailSheet
         category={detailCategory}
@@ -78,7 +90,11 @@ export function PackagesHero({
 
   if (variant === "section") {
     return (
-      <section id="paket-olustur" className={sectionClass}>
+      <section
+        id="paket-olustur"
+        className={sectionClass}
+        aria-hidden={!visible}
+      >
         {inner}
       </section>
     );

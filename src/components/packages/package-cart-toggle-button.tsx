@@ -83,11 +83,14 @@ export function PackageCartToggleButton({
       onClick={handleClick}
       className={
         inCart
-          ? "flex w-full items-center justify-center rounded-2xl bg-red-500 py-2.5 text-xs font-semibold leading-none text-white transition-opacity hover:opacity-90 sm:py-3.5 sm:text-sm"
-          : "flex w-full items-center justify-center rounded-2xl bg-[#93f8b6] py-2.5 text-xs font-semibold leading-none text-black transition-opacity hover:opacity-90 sm:py-3.5 sm:text-sm"
+          ? "flex w-full min-h-11 items-center justify-center rounded-2xl bg-red-500 py-2.5 text-xs font-semibold leading-none text-white transition-opacity hover:opacity-90 sm:min-h-12 sm:py-3.5 sm:text-sm"
+          : "flex w-full min-h-11 items-center justify-center rounded-2xl bg-[#93f8b6] py-2.5 text-xs font-semibold leading-none text-black transition-opacity hover:opacity-90 sm:min-h-12 sm:py-3.5 sm:text-sm"
       }
     >
-      {inCart ? "Sepetten Çıkar" : "Sepete Ekle"}
+      <span className="inline-flex items-center justify-center gap-2">
+        <span className="h-[18px] w-[18px] shrink-0" aria-hidden />
+        <span>{inCart ? "Sepetten Çıkar" : "Sepete Ekle"}</span>
+      </span>
     </button>
   );
 }

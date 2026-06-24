@@ -12,10 +12,10 @@ export function BekographyBrand({
   className = "",
 }: BekographyBrandProps) {
   const logoHeight =
-    size === "sm" ? "h-8 sm:h-9" : "h-[2.375rem] md:h-[2.875rem]";
+    size === "sm" ? "h-6 sm:h-7" : "h-[2.375rem] md:h-[2.875rem]";
   const titleClass =
     size === "sm"
-      ? "text-sm leading-none lowercase tracking-wide text-white sm:text-base"
+      ? "font-brand text-sm leading-none lowercase tracking-wide text-white sm:text-base"
       : "font-brand text-[1.65rem] leading-none lowercase tracking-wide text-white md:text-[2.1rem]";
   const subtitleClass =
     size === "sm"
