@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { HomeExploreCarousel } from "@/components/home/home-explore-carousel";
-import { AboutPageContent } from "@/components/about/about-page-content";
-import { ContactPageClient } from "@/components/contact/contact-page-client";
 import { PackagesHero } from "@/components/packages/packages-hero";
 import type { PackageCategoryData } from "@/lib/package-types";
 import type { ExploreMediaItem } from "@/lib/explore-media-types";
@@ -20,7 +18,7 @@ export function HomePageClient({
   const [exploreReady, setExploreReady] = useState(false);
 
   return (
-    <main className="flex-1">
+    <>
       <div id="kesfet">
         <HomeExploreCarousel
           feedKey="home"
@@ -33,8 +31,6 @@ export function HomePageClient({
         variant="section"
         visible={exploreReady}
       />
-      <AboutPageContent variant="section" />
-      <ContactPageClient variant="section" />
-    </main>
+    </>
   );
 }
