@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants";
 import type { PostShootSection } from "@/lib/post-shoot";
 import type { TrackingData } from "@/lib/tracking-types";
+import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
 import {
   BrideIcon,
@@ -253,12 +254,14 @@ function TrackingOrderBody({
   data: TrackingData;
   exportRef?: Ref<HTMLDivElement>;
 }) {
+  const trackingData = normalizeTrackingData(data);
+
   return (
     <div ref={exportRef}>
       <div className="mx-auto max-w-5xl">
-        <TrackingWorkflowTimeline workflow={data.workflow} />
+        <TrackingWorkflowTimeline workflow={trackingData.workflow} />
       </div>
-      <ReservationOrderDocument data={data} />
+      <ReservationOrderDocument data={trackingData} />
     </div>
   );
 }

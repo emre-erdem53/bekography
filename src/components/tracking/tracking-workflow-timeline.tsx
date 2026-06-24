@@ -9,9 +9,13 @@ export function TrackingWorkflowTimeline({
   workflow,
   compact = false,
 }: {
-  workflow: TrackingWorkflowView;
+  workflow: TrackingWorkflowView | undefined;
   compact?: boolean;
 }) {
+  if (!workflow?.stages?.length) {
+    return null;
+  }
+
   const currentStages = workflow.stages.filter((stage) => stage.state === "current");
 
   return (

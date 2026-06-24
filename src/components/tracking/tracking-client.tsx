@@ -6,10 +6,11 @@ import {
   TrackingPageShell,
 } from "@/components/tracking/tracking-order-view";
 import type { TrackingData } from "@/lib/tracking-types";
+import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import { normalizeTcKimlik } from "@/lib/reservation-utils";
 
 function trackingStorageKey(slug: string) {
-  return `bekography-takip:v2:${slug}`;
+  return `bekography-takip:v3:${slug}`;
 }
 
 export function TrackingClient({ slug }: { slug: string }) {
@@ -34,7 +35,7 @@ export function TrackingClient({ slug }: { slug: string }) {
         sessionStorage.removeItem(trackingStorageKey(slug));
         return;
       }
-      setData(parsed);
+      setData(normalizeTrackingData(parsed));
       setVerified(true);
     } catch {
       sessionStorage.removeItem(trackingStorageKey(slug));
@@ -61,7 +62,7 @@ export function TrackingClient({ slug }: { slug: string }) {
         body: JSON.stringify({ tc: normalized }),
       });
 
-      const payload = await response.json().catch(() => ({}));
+      const payloadRaw = await response.json().catch(() => ({}));
 
       if (response.status === 404) {
         setNotFound(true);
@@ -70,16 +71,20 @@ export function TrackingClient({ slug }: { slug: string }) {
 
       if (!response.ok) {
         setError(
-          typeof payload.error === "string"
-            ? payload.error
+          typeof payloadRaw.error === "string"
+            ? payloadRaw.error
             : "TC kimlik numarası doğrulanamadı",
         );
         return;
       }
 
-      setData(payload as TrackingData);
+      const trackingData = normalizeTrackingData(payloadRaw as TrackingData);
+      setData(trackingData);
       setVerified(true);
-      sessionStorage.setItem(trackingStorageKey(slug), JSON.stringify(payload));
+      sessionStorage.setItem(
+        trackingStorageKey(slug),
+        JSON.stringify(trackingData),
+      );
     } catch {
       setError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
