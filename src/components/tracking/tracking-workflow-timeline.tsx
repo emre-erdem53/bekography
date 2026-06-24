@@ -72,11 +72,12 @@ export function TrackingWorkflowTimeline({
       )}
 
       <div className="overflow-x-auto pb-2">
-        <ol className="flex min-w-max items-end gap-2 sm:gap-3 md:min-w-0 md:gap-4">
+        <ol className="flex min-w-max md:min-w-0">
           {workflow.stages.map((stage, index) => {
             const isCurrent = stage.state === "current";
             const isCompleted = stage.state === "completed";
             const isUpcoming = stage.state === "upcoming";
+            const isLast = index === workflow.stages.length - 1;
             const toneClass =
               stage.tone === "green"
                 ? "text-emerald-400"
@@ -85,44 +86,58 @@ export function TrackingWorkflowTimeline({
                   : stage.tone === "amber"
                     ? "text-amber-300"
                     : "text-zinc-400";
+            const connectorClass = isCompleted ? "bg-white/50" : "bg-white/10";
+            const leftConnectorClass =
+              index === 0
+                ? "bg-transparent"
+                : workflow.stages[index - 1].state === "completed"
+                  ? "bg-white/50"
+                  : "bg-white/10";
+            const rightConnectorClass = isLast
+              ? "bg-transparent"
+              : connectorClass;
 
             return (
               <li
                 key={stage.id}
-                className={`relative flex min-w-[4.5rem] flex-1 flex-col items-center text-center sm:min-w-[5.5rem] ${
+                className={`flex min-w-[4.75rem] flex-1 flex-col items-center sm:min-w-[5.5rem] ${
                   isCurrent ? "md:min-w-[7rem]" : ""
                 }`}
               >
-                {index < workflow.stages.length - 1 ? (
+                <div className="flex w-full items-center">
                   <span
-                    className={`absolute left-[calc(50%+14px)] top-3 hidden h-px w-[calc(100%-28px)] md:block ${
-                      isCompleted ? "bg-white/50" : "bg-white/10"
-                    }`}
+                    className={`h-px min-w-3 flex-1 sm:min-w-4 ${leftConnectorClass}`}
+                    aria-hidden
                   />
-                ) : null}
-
-                <span
-                  className={`relative z-10 flex shrink-0 items-center justify-center rounded-full border transition-all ${
-                    isCurrent
-                      ? "h-8 w-8 border-amber-300 bg-amber-300 text-black sm:h-9 sm:w-9"
-                      : isCompleted
-                        ? "h-6 w-6 border-white bg-white text-black sm:h-7 sm:w-7"
-                        : "h-5 w-5 border-white/20 bg-transparent sm:h-6 sm:w-6"
-                  }`}
-                >
-                  {isCompleted ? (
-                    <Check
-                      className={
-                        isCurrent ? "h-4 w-4" : "h-3 w-3 sm:h-3.5 sm:w-3.5"
-                      }
-                    />
-                  ) : isCurrent ? (
-                    <span className="h-2 w-2 rounded-full bg-black" />
-                  ) : null}
-                </span>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center sm:h-10 sm:w-10">
+                    <span
+                      className={`flex items-center justify-center rounded-full border transition-all ${
+                        isCurrent
+                          ? "h-8 w-8 border-amber-300 bg-amber-300 text-black sm:h-9 sm:w-9"
+                          : isCompleted
+                            ? "h-6 w-6 border-white bg-white text-black sm:h-7 sm:w-7"
+                            : "h-5 w-5 border-white/20 bg-transparent sm:h-6 sm:w-6"
+                      }`}
+                    >
+                      {isCompleted ? (
+                        <Check
+                          className={
+                            isCurrent ? "h-4 w-4" : "h-3 w-3 sm:h-3.5 sm:w-3.5"
+                          }
+                        />
+                      ) : isCurrent ? (
+                        <span className="h-2 w-2 rounded-full bg-black" />
+                      ) : null}
+                    </span>
+                  </span>
+                  <span
+                    className={`h-px min-w-3 flex-1 sm:min-w-4 ${rightConnectorClass}`}
+                    aria-hidden
+                  />
+                </div>
 
                 <p
-                  className={`mt-2 leading-snug ${
+                  className={`mt-3 w-full px-1 text-center leading-snug ${
                     isCurrent
                       ? `text-xs font-semibold sm:text-sm md:text-base ${toneClass}`
                       : isUpcoming

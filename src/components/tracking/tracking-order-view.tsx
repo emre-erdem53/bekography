@@ -42,7 +42,7 @@ export const ReservationOrderDocument = forwardRef<
 >(function ReservationOrderDocument({ data }, ref) {
   return (
     <div ref={ref} className="mx-auto max-w-5xl">
-      <header className="border-b border-white/10 pb-8 text-center">
+      <header className="mt-8 border-b border-white/10 pb-8 pt-2 text-center sm:mt-10 sm:pt-4">
         <p className="text-xs font-medium uppercase tracking-[0.28em] text-zinc-500">
           {data.formYear} / bekography — Sipariş Formu
         </p>
