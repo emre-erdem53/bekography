@@ -16,7 +16,7 @@ import {
 import type { PostShootSection } from "@/lib/post-shoot";
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-sm text-white outline-none focus:border-white/30";
+  "box-border w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-sm text-white outline-none focus:border-white/30";
 
 type SectionKey = "digital" | "editing" | "printing";
 
@@ -182,7 +182,7 @@ export function PostShootTemplatesAdminClient() {
           {settings.variables.map((variable, index) => (
             <div
               key={`${variable.key}-${index}`}
-              className="grid gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 md:grid-cols-[1fr_1fr_1fr_auto]"
+              className="grid-safe grid gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-4 md:grid-cols-[1fr_1fr_1fr_auto]"
             >
               <label className="block">
                 <span className="mb-1 block text-xs text-zinc-500">Anahtar</span>

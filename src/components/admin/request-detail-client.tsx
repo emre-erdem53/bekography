@@ -95,7 +95,7 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
         />
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
+      <div className="grid-safe grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
         <Info label="İletişim" value={request.customerName} />
         <Info
           label="Telefon"

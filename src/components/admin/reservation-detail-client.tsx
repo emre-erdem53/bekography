@@ -181,7 +181,7 @@ export function ReservationDetailClient({
       </div>
 
       <Section title="Müşteri Bilgileri">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid-safe grid gap-4 md:grid-cols-2">
           <Info label="Damat" value={reservation.groomName} />
           <Info label="Damat TC" value={reservation.groomTc || "—"} />
           <Info label="Damat Tel" value={reservation.groomPhone} />
@@ -207,7 +207,7 @@ export function ReservationDetailClient({
               >
                 {item.packageOption.category.title} — {item.shootContent}
               </h3>
-              <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+              <div className="mt-3 grid-safe grid gap-2 text-sm md:grid-cols-2">
                 <p className="text-zinc-400">
                   Çekim:{" "}
                   <span className="text-white">
@@ -260,7 +260,7 @@ export function ReservationDetailClient({
       </Section>
 
       <Section title="Ödeme Planı">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid-safe grid gap-4 md:grid-cols-3">
           <Info label="Toplam Fiyat" value={formatPrice(reservation.totalPrice)} />
           <Info
             label="Cayma Bedeli Maks."

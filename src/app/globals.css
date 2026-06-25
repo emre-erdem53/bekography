@@ -79,6 +79,33 @@ body {
   display: none;
 }
 
+/* Mobile: keep form controls inside their containers */
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    display: block;
+    width: 100%;
+  }
+}
+
+@layer utilities {
+  .grid-safe {
+    min-width: 0;
+  }
+
+  .grid-safe > * {
+    min-width: 0;
+  }
+}
+
 /* Admin takvim — koyu tema, net hücre sınırları */
 .admin-calendar {
   --cal-bg: #0a0a0a;

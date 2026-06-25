@@ -434,7 +434,7 @@ export function PackageForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-3xl space-y-6">
+    <form onSubmit={handleSubmit} className="mx-auto min-w-0 max-w-3xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-white sm:text-2xl">
@@ -450,7 +450,7 @@ export function PackageForm({
         </Link>
       </div>
 
-      <div className="grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
+      <div className="grid-safe grid gap-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5 md:grid-cols-2">
         <Field label="Başlık">
           <input
             value={title}
@@ -470,14 +470,16 @@ export function PackageForm({
             kodu yazmayın. Çok renkli SVG&apos;ler tek renge dönüşür.
           </p>
           {isCustomPackageIcon(iconKey) ? (
-            <div className="mb-3 flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-3">
+            <div className="mb-3 flex min-w-0 items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-3">
               <PackageIconDisplay
                 iconKey={iconKey}
-                className="h-6 w-6"
+                className="h-6 w-6 shrink-0"
                 style={{ color: accentColor }}
                 imageSizes="24px"
               />
-              <span className="truncate text-xs text-zinc-400">{iconKey}</span>
+              <span className="min-w-0 flex-1 break-all text-xs text-zinc-400">
+                {iconKey}
+              </span>
             </div>
           ) : (
             <p className="mb-3 text-xs text-zinc-500">
@@ -612,7 +614,7 @@ export function PackageForm({
 
                 {isExpanded ? (
                   <div className="space-y-4 border-t border-white/10 p-4 pt-4">
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid-safe grid gap-3 md:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-zinc-500">
                       Tür adı
@@ -632,7 +634,7 @@ export function PackageForm({
                     <label className="mb-1.5 block text-xs font-medium text-zinc-500">
                       İkon
                     </label>
-                    <div className="flex items-center gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
                       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5">
                         <PackageIconDisplay
                           iconKey={
@@ -652,7 +654,7 @@ export function PackageForm({
                             },
                           })
                         }
-                        className={inputClass}
+                        className={`${inputClass} min-w-0 flex-1`}
                       >
                         <option value="">Otomatik (isme göre)</option>
                         {PACKAGE_OPTION_ICON_KEYS.map((icon) => (
@@ -665,7 +667,7 @@ export function PackageForm({
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid-safe grid gap-3 md:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-zinc-500">
                       Hemen Ödeme (₺)
@@ -861,7 +863,7 @@ export function PackageForm({
                       </div>
                     );
                   })}
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid-safe grid gap-3 sm:grid-cols-2">
                     <AdminFileUpload
                       accept="image/jpeg,image/webp,image/png"
                       label="Görsel Ekle"
@@ -1095,7 +1097,7 @@ export function PackageForm({
               Henüz dinamik alan tanımlanmamış.
             </p>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid-safe grid gap-3 md:grid-cols-2">
               {templateVariables.map((variable) => (
                 <Field key={variable.key} label={variable.label}>
                   <input
@@ -1143,7 +1145,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block space-y-1.5">
+    <label className="block min-w-0 space-y-1.5">
       <span className="text-sm text-zinc-400">{label}</span>
       {children}
     </label>
@@ -1151,4 +1153,4 @@ function Field({
 }
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-white outline-none focus:border-white/30";
+  "box-border w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-white outline-none focus:border-white/30";

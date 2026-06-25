@@ -86,7 +86,7 @@ export function PaymentTypeOptionButton({
     <button
       type="button"
       onClick={onSelect}
-      className={`flex flex-1 flex-col rounded-lg border px-3 py-2.5 text-left transition-colors ${
+      className={`flex min-w-0 flex-1 flex-col rounded-lg border px-3 py-2.5 text-left transition-colors ${
         selected
           ? "border-[#93f8b6] bg-[#93f8b6] text-black"
           : "border-white/20 text-zinc-400"

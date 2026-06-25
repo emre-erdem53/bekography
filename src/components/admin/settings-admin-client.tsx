@@ -5,7 +5,7 @@ import type { SiteSettingsData } from "@/lib/site-settings";
 import { useSiteSettingsActions } from "@/components/site-settings-provider";
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none focus:border-white/25";
+  "box-border w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white outline-none focus:border-white/25";
 
 export function SettingsAdminClient() {
   const { refreshSettings } = useSiteSettingsActions();
@@ -71,7 +71,7 @@ export function SettingsAdminClient() {
           </p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid-safe grid gap-5 md:grid-cols-2">
           {(["pesin", "taksitli"] as const).map((type) => (
             <div
               key={type}

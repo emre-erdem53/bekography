@@ -21,7 +21,7 @@ export function ApprovedRequestAlerts() {
   if (alerts.length === 0) return null;
 
   return (
-    <div className="space-y-3 border-b border-white/10 px-4 py-4 sm:px-6 md:px-8">
+    <div className="min-w-0 space-y-2 overflow-hidden border-b border-white/10 px-4 py-3 sm:px-6 md:px-8">
       {alerts.map((alert) => (
         <AlertBar
           key={alert.id}

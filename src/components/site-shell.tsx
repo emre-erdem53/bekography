@@ -28,7 +28,9 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <div className={mounted && !isTracking ? cartBottomInset : undefined}>
+      <div
+        className={`min-w-0 overflow-x-hidden ${mounted && !isTracking ? cartBottomInset : ""}`}
+      >
         {children}
       </div>
       {!isTracking ? <PackageCartBar /> : null}

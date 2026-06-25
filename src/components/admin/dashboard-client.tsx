@@ -46,13 +46,13 @@ export function DashboardClient() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       <div>
         <h1 className="text-xl font-semibold text-white sm:text-2xl">Dashboard</h1>
         <p className="mt-1 text-sm text-zinc-400">Genel özet ve uyarılar</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid-safe grid gap-4 sm:grid-cols-2">
         {[
           {
             label: "Bekleyen Talepler",
@@ -76,7 +76,7 @@ export function DashboardClient() {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid-safe grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
           <h2 className="text-lg font-semibold text-white">Bugünkü Çekimler</h2>
           {data.todayShoots.length === 0 ? (
@@ -89,8 +89,12 @@ export function DashboardClient() {
                     href={`/admin/rezervasyonlar/${shoot.id}`}
                     className="block rounded-xl border border-white/5 px-4 py-3 hover:bg-white/5"
                   >
-                    <p className="font-medium text-white">{shoot.customerName}</p>
-                    <p className="text-sm text-zinc-400">{shoot.packageTitle}</p>
+                    <p className="break-words font-medium text-white">
+                      {shoot.customerName}
+                    </p>
+                    <p className="break-words text-sm text-zinc-400">
+                      {shoot.packageTitle}
+                    </p>
                   </Link>
                 </li>
               ))}
@@ -110,8 +114,10 @@ export function DashboardClient() {
                     href={`/admin/rezervasyonlar/${shoot.id}`}
                     className="block rounded-xl border border-white/5 px-4 py-3 hover:bg-white/5"
                   >
-                    <p className="font-medium text-white">{shoot.customerName}</p>
-                    <p className="text-sm text-zinc-400">
+                    <p className="break-words font-medium text-white">
+                      {shoot.customerName}
+                    </p>
+                    <p className="break-words text-sm text-zinc-400">
                       {format(new Date(shoot.shootDate), "d MMMM yyyy", {
                         locale: tr,
                       })}{" "}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-white outline-none focus:border-white/30";
+  "box-border w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-white outline-none focus:border-white/30";
 
 function moveItem<T>(items: T[], from: number, to: number): T[] {
   if (to < 0 || to >= items.length || from === to) return items;
@@ -79,7 +79,7 @@ export function ReorderableTagsEditor({
       ) : (
         <p className="text-xs text-zinc-500">Henüz etiket yok.</p>
       )}
-      <div className="flex gap-2">
+      <div className="flex min-w-0 gap-2">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -90,7 +90,7 @@ export function ReorderableTagsEditor({
             }
           }}
           placeholder={placeholder}
-          className={inputClass}
+          className={`${inputClass} min-w-0 flex-1`}
         />
         <button
           type="button"

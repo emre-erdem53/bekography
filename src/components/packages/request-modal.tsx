@@ -62,8 +62,8 @@ function CityPicker({
 
   if (!editing) {
     return (
-      <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#1a1a1a] px-4 py-3">
-        <span className="text-white">{displayValue}</span>
+      <div className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#1a1a1a] px-4 py-3">
+        <span className="min-w-0 flex-1 truncate text-white">{displayValue}</span>
         <button
           type="button"
           onClick={() => setEditing(true)}
@@ -324,7 +324,7 @@ export function RequestModal({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 24 }}
             onClick={(event) => event.stopPropagation()}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-2xl border border-white/10 bg-[#111] p-6 sm:max-w-xl sm:rounded-2xl lg:max-w-2xl"
+            className="max-h-[90vh] w-full min-w-0 max-w-lg overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-2xl border border-white/10 bg-[#111] p-6 sm:max-w-xl sm:rounded-2xl lg:max-w-2xl"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">Talep Oluştur</h2>
@@ -436,7 +436,7 @@ export function RequestModal({
 
                   return (
                     <FormSection key={category.categoryId} title={category.title}>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid-safe grid gap-4 sm:grid-cols-2">
                         {hideCity ? null : (
                           <Field label={category.cityLabel} required>
                             <CityPicker
@@ -491,7 +491,7 @@ export function RequestModal({
                   <p className="text-xs leading-relaxed text-zinc-500">
                     Tüm paketler için geçerli olacak ödeme planını seçin.
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex min-w-0 gap-2">
                     <PaymentTypeOptionButton
                       type="pesin"
                       price={totalCash}
@@ -508,7 +508,7 @@ export function RequestModal({
                 </FormSection>
 
                 {!requestAllowed ? (
-                  <p className="rounded-xl border border-amber-400/25 bg-amber-950/50 px-4 py-3 text-sm leading-relaxed text-amber-100">
+                  <p className="break-words rounded-xl border border-amber-400/25 bg-amber-950/50 px-4 py-3 text-sm leading-relaxed text-amber-100">
                     {getCompanionRequirementMessage()}
                   </p>
                 ) : null}
@@ -567,7 +567,7 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3 rounded-xl border border-white/10 bg-black/40 p-4">
+    <section className="min-w-0 space-y-3 overflow-hidden rounded-xl border border-white/10 bg-black/40 p-4">
       <h3 className="text-sm font-medium text-white">{title}</h3>
       {children}
     </section>
@@ -584,7 +584,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block space-y-1.5">
+    <label className="block min-w-0 space-y-1.5">
       <span className="text-sm text-zinc-400">
         {label}
         {required ? <span className="text-red-400"> *</span> : null}
@@ -595,4 +595,4 @@ function Field({
 }
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 py-3 text-white outline-none focus:border-white/30";
+  "box-border w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-[#1a1a1a] px-4 py-3 text-white outline-none focus:border-white/30";

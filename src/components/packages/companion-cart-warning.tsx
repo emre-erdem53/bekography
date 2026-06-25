@@ -35,7 +35,7 @@ export function CompanionCartWarning() {
             <div className="flex items-start justify-between gap-3">
               <p
                 id="companion-cart-warning-title"
-                className="text-sm leading-relaxed text-amber-50"
+                className="min-w-0 flex-1 text-sm leading-relaxed text-amber-50"
               >
                 {getCompanionRequirementMessage()}
               </p>

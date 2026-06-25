@@ -30,7 +30,7 @@ export function AdminFileUpload({
   }
 
   return (
-    <div>
+    <div className="min-w-0">
       <button
         type="button"
         disabled={disabled}
@@ -45,7 +45,7 @@ export function AdminFileUpload({
           setDragOver(false);
           handleFile(event.dataTransfer.files?.[0]);
         }}
-        className={`group mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-all duration-200 ${
+        className={`group mt-2 flex w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-all duration-200 ${
           disabled
             ? "cursor-not-allowed opacity-50"
             : "cursor-pointer"

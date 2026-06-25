@@ -15,11 +15,9 @@ export function AlertBar({ message, href }: AlertBarProps) {
   if (!visible) return null;
 
   const content = (
-    <div className="flex flex-col gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 sm:flex-row sm:items-start">
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-        <span className="flex-1 leading-relaxed">{message}</span>
-      </div>
+    <div className="flex w-full min-w-0 items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-200">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+      <span className="min-w-0 flex-1 break-words leading-snug">{message}</span>
       <button
         type="button"
         onClick={(event) => {
@@ -27,7 +25,7 @@ export function AlertBar({ message, href }: AlertBarProps) {
           event.stopPropagation();
           setVisible(false);
         }}
-        className="self-end rounded-lg p-1 hover:bg-red-500/20 sm:self-start"
+        className="shrink-0 rounded-lg p-1 hover:bg-red-500/20"
         aria-label="Kapat"
       >
         <X className="h-4 w-4" />
@@ -37,7 +35,7 @@ export function AlertBar({ message, href }: AlertBarProps) {
 
   if (href) {
     return (
-      <Link href={href} className="block hover:opacity-90">
+      <Link href={href} className="block min-w-0 max-w-full hover:opacity-90">
         {content}
       </Link>
     );

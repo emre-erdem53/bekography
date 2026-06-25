@@ -594,7 +594,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const coupleTitle = formatCoupleName(brideName, groomName);
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-4xl space-y-6">
+    <form onSubmit={handleSubmit} className="mx-auto min-w-0 max-w-4xl space-y-6">
       <div>
         <Link href={backHref} className="text-sm text-zinc-400 hover:text-white">
           ← {isEditing ? "Rezervasyon detayı" : "Rezervasyonlar"}
@@ -618,9 +618,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       </div>
 
       {dateConflicts.length > 0 ? (
-        <div className="flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="flex min-w-0 items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div>
+          <div className="min-w-0 flex-1 break-words">
             <p>Bu tarihler için zaten rezervasyon bulunmaktadır:</p>
             <ul className="mt-1 list-disc pl-4">
               {dateConflicts.map((date) => (
@@ -632,7 +632,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       ) : null}
 
       <Section title="1. Müşteri Bilgileri">
-        <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid-safe grid gap-4 md:grid-cols-2">
           <Field label="Damat Ad Soyad">
             <input
               value={groomName}
@@ -747,7 +747,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                   </button>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-2">
+                <div className="grid-safe grid gap-3 md:grid-cols-2">
                   <Field label="Çekim Günü">
                     <input
                       type="date"
@@ -930,7 +930,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       </Section>
 
       <Section title="4. Ödeme Planı">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid-safe grid gap-4 md:grid-cols-3">
           <Field label="Toplam Fiyat (₺)">
             <input
               type="number"
@@ -974,7 +974,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             </button>
           </div>
           {installments.map((row, index) => (
-            <div key={index} className="grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_1fr_auto]">
+            <div key={index} className="grid-safe grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_1fr_auto]">
               <Field label={`Ödenecek Tutar ${index + 1} (₺)`}>
                 <input
                   type="number"
@@ -1026,9 +1026,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           ) : null}
         </div>
 
-        <div className="mt-4 flex gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90">
+        <div className="mt-4 flex min-w-0 gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-100/90">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400" />
-          <p>{CANCELLATION_POLICY}</p>
+          <p className="min-w-0 flex-1 break-words">{CANCELLATION_POLICY}</p>
         </div>
       </Section>
 
@@ -1074,7 +1074,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block space-y-1.5">
+    <label className="block min-w-0 space-y-1.5">
       <span className="text-sm text-zinc-400">{label}</span>
       {children}
     </label>
@@ -1082,4 +1082,4 @@ function Field({
 }
 
 const inputClass =
-  "w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-white outline-none focus:border-white/30";
+  "box-border w-full min-w-0 max-w-full rounded-xl border border-white/10 bg-[#141414] px-4 py-2.5 text-white outline-none focus:border-white/30";
