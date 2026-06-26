@@ -2,11 +2,9 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Download, Pencil, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft } from "lucide-react";
 import { toPng } from "html-to-image";
 import { TrackingOrderView } from "@/components/tracking/tracking-order-view";
-import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
-import { ReservationPostShootAdmin } from "@/components/admin/reservation-post-shoot-admin";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import type { TrackingData } from "@/lib/tracking-types";
 
@@ -26,7 +24,7 @@ export function ReservationSummaryClient({
   data: TrackingData;
 }) {
   const exportRef = useRef<HTMLDivElement>(null);
-  const [data, setData] = useState(initialData);
+  const [data] = useState(initialData);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
 
@@ -58,30 +56,15 @@ export function ReservationSummaryClient({
     }
   }
 
-  function handleWorkflowChange(postShoot: TrackingData["postShoot"]) {
-    setData((prev) => normalizeTrackingData({ ...prev, postShoot }));
-  }
-
-  function handlePostShootSaved(postShoot: TrackingData["postShoot"]) {
-    setData((prev) => normalizeTrackingData({ ...prev, postShoot }));
-  }
-
   return (
     <div className="relative flex min-h-screen flex-col bg-black">
       <div className="fixed bottom-6 right-4 z-[70] flex max-w-[calc(100vw-2rem)] flex-col gap-2 sm:right-6 sm:flex-row sm:items-center">
         <Link
-          href="/admin/rezervasyonlar"
+          href={`/admin/rezervasyonlar/${reservationId}`}
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/90 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/10"
         >
           <ArrowLeft className="h-4 w-4" />
-          Liste
-        </Link>
-        <Link
-          href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/90 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/10"
-        >
-          <Pencil className="h-4 w-4" />
-          Düzenle
+          Rezervasyon Detayı
         </Link>
         <button
           type="button"
@@ -101,36 +84,13 @@ export function ReservationSummaryClient({
       ) : null}
 
       <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-24 sm:px-6 md:px-8">
-        <section className="mb-8 space-y-3 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-          <div>
-            <h1 className="text-lg font-semibold text-white">Paket Süreçleri</h1>
-            <p className="mt-1 text-sm text-zinc-400">
-              Her paketin aşamasını müşteri takip ekranıyla aynı seçeneklerden
-              yönetin.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {trackingData.items.map((item) => (
-              <ReservationItemWorkflowAdmin
-                key={item.id}
-                reservationId={reservationId}
-                itemId={item.id}
-                itemTitle={`${item.categoryTitle} · ${item.shootTypeLabel}`}
-                postShoot={trackingData.postShoot}
-                workflow={item.workflow}
-                hasPrinting={item.isOutdoor}
-                onWorkflowChange={handleWorkflowChange}
-              />
-            ))}
-          </div>
-        </section>
-
-        <ReservationPostShootAdmin
-          reservationId={reservationId}
-          postShoot={trackingData.postShoot}
-          items={trackingData.items}
-          onSaved={handlePostShootSaved}
-        />
+        <div className="mb-6 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
+          <h1 className="text-lg font-semibold text-white">Müşteri Önizlemesi</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Müşterinin takip sayfasında gördüğü sipariş formu. Süreç yönetimi
+            ve metin düzenleme rezervasyon detay ekranından yapılır.
+          </p>
+        </div>
       </div>
 
       <TrackingOrderView data={trackingData} exportRef={exportRef} />

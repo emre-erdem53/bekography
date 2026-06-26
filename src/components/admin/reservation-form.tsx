@@ -586,7 +586,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     router.push(
       isEditing
         ? `/admin/rezervasyonlar/${reservationId}`
-        : `/admin/rezervasyonlar/${data.id}/ozet`,
+        : `/admin/rezervasyonlar/${data.id}`,
     );
     router.refresh();
   }

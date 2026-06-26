@@ -4,7 +4,7 @@ import { ReservationSummaryClient } from "@/components/admin/reservation-summary
 import { buildTrackingPayloadById } from "@/lib/build-tracking-payload";
 
 export const metadata: Metadata = {
-  title: "Sipariş Özeti",
+  title: "Müşteri Önizlemesi",
 };
 
 export default async function ReservationSummaryPage({

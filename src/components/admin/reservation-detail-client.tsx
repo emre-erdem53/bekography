@@ -14,7 +14,10 @@ import {
 } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { formatCoupleName } from "@/lib/reservation-utils";
-import { parsePostShootSnapshot } from "@/lib/post-shoot";
+import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
+import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
+import type { TrackingData } from "@/lib/tracking-types";
+import { isOutdoorCategory, parsePostShootSnapshot } from "@/lib/post-shoot";
 
 type ReservationDetail = {
   id: string;
@@ -34,6 +37,7 @@ type ReservationDetail = {
   status: ReservationStatus;
   notes: string | null;
   items: {
+    id: string;
     paymentType: "pesin" | "taksitli";
     unitPrice: number;
     shootDate: string;
@@ -62,15 +66,34 @@ export function ReservationDetailClient({
   const router = useRouter();
   const { labels: paymentLabels } = usePaymentTypeCopy();
   const [reservation, setReservation] = useState<ReservationDetail | null>(null);
+  const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/admin/reservations/${reservationId}`)
-      .then((res) => res.json())
-      .then(setReservation)
+    Promise.all([
+      fetch(`/api/admin/reservations/${reservationId}`).then((res) => res.json()),
+      fetch(`/api/admin/reservations/${reservationId}/tracking`).then((res) =>
+        res.ok ? res.json() : null,
+      ),
+    ])
+      .then(([reservationData, trackingPayload]) => {
+        setReservation(reservationData);
+        if (trackingPayload) {
+          setTrackingData(normalizeTrackingData(trackingPayload));
+        }
+      })
       .finally(() => setLoading(false));
   }, [reservationId]);
+
+  function handleWorkflowChange(postShoot: TrackingData["postShoot"]) {
+    setTrackingData((prev) =>
+      prev ? normalizeTrackingData({ ...prev, postShoot }) : prev,
+    );
+    setReservation((prev) =>
+      prev ? { ...prev, postShoot } : prev,
+    );
+  }
 
   async function updateStatus(status: ReservationStatus) {
     if (!reservation) return;
@@ -122,6 +145,9 @@ export function ReservationDetailClient({
 
   const postShoot = parsePostShootSnapshot(reservation.postShoot);
   const coupleName = formatCoupleName(reservation.brideName, reservation.groomName);
+  const showPrinting = reservation.items.some((item) =>
+    isOutdoorCategory(item.packageOption.category.slug, {}),
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -140,7 +166,7 @@ export function ReservationDetailClient({
             href={`/admin/rezervasyonlar/${reservationId}/ozet`}
             className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
           >
-            Sipariş Özeti
+            Müşteri Önizlemesi
           </Link>
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
@@ -159,13 +185,34 @@ export function ReservationDetailClient({
       <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
         <h2 className="font-semibold text-white">Sipariş süreci</h2>
         <p className="mt-1 text-sm text-zinc-400">
-          Paket bazında aşama yönetimi müşteri özeti ekranından yapılır.
+          Her paketin aşamasını müşteri takip ekranıyla aynı seçeneklerden
+          yönetin.
         </p>
+        {trackingData ? (
+          <div className="mt-4 space-y-3">
+            {trackingData.items.map((item) => (
+              <ReservationItemWorkflowAdmin
+                key={item.id}
+                reservationId={reservationId}
+                itemId={item.id}
+                itemTitle={`${item.categoryTitle} · ${item.shootTypeLabel}`}
+                postShoot={trackingData.postShoot}
+                workflow={item.workflow}
+                hasPrinting={item.isOutdoor}
+                onWorkflowChange={handleWorkflowChange}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-zinc-500">
+            Süreç bilgisi yüklenemedi.
+          </p>
+        )}
         <Link
           href={`/admin/rezervasyonlar/${reservationId}/ozet`}
-          className="mt-4 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200"
+          className="mt-4 inline-flex rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
         >
-          Sipariş Özetine Git
+          Müşteri önizlemesini aç
         </Link>
       </div>
 
@@ -258,7 +305,19 @@ export function ReservationDetailClient({
       <Section title="Çekim Sonrası">
         <PostShootSectionReadOnly title="Dijital" section={postShoot.digital} />
         <PostShootSectionReadOnly title="Düzenleme" section={postShoot.editing} />
-        <PostShootSectionReadOnly title="Baskı" section={postShoot.printing} />
+        {showPrinting ? (
+          <PostShootSectionReadOnly title="Baskı" section={postShoot.printing} />
+        ) : null}
+        <p className="mt-2 text-xs text-zinc-500">
+          Metinleri düzenlemek için{" "}
+          <Link
+            href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
+            className="text-zinc-300 underline hover:text-white"
+          >
+            rezervasyon düzenleme
+          </Link>{" "}
+          ekranını kullanın.
+        </p>
       </Section>
 
       <Section title="Ödeme Planı">

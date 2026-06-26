@@ -97,7 +97,7 @@ export function ReservationsAdminClient({
     setReservations((prev) => prev.filter((item) => item.id !== id));
   }
 
-  const summaryHref = (id: string) => `/admin/rezervasyonlar/${id}/ozet`;
+  const detailHref = (id: string) => `/admin/rezervasyonlar/${id}`;
 
   const pageTitle = isDeleted
     ? "Silinen Rezervasyonlar"
@@ -205,11 +205,11 @@ export function ReservationsAdminClient({
                 key={reservation.id}
                 role="link"
                 tabIndex={0}
-                onClick={() => router.push(summaryHref(reservation.id))}
+                onClick={() => router.push(detailHref(reservation.id))}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    router.push(summaryHref(reservation.id));
+                    router.push(detailHref(reservation.id));
                   }
                 }}
                 className="cursor-pointer rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 transition-colors hover:border-white/20"
@@ -254,7 +254,7 @@ export function ReservationsAdminClient({
                     {!isPast ? (
                       <>
                         <Link
-                          href={summaryHref(reservation.id)}
+                          href={detailHref(reservation.id)}
                           className="font-medium text-white hover:text-zinc-200"
                         >
                           Özet
@@ -314,7 +314,7 @@ export function ReservationsAdminClient({
                   <tr
                     key={reservation.id}
                     className="cursor-pointer border-t border-white/5 transition-colors hover:bg-white/[0.03]"
-                    onClick={() => router.push(summaryHref(reservation.id))}
+                    onClick={() => router.push(detailHref(reservation.id))}
                   >
                     <td className="px-4 py-3">
                       <CoupleNames
@@ -360,7 +360,7 @@ export function ReservationsAdminClient({
                       ) : !isPast ? (
                         <div className="flex items-center gap-3">
                           <Link
-                            href={summaryHref(reservation.id)}
+                            href={detailHref(reservation.id)}
                             className="font-medium text-white hover:text-zinc-200"
                           >
                             Özet
