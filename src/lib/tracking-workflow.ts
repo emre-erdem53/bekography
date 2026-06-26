@@ -274,7 +274,7 @@ export function buildTrackingWorkflowView(input: {
 }): TrackingWorkflowView {
   const now = input.now ?? new Date();
   const { postShoot, workflow } = input;
-  const hasPrinting = input.hasPrinting ?? hasPrintingProducts(postShoot);
+  const hasPrinting = input.hasPrinting ?? false;
 
   if (workflow.adminStage) {
     return buildViewFromAdminStage(workflow.adminStage, hasPrinting);

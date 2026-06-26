@@ -17,7 +17,7 @@ import { formatCoupleName } from "@/lib/reservation-utils";
 import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import type { TrackingData } from "@/lib/tracking-types";
-import { isOutdoorCategory, parsePostShootSnapshot } from "@/lib/post-shoot";
+import { parsePostShootSnapshot } from "@/lib/post-shoot";
 
 type ReservationDetail = {
   id: string;
@@ -145,9 +145,10 @@ export function ReservationDetailClient({
 
   const postShoot = parsePostShootSnapshot(reservation.postShoot);
   const coupleName = formatCoupleName(reservation.brideName, reservation.groomName);
-  const showPrinting = reservation.items.some((item) =>
-    isOutdoorCategory(item.packageOption.category.slug, {}),
-  );
+  const showPrinting = trackingData?.items.some((item) => item.hasPrinting) ??
+    reservation.items.some((item) =>
+      item.packageOption.category.slug === "dis-cekim",
+    );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -198,7 +199,7 @@ export function ReservationDetailClient({
                 itemTitle={`${item.categoryTitle} · ${item.shootTypeLabel}`}
                 postShoot={trackingData.postShoot}
                 workflow={item.workflow}
-                hasPrinting={item.isOutdoor}
+                hasPrinting={item.hasPrinting}
                 onWorkflowChange={handleWorkflowChange}
               />
             ))}

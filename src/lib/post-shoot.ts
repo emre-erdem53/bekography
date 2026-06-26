@@ -229,6 +229,18 @@ export function hasPrintingProducts(postShoot: PostShootSnapshot): boolean {
   );
 }
 
+export function itemHasPrintingStage(categorySlug: string): boolean {
+  return categorySlug === "dis-cekim";
+}
+
+export function reservationHasPrintingPackage(
+  items: { categorySlug?: string; hasPrinting?: boolean }[],
+): boolean {
+  return items.some(
+    (item) => item.hasPrinting ?? itemHasPrintingStage(item.categorySlug ?? ""),
+  );
+}
+
 export function hasOutdoorPackageInItems(
   items: ReservationItemInput[],
   categories: CategoryInput[],

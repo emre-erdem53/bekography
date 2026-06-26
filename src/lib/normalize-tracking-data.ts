@@ -1,8 +1,10 @@
 import { RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import {
   getItemWorkflowFlags,
+  itemHasPrintingStage,
   parsePostShootSnapshot,
   ensureItemWorkflows,
+  reservationHasPrintingPackage,
 } from "@/lib/post-shoot";
 import { emptyProductSnapshot } from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
@@ -30,10 +32,16 @@ export function normalizeTrackingData(
     const itemWorkflowFlags = itemId
       ? getItemWorkflowFlags(postShoot, itemId)
       : item.workflowFlags ?? emptyTrackingWorkflowFlags();
+    const hasPrinting =
+      item.hasPrinting ??
+      itemHasPrintingStage(
+        item.productSnapshot?.categorySlug ?? "",
+      );
     const workflow = buildTrackingWorkflowView({
       shootDate: new Date(itemShootDate),
       postShoot,
       workflow: itemWorkflowFlags,
+      hasPrinting,
     });
 
     return {
@@ -50,6 +58,7 @@ export function normalizeTrackingData(
       agreedUnitPrice: item.agreedUnitPrice ?? 0,
       paymentType: item.paymentType ?? "",
       isOutdoor: item.isOutdoor ?? false,
+      hasPrinting,
       departureTime: item.departureTime ?? null,
       arrivalTime: item.arrivalTime ?? null,
       startTime: item.startTime ?? null,
@@ -69,6 +78,7 @@ export function normalizeTrackingData(
         shootDate: new Date(shootDate),
         postShoot,
         workflow: workflowFlags,
+        hasPrinting: reservationHasPrintingPackage(items),
       });
 
   return {

@@ -7,7 +7,7 @@ import {
 import { getPaymentTypeLabels } from "@/lib/site-settings";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import { formatCoupleName } from "@/lib/reservation-utils";
-import { isOutdoorCategory, parsePostShootSnapshot, getItemWorkflowFlags, ensureItemWorkflows } from "@/lib/post-shoot";
+import { isOutdoorCategory, itemHasPrintingStage, parsePostShootSnapshot, getItemWorkflowFlags, ensureItemWorkflows, reservationHasPrintingPackage } from "@/lib/post-shoot";
 import {
   buildProductSnapshotFromOption,
   getShootTypeLabel,
@@ -68,6 +68,11 @@ function buildPayloadFromReservation(
     shootDate: earliestShoot,
     postShoot,
     workflow: workflowFlags,
+    hasPrinting: reservationHasPrintingPackage(
+      reservation.items.map((item) => ({
+        categorySlug: item.packageOption.category.slug,
+      })),
+    ),
   });
 
   return {
@@ -109,12 +114,13 @@ function buildPayloadFromReservation(
       const snapshot = isProductSnapshotComplete(storedSnapshot)
         ? storedSnapshot
         : buildProductSnapshotFromOption(item.packageOption);
+      const hasPrinting = itemHasPrintingStage(category.slug);
       const itemWorkflowFlags = getItemWorkflowFlags(postShoot, item.id);
       const itemWorkflow = buildTrackingWorkflowView({
         shootDate: item.shootDate,
         postShoot,
         workflow: itemWorkflowFlags,
-        hasPrinting: category.slug === "dis-cekim",
+        hasPrinting,
       });
 
       return {
@@ -132,6 +138,7 @@ function buildPayloadFromReservation(
         agreedUnitPrice: item.agreedUnitPrice,
         paymentType: paymentLabels[item.paymentType],
         isOutdoor: outdoor,
+        hasPrinting,
         departureTime: item.departureTime,
         arrivalTime: item.arrivalTime,
         startTime: item.startTime,

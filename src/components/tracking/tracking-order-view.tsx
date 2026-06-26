@@ -40,7 +40,7 @@ export const ReservationOrderDocument = forwardRef<
   HTMLDivElement,
   { data: TrackingData; showCoupleHeader?: boolean }
 >(function ReservationOrderDocument({ data, showCoupleHeader = true }, ref) {
-  const showPrinting = data.items.some((item) => item.isOutdoor);
+  const showPrinting = data.items.some((item) => item.hasPrinting);
 
   return (
     <div ref={ref} className="mx-auto max-w-5xl">

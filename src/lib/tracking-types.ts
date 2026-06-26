@@ -25,6 +25,7 @@ export type TrackingShootItem = {
   agreedUnitPrice: number;
   paymentType: string;
   isOutdoor: boolean;
+  hasPrinting: boolean;
   departureTime: string | null;
   arrivalTime: string | null;
   startTime: string | null;
