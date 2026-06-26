@@ -2,14 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Trash2 } from "lucide-react";
-import type { ReservationStatus } from "@prisma/client";
-import { StatusSelect } from "@/components/admin/status-select";
 import { ReservationStatusFilters } from "@/components/admin/reservation-status-filters";
 import {
-  changeReservationStatus,
   deleteReservation,
   restoreReservation,
 } from "@/components/admin/reservation-status-actions";
@@ -20,9 +18,12 @@ import {
   formatReservationListPackages,
   formatReservationListShootDate,
   getReservationWorkflowStageLabel,
+  reservationMatchesWorkflowStage,
 } from "@/lib/reservation-list";
+import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
 
 type ReservationItem = {
+  id: string;
   shootDate: string;
   location: string;
   productSnapshot: unknown;
@@ -36,7 +37,6 @@ type Reservation = {
   id: string;
   brideName: string;
   groomName: string;
-  status: ReservationStatus;
   postShoot: unknown;
   deletedAt: string | null;
   items: ReservationItem[];
@@ -49,18 +49,22 @@ type ReservationsAdminClientProps = {
 export function ReservationsAdminClient({
   view = "active",
 }: ReservationsAdminClientProps) {
+  const router = useRouter();
   const isPast = view === "past";
   const isDeleted = view === "deleted";
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<ReservationStatus | null>(
+  const [stageFilter, setStageFilter] = useState<TrackingWorkflowStageId | null>(
     null,
   );
   const [nameQuery, setNameQuery] = useState("");
 
   const filteredReservations = useMemo(() => {
     return reservations.filter((reservation) => {
-      if (statusFilter && reservation.status !== statusFilter) {
+      if (
+        stageFilter &&
+        !reservationMatchesWorkflowStage(reservation, stageFilter)
+      ) {
         return false;
       }
       return matchesReservationNameQuery(
@@ -69,38 +73,17 @@ export function ReservationsAdminClient({
         nameQuery,
       );
     });
-  }, [reservations, statusFilter, nameQuery]);
+  }, [reservations, stageFilter, nameQuery]);
 
   useEffect(() => {
     setLoading(true);
-    setStatusFilter(null);
+    setStageFilter(null);
     setNameQuery("");
     fetch(`/api/admin/reservations?view=${view}`)
       .then((res) => res.json())
       .then(setReservations)
       .finally(() => setLoading(false));
   }, [view]);
-
-  async function updateStatus(id: string, status: ReservationStatus) {
-    const current = reservations.find((item) => item.id === id)?.status;
-    if (!current) return;
-
-    const result = await changeReservationStatus(id, status, current);
-    if (!result) return;
-
-    if (result.kind === "delivered") {
-      setReservations((prev) => prev.filter((item) => item.id !== id));
-      return;
-    }
-
-    if (result.kind !== "updated") return;
-
-    setReservations((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, status: result.status } : item,
-      ),
-    );
-  }
 
   async function handleDelete(id: string) {
     const deleted = await deleteReservation(id);
@@ -114,12 +97,7 @@ export function ReservationsAdminClient({
     setReservations((prev) => prev.filter((item) => item.id !== id));
   }
 
-  const statusOptions = Object.entries(RESERVATION_STATUS_LABELS)
-    .filter(([value]) => value !== "iptal")
-    .map(([value, label]) => ({
-      value: value as ReservationStatus,
-      label,
-    }));
+  const summaryHref = (id: string) => `/admin/rezervasyonlar/${id}/ozet`;
 
   const pageTitle = isDeleted
     ? "Silinen Rezervasyonlar"
@@ -177,12 +155,12 @@ export function ReservationsAdminClient({
       {!isPast && !isDeleted && !loading && reservations.length > 0 ? (
         <ReservationStatusFilters
           reservations={reservations}
-          statusFilter={statusFilter}
+          stageFilter={stageFilter}
           nameQuery={nameQuery}
-          onStatusFilterChange={setStatusFilter}
+          onStageFilterChange={setStageFilter}
           onNameQueryChange={setNameQuery}
           onClearFilters={() => {
-            setStatusFilter(null);
+            setStageFilter(null);
             setNameQuery("");
           }}
         />
@@ -225,7 +203,16 @@ export function ReservationsAdminClient({
             {filteredReservations.map((reservation) => (
               <article
                 key={reservation.id}
-                className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-4"
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(summaryHref(reservation.id))}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    router.push(summaryHref(reservation.id));
+                  }
+                }}
+                className="cursor-pointer rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 transition-colors hover:border-white/20"
               >
                 <CoupleNames
                   brideName={reservation.brideName}
@@ -260,50 +247,49 @@ export function ReservationsAdminClient({
                   ) : null}
                 </dl>
                 {!isDeleted ? (
-                  <div className="mt-4">
-                    {isPast ? (
-                      <span className="inline-flex rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-                        {RESERVATION_STATUS_LABELS.teslim_edildi}
-                      </span>
-                    ) : (
-                      <StatusSelect
-                        value={reservation.status}
-                        options={statusOptions}
-                        onChange={(status) =>
-                          updateStatus(reservation.id, status)
-                        }
-                      />
-                    )}
+                  <div
+                    className="mt-4 flex gap-4 border-t border-white/5 pt-4 text-sm"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {!isPast ? (
+                      <>
+                        <Link
+                          href={summaryHref(reservation.id)}
+                          className="font-medium text-white hover:text-zinc-200"
+                        >
+                          Özet
+                        </Link>
+                        <Link
+                          href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
+                          className="text-zinc-400 hover:text-white"
+                        >
+                          Düzenle
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(reservation.id)}
+                          className="inline-flex items-center gap-1 text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Sil
+                        </button>
+                      </>
+                    ) : null}
                   </div>
-                ) : null}
-                <div className="mt-4 flex gap-4 border-t border-white/5 pt-4 text-sm">
-                  {isDeleted ? (
+                ) : (
+                  <div
+                    className="mt-4 border-t border-white/5 pt-4"
+                    onClick={(event) => event.stopPropagation()}
+                  >
                     <button
                       type="button"
                       onClick={() => handleRestore(reservation.id)}
-                      className="font-medium text-emerald-300 hover:text-emerald-200"
+                      className="text-sm font-medium text-emerald-300 hover:text-emerald-200"
                     >
                       Geri Getir
                     </button>
-                  ) : !isPast ? (
-                    <>
-                      <Link
-                        href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
-                        className="text-zinc-400 hover:text-white"
-                      >
-                        Düzenle
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(reservation.id)}
-                        className="inline-flex items-center gap-1 text-red-400 hover:text-red-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Sil
-                      </button>
-                    </>
-                  ) : null}
-                </div>
+                  </div>
+                )}
               </article>
             ))}
           </div>
@@ -317,17 +303,19 @@ export function ReservationsAdminClient({
                   <th className="px-4 py-3 font-medium">Paket · Tür</th>
                   <th className="px-4 py-3 font-medium">Çekim Yeri</th>
                   <th className="px-4 py-3 font-medium">Aşama</th>
-                  {!isDeleted ? (
-                    <th className="px-4 py-3 font-medium">Durum</th>
-                  ) : (
+                  {isDeleted ? (
                     <th className="px-4 py-3 font-medium">Silinme</th>
-                  )}
+                  ) : null}
                   <th className="px-4 py-3 font-medium" />
                 </tr>
               </thead>
               <tbody>
                 {filteredReservations.map((reservation) => (
-                  <tr key={reservation.id} className="border-t border-white/5">
+                  <tr
+                    key={reservation.id}
+                    className="cursor-pointer border-t border-white/5 transition-colors hover:bg-white/[0.03]"
+                    onClick={() => router.push(summaryHref(reservation.id))}
+                  >
                     <td className="px-4 py-3">
                       <CoupleNames
                         brideName={reservation.brideName}
@@ -346,32 +334,21 @@ export function ReservationsAdminClient({
                     <td className="max-w-xs px-4 py-3 text-zinc-300">
                       {getReservationWorkflowStageLabel(reservation)}
                     </td>
-                    <td className="px-4 py-3">
-                      {isDeleted ? (
-                        <span className="text-zinc-400">
-                          {reservation.deletedAt
-                            ? format(
-                                new Date(reservation.deletedAt),
-                                "d MMM yyyy",
-                                { locale: tr },
-                              )
-                            : "—"}
-                        </span>
-                      ) : isPast ? (
-                        <span className="inline-flex rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-                          {RESERVATION_STATUS_LABELS.teslim_edildi}
-                        </span>
-                      ) : (
-                        <StatusSelect
-                          value={reservation.status}
-                          options={statusOptions}
-                          onChange={(status) =>
-                            updateStatus(reservation.id, status)
-                          }
-                        />
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
+                    {isDeleted ? (
+                      <td className="px-4 py-3 text-zinc-400">
+                        {reservation.deletedAt
+                          ? format(
+                              new Date(reservation.deletedAt),
+                              "d MMM yyyy",
+                              { locale: tr },
+                            )
+                          : "—"}
+                      </td>
+                    ) : null}
+                    <td
+                      className="px-4 py-3"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       {isDeleted ? (
                         <button
                           type="button"
@@ -382,6 +359,12 @@ export function ReservationsAdminClient({
                         </button>
                       ) : !isPast ? (
                         <div className="flex items-center gap-3">
+                          <Link
+                            href={summaryHref(reservation.id)}
+                            className="font-medium text-white hover:text-zinc-200"
+                          >
+                            Özet
+                          </Link>
                           <Link
                             href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
                             className="text-zinc-400 hover:text-white"

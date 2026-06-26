@@ -1,43 +1,54 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { ReservationStatus } from "@prisma/client";
 import { X } from "lucide-react";
+import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
 import {
-  RESERVATION_ADMIN_FILTER_STATUSES,
-  RESERVATION_ADMIN_STATUS_LABELS,
-  countReservationsByStatus,
+  RESERVATION_ADMIN_FILTER_STAGES,
+  RESERVATION_ADMIN_STAGE_LABELS,
+  countReservationsByWorkflowStage,
 } from "@/lib/reservation-admin-filters";
 
 type ReservationStatusFiltersProps = {
-  reservations: Array<{ status: ReservationStatus }>;
-  statusFilter: ReservationStatus | null;
+  reservations: Array<{
+    brideName: string;
+    groomName: string;
+    postShoot: unknown;
+    items: Array<{
+      id: string;
+      shootDate: string | Date;
+      location: string;
+      productSnapshot: unknown;
+      packageOption: { label: string; category: { title: string } };
+    }>;
+  }>;
+  stageFilter: TrackingWorkflowStageId | null;
   nameQuery: string;
-  onStatusFilterChange: (status: ReservationStatus | null) => void;
+  onStageFilterChange: (stage: TrackingWorkflowStageId | null) => void;
   onNameQueryChange: (query: string) => void;
   onClearFilters: () => void;
 };
 
 export function ReservationStatusFilters({
   reservations,
-  statusFilter,
+  stageFilter,
   nameQuery,
-  onStatusFilterChange,
+  onStageFilterChange,
   onNameQueryChange,
   onClearFilters,
 }: ReservationStatusFiltersProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const chipRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const statusCounts = useMemo(
-    () => countReservationsByStatus(reservations),
+  const stageCounts = useMemo(
+    () => countReservationsByWorkflowStage(reservations),
     [reservations],
   );
 
-  const hasActiveFilters = statusFilter !== null || nameQuery.trim().length > 0;
+  const hasActiveFilters = stageFilter !== null || nameQuery.trim().length > 0;
 
   const focusChip = useCallback((index: number) => {
-    const total = RESERVATION_ADMIN_FILTER_STATUSES.length + 1;
+    const total = RESERVATION_ADMIN_FILTER_STAGES.length + 1;
     const next = ((index % total) + total) % total;
     chipRefs.current[next]?.focus();
   }, []);
@@ -102,7 +113,7 @@ export function ReservationStatusFilters({
             chipRefs.current[0] = node;
           }}
           type="button"
-          onClick={() => onStatusFilterChange(null)}
+          onClick={() => onStageFilterChange(null)}
           onKeyDown={(event) => {
             if (event.key === "ArrowRight") {
               event.preventDefault();
@@ -110,11 +121,11 @@ export function ReservationStatusFilters({
             }
             if (event.key === "ArrowLeft") {
               event.preventDefault();
-              focusChip(RESERVATION_ADMIN_FILTER_STATUSES.length);
+              focusChip(RESERVATION_ADMIN_FILTER_STAGES.length);
             }
           }}
           className={`rounded-xl border px-3 py-3 text-left transition-colors ${
-            statusFilter === null
+            stageFilter === null
               ? "border-white bg-white text-black"
               : "border-white/10 bg-black/40 text-white hover:border-white/25"
           }`}
@@ -127,20 +138,18 @@ export function ReservationStatusFilters({
           </span>
         </button>
 
-        {RESERVATION_ADMIN_FILTER_STATUSES.map((status, index) => {
+        {RESERVATION_ADMIN_FILTER_STAGES.map((stage, index) => {
           const chipIndex = index + 1;
-          const isActive = statusFilter === status;
+          const isActive = stageFilter === stage;
 
           return (
             <button
-              key={status}
+              key={stage}
               ref={(node) => {
                 chipRefs.current[chipIndex] = node;
               }}
               type="button"
-              onClick={() =>
-                onStatusFilterChange(isActive ? null : status)
-              }
+              onClick={() => onStageFilterChange(isActive ? null : stage)}
               onKeyDown={(event) => {
                 if (event.key === "ArrowRight") {
                   event.preventDefault();
@@ -158,10 +167,10 @@ export function ReservationStatusFilters({
               }`}
             >
               <span className="block text-[11px] font-medium leading-snug text-zinc-400">
-                {RESERVATION_ADMIN_STATUS_LABELS[status]}
+                {RESERVATION_ADMIN_STAGE_LABELS[stage]}
               </span>
               <span className="mt-1 block text-2xl font-semibold tabular-nums text-white">
-                {statusCounts[status]}
+                {stageCounts[stage]}
               </span>
             </button>
           );

@@ -1,15 +1,21 @@
-import { parsePostShootSnapshot } from "@/lib/post-shoot";
+import {
+  ensureItemWorkflows,
+  getItemWorkflowFlags,
+  parsePostShootSnapshot,
+} from "@/lib/post-shoot";
 import {
   getShootTypeLabel,
   parseProductSnapshot,
 } from "@/lib/reservation-product-snapshot";
 import {
   buildTrackingWorkflowView,
-  emptyTrackingWorkflowFlags,
+  getCurrentWorkflowStageId,
+  type TrackingWorkflowStageId,
 } from "@/lib/tracking-workflow";
 import { formatDateOnlyDisplay, toDateInputValue } from "@/lib/date-only";
 
 type ReservationListItem = {
+  id: string;
   shootDate: string | Date;
   location: string;
   productSnapshot: unknown;
@@ -25,6 +31,22 @@ type ReservationListRow = {
   postShoot: unknown;
   items: ReservationListItem[];
 };
+
+function buildItemWorkflowView(
+  reservation: ReservationListRow,
+  item: ReservationListItem,
+) {
+  const postShoot = ensureItemWorkflows(
+    parsePostShootSnapshot(reservation.postShoot),
+    reservation.items.map((row) => row.id),
+  );
+
+  return buildTrackingWorkflowView({
+    shootDate: new Date(item.shootDate),
+    postShoot,
+    workflow: getItemWorkflowFlags(postShoot, item.id),
+  });
+}
 
 export function formatReservationListShootDate(items: ReservationListItem[]) {
   if (items.length === 0) return "—";
@@ -71,17 +93,34 @@ export function formatReservationListLocation(items: ReservationListItem[]) {
 export function getReservationWorkflowStageLabel(
   reservation: ReservationListRow,
 ): string {
-  const sortedItems = [...reservation.items].sort(
-    (a, b) => new Date(a.shootDate).getTime() - new Date(b.shootDate).getTime(),
+  if (reservation.items.length === 0) return "—";
+
+  return reservation.items
+    .map((item) => {
+      const snapshot = parseProductSnapshot(item.productSnapshot);
+      const title =
+        snapshot.categoryTitle || item.packageOption.category.title;
+      const workflow = buildItemWorkflowView(reservation, item);
+      return `${title}: ${workflow.primaryTitle}`;
+    })
+    .join(" · ");
+}
+
+export function getReservationItemWorkflowStage(
+  reservation: ReservationListRow,
+  item: ReservationListItem,
+): TrackingWorkflowStageId | null {
+  const workflow = buildItemWorkflowView(reservation, item);
+  return getCurrentWorkflowStageId(workflow);
+}
+
+export function reservationMatchesWorkflowStage(
+  reservation: ReservationListRow,
+  stage: TrackingWorkflowStageId,
+): boolean {
+  return reservation.items.some(
+    (item) => getReservationItemWorkflowStage(reservation, item) === stage,
   );
-  const earliestShoot = sortedItems[0]?.shootDate ?? new Date();
-  const postShoot = parsePostShootSnapshot(reservation.postShoot);
-  const workflow = buildTrackingWorkflowView({
-    shootDate: new Date(earliestShoot),
-    postShoot,
-    workflow: postShoot.workflow ?? emptyTrackingWorkflowFlags(),
-  });
-  return workflow.primaryTitle;
 }
 
 export { toDateInputValue };

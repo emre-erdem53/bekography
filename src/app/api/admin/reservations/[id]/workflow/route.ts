@@ -2,14 +2,32 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { parsePostShootSnapshot } from "@/lib/post-shoot";
 import {
+  ensureItemWorkflows,
+  parsePostShootSnapshot,
+  setItemWorkflowFlags,
+} from "@/lib/post-shoot";
+import {
+  TRACKING_WORKFLOW_STAGE_ORDER,
   mergeWorkflowAction,
   parseTrackingWorkflowFlags,
+  workflowFlagsForAdminStage,
   type TrackingWorkflowAction,
+  type TrackingWorkflowStageId,
 } from "@/lib/tracking-workflow";
 
+const workflowStageSchema = z.object({
+  itemId: z.string().min(1),
+  stage: z.enum(
+    TRACKING_WORKFLOW_STAGE_ORDER as [
+      TrackingWorkflowStageId,
+      ...TrackingWorkflowStageId[],
+    ],
+  ),
+});
+
 const workflowActionSchema = z.object({
+  itemId: z.string().min(1),
   action: z.enum([
     "digital_delivered",
     "selection_completed",
@@ -28,13 +46,17 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const parsed = workflowActionSchema.safeParse(body);
+    const stageParsed = workflowStageSchema.safeParse(body);
+    const actionParsed = workflowActionSchema.safeParse(body);
 
-    if (!parsed.success) {
+    if (!stageParsed.success && !actionParsed.success) {
       return NextResponse.json({ error: "Geçersiz işlem" }, { status: 400 });
     }
 
-    const reservation = await prisma.reservation.findUnique({ where: { id } });
+    const reservation = await prisma.reservation.findUnique({
+      where: { id },
+      include: { items: { select: { id: true } } },
+    });
     if (!reservation) {
       return NextResponse.json(
         { error: "Rezervasyon bulunamadı" },
@@ -42,23 +64,42 @@ export async function POST(
       );
     }
 
-    const postShoot = parsePostShootSnapshot(reservation.postShoot);
-    const currentFlags = parseTrackingWorkflowFlags(postShoot.workflow);
-    const nextFlags = mergeWorkflowAction(
-      currentFlags,
-      parsed.data.action as TrackingWorkflowAction,
+    const itemId = stageParsed.success
+      ? stageParsed.data.itemId
+      : actionParsed.data!.itemId;
+
+    if (!reservation.items.some((item) => item.id === itemId)) {
+      return NextResponse.json(
+        { error: "Paket bulunamadı" },
+        { status: 404 },
+      );
+    }
+
+    let postShoot = ensureItemWorkflows(
+      parsePostShootSnapshot(reservation.postShoot),
+      reservation.items.map((item) => item.id),
     );
-    const updatedPostShoot = {
-      ...postShoot,
-      workflow: nextFlags,
-    };
+
+    const hasPrinting = postShoot.printing.pills.length > 0;
+    const currentFlags = parseTrackingWorkflowFlags(
+      postShoot.itemWorkflows?.[itemId],
+    );
+
+    const nextFlags = stageParsed.success
+      ? workflowFlagsForAdminStage(stageParsed.data.stage, hasPrinting)
+      : mergeWorkflowAction(
+          currentFlags,
+          actionParsed.data!.action as TrackingWorkflowAction,
+        );
+
+    postShoot = setItemWorkflowFlags(postShoot, itemId, nextFlags);
 
     await prisma.reservation.update({
       where: { id },
-      data: { postShoot: updatedPostShoot },
+      data: { postShoot },
     });
 
-    return NextResponse.json({ postShoot: updatedPostShoot });
+    return NextResponse.json({ postShoot });
   } catch (error) {
     console.error("POST /api/admin/reservations/[id]/workflow", error);
     return NextResponse.json(

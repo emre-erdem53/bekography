@@ -38,37 +38,19 @@ export function TrackingPageShell({
 
 export const ReservationOrderDocument = forwardRef<
   HTMLDivElement,
-  { data: TrackingData }
->(function ReservationOrderDocument({ data }, ref) {
+  { data: TrackingData; showCoupleHeader?: boolean }
+>(function ReservationOrderDocument({ data, showCoupleHeader = true }, ref) {
   return (
     <div ref={ref} className="mx-auto max-w-5xl">
-      <header className="mt-8 border-b border-white/10 pb-8 pt-2 text-center sm:mt-10 sm:pt-4">
-        <p className="text-xs font-medium uppercase tracking-[0.28em] text-zinc-500">
-          {data.formYear} / bekography — Sipariş Formu
-        </p>
+      {showCoupleHeader ? (
+        <CoupleOrderHeader data={data} />
+      ) : null}
 
-        <div className="mt-8 flex flex-row items-end justify-center gap-3 px-2 sm:gap-8 md:gap-12">
-          <CoupleName
-            label="Gelin"
-            name={data.brideName}
-            iconSrc="/bride.svg"
-          />
-          <span className="font-couple mb-8 shrink-0 text-xl text-zinc-600 sm:text-2xl md:text-3xl">
-            &
-          </span>
-          <CoupleName
-            label="Damat"
-            name={data.groomName}
-            iconSrc="/groom.svg"
-          />
-        </div>
-      </header>
-
-      <section className="mt-10">
+      <section className={showCoupleHeader ? "mt-10" : "mt-0"}>
         <SectionHeading>Çekim Hizmeti</SectionHeading>
         <div className="mt-5 space-y-4">
-          {data.items.map((item, index) => (
-            <ShootServiceCard key={index} item={item} />
+          {data.items.map((item) => (
+            <ShootServiceCard key={item.id || item.categoryTitle} item={item} />
           ))}
         </div>
       </section>
@@ -237,12 +219,28 @@ function TrackingOrderBody({
   const trackingData = normalizeTrackingData(data);
 
   return (
-    <div ref={exportRef}>
-      <div className="mx-auto max-w-5xl">
-        <TrackingWorkflowTimeline workflow={trackingData.workflow} />
-      </div>
-      <ReservationOrderDocument data={trackingData} />
+    <div ref={exportRef} className="mx-auto max-w-5xl">
+      <CoupleOrderHeader data={trackingData} />
+      <ReservationOrderDocument data={trackingData} showCoupleHeader={false} />
     </div>
+  );
+}
+
+function CoupleOrderHeader({ data }: { data: TrackingData }) {
+  return (
+    <header className="border-b border-white/10 pb-8 pt-2 text-center sm:pt-4">
+      <p className="text-xs font-medium uppercase tracking-[0.28em] text-zinc-500">
+        {data.formYear} / bekography — Sipariş Formu
+      </p>
+
+      <div className="mt-8 flex flex-row items-end justify-center gap-3 px-2 sm:gap-8 md:gap-12">
+        <CoupleName label="Gelin" name={data.brideName} iconSrc="/bride.svg" />
+        <span className="font-couple mb-8 shrink-0 text-xl text-zinc-600 sm:text-2xl md:text-3xl">
+          &
+        </span>
+        <CoupleName label="Damat" name={data.groomName} iconSrc="/groom.svg" />
+      </div>
+    </header>
   );
 }
 
@@ -332,6 +330,15 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
           Ödeme: <span className="text-zinc-300">{item.paymentType}</span>
         </p>
       </div>
+
+      {item.workflow ? (
+        <div className="mt-5 border-t border-white/10 pt-5">
+          <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
+            Sipariş Durumu
+          </p>
+          <TrackingWorkflowTimeline workflow={item.workflow} embedded />
+        </div>
+      ) : null}
     </article>
   );
 }

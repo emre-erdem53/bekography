@@ -13,6 +13,7 @@ export type TrackingTimelineStep = {
 };
 
 export type TrackingShootItem = {
+  id: string;
   categoryTitle: string;
   accentColor: string;
   optionLabel: string;
@@ -29,6 +30,8 @@ export type TrackingShootItem = {
   startTime: string | null;
   endTime: string | null;
   productSnapshot: ReservationProductSnapshot;
+  workflow: TrackingWorkflowView;
+  workflowFlags: TrackingWorkflowFlags;
 };
 
 export type TrackingInstallment = {

@@ -11,9 +11,11 @@ import {
 export function TrackingWorkflowTimeline({
   workflow,
   compact = false,
+  embedded = false,
 }: {
   workflow: TrackingWorkflowView | undefined;
   compact?: boolean;
+  embedded?: boolean;
 }) {
   if (!workflow?.stages?.length) {
     return null;
@@ -24,12 +26,14 @@ export function TrackingWorkflowTimeline({
   return (
     <section
       className={
-        compact
-          ? "space-y-4"
-          : "mx-auto max-w-5xl border-b border-white/10 pb-10"
+        embedded
+          ? "space-y-3"
+          : compact
+            ? "space-y-4"
+            : "mx-auto max-w-5xl border-b border-white/10 pb-10"
       }
     >
-      {!compact ? (
+      {!compact && !embedded ? (
         <div className="mb-6">
           <p className="text-xs font-medium uppercase tracking-[0.28em] text-zinc-500">
             Sipariş Durumu
@@ -62,7 +66,7 @@ export function TrackingWorkflowTimeline({
             </p>
           ) : null}
         </div>
-      ) : (
+      ) : !embedded ? (
         <div>
           <p className="text-sm font-semibold text-white">{workflow.primaryTitle}</p>
           {workflow.primarySubtitle ? (
@@ -72,10 +76,10 @@ export function TrackingWorkflowTimeline({
             <p className="mt-2 text-sm text-zinc-300">{workflow.summary}</p>
           ) : null}
         </div>
-      )}
+      ) : null}
 
-      <div className="overflow-x-auto pb-2">
-        <ol className="flex min-w-max md:min-w-0">
+      <div className={`overflow-x-auto ${embedded ? "pb-1" : "pb-2"}`}>
+        <ol className={`flex min-w-max ${embedded ? "" : "md:min-w-0"}`}>
           {workflow.stages.map((stage, index) => {
             const isCurrent = stage.state === "current";
             const isCompleted = stage.state === "completed";
@@ -103,8 +107,12 @@ export function TrackingWorkflowTimeline({
             return (
               <li
                 key={stage.id}
-                className={`flex min-w-[4.75rem] flex-1 flex-col items-center sm:min-w-[5.5rem] ${
-                  isCurrent ? "md:min-w-[7rem]" : ""
+                className={`flex flex-col items-center ${
+                  embedded
+                    ? "min-w-[3.5rem] flex-1 sm:min-w-[4rem]"
+                    : `min-w-[4.75rem] flex-1 sm:min-w-[5.5rem] ${
+                        isCurrent ? "md:min-w-[7rem]" : ""
+                      }`
                 }`}
               >
                 <div className="flex w-full items-center">
@@ -156,7 +164,7 @@ export function TrackingWorkflowTimeline({
         </ol>
       </div>
 
-      {!compact && currentStages.length > 1 ? (
+      {!compact && !embedded && currentStages.length > 1 ? (
         <p className="mt-4 text-xs text-zinc-500">
           Şu anda{" "}
           {currentStages

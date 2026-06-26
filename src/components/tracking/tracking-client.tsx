@@ -10,7 +10,7 @@ import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import { normalizeTcKimlik } from "@/lib/reservation-utils";
 
 function trackingStorageKey(slug: string) {
-  return `bekography-takip:v4:${slug}`;
+  return `bekography-takip:v5:${slug}`;
 }
 
 export function TrackingClient({ slug }: { slug: string }) {

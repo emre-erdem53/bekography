@@ -15,7 +15,6 @@ import {
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { formatCoupleName } from "@/lib/reservation-utils";
 import { parsePostShootSnapshot } from "@/lib/post-shoot";
-import { ReservationWorkflowActions } from "@/components/admin/reservation-workflow-actions";
 
 type ReservationDetail = {
   id: string;
@@ -156,16 +155,18 @@ export function ReservationDetailClient({
         </div>
       </div>
 
-      <ReservationWorkflowActions
-        reservationId={reservationId}
-        postShoot={postShoot}
-        shootDate={reservation.items[0]?.shootDate ?? new Date().toISOString()}
-        onWorkflowChange={(nextPostShoot) =>
-          setReservation((prev) =>
-            prev ? { ...prev, postShoot: nextPostShoot } : prev,
-          )
-        }
-      />
+      <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
+        <h2 className="font-semibold text-white">Sipariş süreci</h2>
+        <p className="mt-1 text-sm text-zinc-400">
+          Paket bazında aşama yönetimi müşteri özeti ekranından yapılır.
+        </p>
+        <Link
+          href={`/admin/rezervasyonlar/${reservationId}/ozet`}
+          className="mt-4 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-zinc-200"
+        >
+          Sipariş Özetine Git
+        </Link>
+      </div>
 
       <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 sm:flex-row sm:items-center">
         <p className="min-w-0 flex-1 break-all text-sm text-zinc-400 sm:truncate">

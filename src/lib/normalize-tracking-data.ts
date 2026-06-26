@@ -1,5 +1,9 @@
 import { RESERVATION_STATUS_LABELS } from "@/lib/constants";
-import { parsePostShootSnapshot } from "@/lib/post-shoot";
+import {
+  getItemWorkflowFlags,
+  parsePostShootSnapshot,
+  ensureItemWorkflows,
+} from "@/lib/post-shoot";
 import { emptyProductSnapshot } from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
 import {
@@ -11,37 +15,61 @@ import {
 export function normalizeTrackingData(
   value: Partial<TrackingData> & Pick<TrackingData, "coupleName" | "items">,
 ): TrackingData {
-  const postShoot = parsePostShootSnapshot(value.postShoot);
-  const workflowFlags =
-    value.workflowFlags ?? postShoot.workflow ?? emptyTrackingWorkflowFlags();
+  const postShoot = ensureItemWorkflows(
+    parsePostShootSnapshot(value.postShoot),
+    value.items.map((item) => item.id).filter(Boolean),
+  );
   const shootDate =
     value.shootDate ??
     value.items[0]?.shootDate ??
     new Date().toISOString();
-  const workflow = buildTrackingWorkflowView({
-    shootDate: new Date(shootDate),
-    postShoot,
-    workflow: workflowFlags,
+
+  const items = value.items.map((item) => {
+    const itemId = item.id ?? "";
+    const itemShootDate = item.shootDate ?? shootDate;
+    const itemWorkflowFlags = itemId
+      ? getItemWorkflowFlags(postShoot, itemId)
+      : item.workflowFlags ?? emptyTrackingWorkflowFlags();
+    const workflow = buildTrackingWorkflowView({
+      shootDate: new Date(itemShootDate),
+      postShoot,
+      workflow: itemWorkflowFlags,
+    });
+
+    return {
+      id: itemId,
+      shootTypeLabel: item.shootTypeLabel ?? item.optionLabel ?? "",
+      productSnapshot: item.productSnapshot ?? emptyProductSnapshot(),
+      categoryTitle: item.categoryTitle ?? "",
+      accentColor: item.accentColor ?? "#ffffff",
+      optionLabel: item.optionLabel ?? "",
+      shootContent: item.shootContent ?? "",
+      shootDate: itemShootDate,
+      readyTime: item.readyTime ?? "",
+      location: item.location ?? "",
+      agreedUnitPrice: item.agreedUnitPrice ?? 0,
+      paymentType: item.paymentType ?? "",
+      isOutdoor: item.isOutdoor ?? false,
+      departureTime: item.departureTime ?? null,
+      arrivalTime: item.arrivalTime ?? null,
+      startTime: item.startTime ?? null,
+      endTime: item.endTime ?? null,
+      workflow,
+      workflowFlags: itemWorkflowFlags,
+    };
   });
 
-  const items = value.items.map((item) => ({
-    shootTypeLabel: item.shootTypeLabel ?? item.optionLabel ?? "",
-    productSnapshot: item.productSnapshot ?? emptyProductSnapshot(),
-    categoryTitle: item.categoryTitle ?? "",
-    accentColor: item.accentColor ?? "#ffffff",
-    optionLabel: item.optionLabel ?? "",
-    shootContent: item.shootContent ?? "",
-    shootDate: item.shootDate ?? shootDate,
-    readyTime: item.readyTime ?? "",
-    location: item.location ?? "",
-    agreedUnitPrice: item.agreedUnitPrice ?? 0,
-    paymentType: item.paymentType ?? "",
-    isOutdoor: item.isOutdoor ?? false,
-    departureTime: item.departureTime ?? null,
-    arrivalTime: item.arrivalTime ?? null,
-    startTime: item.startTime ?? null,
-    endTime: item.endTime ?? null,
-  }));
+  const firstItem = items[0];
+  const workflowFlags = firstItem
+    ? firstItem.workflowFlags
+    : value.workflowFlags ?? emptyTrackingWorkflowFlags();
+  const workflow = firstItem
+    ? firstItem.workflow
+    : buildTrackingWorkflowView({
+        shootDate: new Date(shootDate),
+        postShoot,
+        workflow: workflowFlags,
+      });
 
   return {
     coupleName: value.coupleName,

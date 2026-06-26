@@ -7,7 +7,7 @@ import {
 import { getPaymentTypeLabels } from "@/lib/site-settings";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import { formatCoupleName } from "@/lib/reservation-utils";
-import { isOutdoorCategory, parsePostShootSnapshot } from "@/lib/post-shoot";
+import { isOutdoorCategory, parsePostShootSnapshot, getItemWorkflowFlags, ensureItemWorkflows } from "@/lib/post-shoot";
 import {
   buildProductSnapshotFromOption,
   getShootTypeLabel,
@@ -17,7 +17,6 @@ import {
 import type { TrackingData } from "@/lib/tracking-types";
 import {
   buildTrackingWorkflowView,
-  emptyTrackingWorkflowFlags,
 } from "@/lib/tracking-workflow";
 
 const reservationInclude = {
@@ -57,8 +56,14 @@ function buildPayloadFromReservation(
   }));
 
   const earliestShoot = reservation.items[0]?.shootDate ?? new Date();
-  const postShoot = parsePostShootSnapshot(reservation.postShoot);
-  const workflowFlags = postShoot.workflow ?? emptyTrackingWorkflowFlags();
+  const postShoot = ensureItemWorkflows(
+    parsePostShootSnapshot(reservation.postShoot),
+    reservation.items.map((item) => item.id),
+  );
+  const workflowFlags = getItemWorkflowFlags(
+    postShoot,
+    reservation.items[0]?.id ?? "",
+  );
   const workflow = buildTrackingWorkflowView({
     shootDate: earliestShoot,
     postShoot,
@@ -103,8 +108,15 @@ function buildPayloadFromReservation(
       const snapshot = isProductSnapshotComplete(storedSnapshot)
         ? storedSnapshot
         : buildProductSnapshotFromOption(item.packageOption);
+      const itemWorkflowFlags = getItemWorkflowFlags(postShoot, item.id);
+      const itemWorkflow = buildTrackingWorkflowView({
+        shootDate: item.shootDate,
+        postShoot,
+        workflow: itemWorkflowFlags,
+      });
 
       return {
+        id: item.id,
         categoryTitle: snapshot.categoryTitle || category.title,
         accentColor: snapshot.accentColor || category.accentColor,
         optionLabel: snapshot.optionLabel || item.packageOption.label,
@@ -123,6 +135,8 @@ function buildPayloadFromReservation(
         startTime: item.startTime,
         endTime: item.endTime,
         productSnapshot: snapshot,
+        workflow: itemWorkflow,
+        workflowFlags: itemWorkflowFlags,
       };
     }),
     purchasedProducts: reservation.items.map((item) => {

@@ -28,6 +28,8 @@ export type PostShootSnapshot = {
   printing: PostShootSection;
   source?: "template" | "manual";
   workflow?: TrackingWorkflowFlags;
+  /** Paket (rezervasyon kalemi) bazında süreç bayrakları. */
+  itemWorkflows?: Record<string, TrackingWorkflowFlags>;
 };
 
 type PackageLike = {
@@ -140,7 +142,55 @@ export function parsePostShootSnapshot(value: unknown): PostShootSnapshot {
     printing,
     source: data.source === "manual" ? "manual" : "template",
     workflow: parseTrackingWorkflowFlags(data.workflow),
+    itemWorkflows:
+      data.itemWorkflows && typeof data.itemWorkflows === "object"
+        ? Object.fromEntries(
+            Object.entries(data.itemWorkflows).map(([key, value]) => [
+              key,
+              parseTrackingWorkflowFlags(value),
+            ]),
+          )
+        : undefined,
   };
+}
+
+export function getItemWorkflowFlags(
+  postShoot: PostShootSnapshot,
+  itemId: string,
+): TrackingWorkflowFlags {
+  const itemFlags = postShoot.itemWorkflows?.[itemId];
+  if (itemFlags) return itemFlags;
+  return postShoot.workflow ?? emptyTrackingWorkflowFlags();
+}
+
+export function setItemWorkflowFlags(
+  postShoot: PostShootSnapshot,
+  itemId: string,
+  flags: TrackingWorkflowFlags,
+): PostShootSnapshot {
+  return {
+    ...postShoot,
+    itemWorkflows: {
+      ...(postShoot.itemWorkflows ?? {}),
+      [itemId]: flags,
+    },
+  };
+}
+
+export function ensureItemWorkflows(
+  postShoot: PostShootSnapshot,
+  itemIds: string[],
+): PostShootSnapshot {
+  const fallback = postShoot.workflow ?? emptyTrackingWorkflowFlags();
+  const itemWorkflows = { ...(postShoot.itemWorkflows ?? {}) };
+
+  for (const itemId of itemIds) {
+    if (!itemWorkflows[itemId]) {
+      itemWorkflows[itemId] = { ...fallback };
+    }
+  }
+
+  return { ...postShoot, itemWorkflows };
 }
 
 export function isOutdoorCategory(

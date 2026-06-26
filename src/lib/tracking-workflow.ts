@@ -19,6 +19,8 @@ export type TrackingWorkflowFlags = {
   selectionCompletedAt: string | null;
   editingCompletedAt: string | null;
   printingCompletedAt: string | null;
+  /** Admin panelinden doğrudan seçilen güncel aşama. */
+  adminStage?: TrackingWorkflowStageId | null;
 };
 
 export type TrackingWorkflowStageId =
@@ -67,6 +69,7 @@ export function emptyTrackingWorkflowFlags(): TrackingWorkflowFlags {
     selectionCompletedAt: null,
     editingCompletedAt: null,
     printingCompletedAt: null,
+    adminStage: null,
   };
 }
 
@@ -94,6 +97,11 @@ export function parseTrackingWorkflowFlags(
     printingCompletedAt:
       typeof data.printingCompletedAt === "string"
         ? data.printingCompletedAt
+        : null,
+    adminStage:
+      typeof data.adminStage === "string" &&
+      (TRACKING_WORKFLOW_STAGE_ORDER as string[]).includes(data.adminStage)
+        ? (data.adminStage as TrackingWorkflowStageId)
         : null,
   };
 }
@@ -147,6 +155,116 @@ function summarizePills(pills: string[]): string {
   return pills.filter(Boolean).join(" · ");
 }
 
+export const ADMIN_WORKFLOW_STAGE_OPTIONS: Array<{
+  id: TrackingWorkflowStageId;
+  label: string;
+}> = [
+  { id: "rezervasyon", label: "Rezervasyon" },
+  { id: "cekim", label: "Çekim Bekleniyor" },
+  { id: "dijital", label: "Dijital Teslimat" },
+  { id: "secim", label: "Seçim" },
+  { id: "duzenleme", label: "Düzenleme" },
+  { id: "baski", label: "Baskı" },
+];
+
+export function workflowStageOrder(hasPrinting: boolean): TrackingWorkflowStageId[] {
+  return TRACKING_WORKFLOW_STAGE_ORDER.filter(
+    (id) => id !== "baski" || hasPrinting,
+  );
+}
+
+export function workflowFlagsForAdminStage(
+  stageId: TrackingWorkflowStageId,
+  hasPrinting: boolean,
+): TrackingWorkflowFlags {
+  const now = new Date().toISOString();
+  const order = workflowStageOrder(hasPrinting);
+  const stageIndex = order.indexOf(stageId);
+  const flags = emptyTrackingWorkflowFlags();
+  flags.adminStage = stageId;
+
+  const digitalIndex = order.indexOf("dijital");
+  const selectionIndex = order.indexOf("secim");
+  const editingIndex = order.indexOf("duzenleme");
+  const printingIndex = order.indexOf("baski");
+
+  if (stageIndex > digitalIndex && digitalIndex >= 0) {
+    flags.digitalDeliveredAt = now;
+  }
+  if (stageIndex > selectionIndex && selectionIndex >= 0) {
+    flags.digitalDeliveredAt = now;
+    flags.selectionCompletedAt = now;
+  }
+  if (stageIndex > editingIndex && editingIndex >= 0) {
+    flags.digitalDeliveredAt = now;
+    flags.selectionCompletedAt = now;
+    flags.editingCompletedAt = now;
+  }
+  if (printingIndex >= 0 && stageIndex > printingIndex) {
+    flags.digitalDeliveredAt = now;
+    flags.selectionCompletedAt = now;
+    flags.editingCompletedAt = now;
+    flags.printingCompletedAt = now;
+  }
+
+  return flags;
+}
+
+function buildViewFromAdminStage(
+  stageId: TrackingWorkflowStageId,
+  hasPrinting: boolean,
+): TrackingWorkflowView {
+  const order = workflowStageOrder(hasPrinting);
+  const stageIndex = order.indexOf(stageId);
+
+  if (stageIndex < 0) {
+    return buildViewFromAdminStage("rezervasyon", hasPrinting);
+  }
+
+  const stages = order.map((id, index) => {
+    const state: TrackingWorkflowStageState =
+      index < stageIndex
+        ? "completed"
+        : index === stageIndex
+          ? "current"
+          : "upcoming";
+
+    let tone: TrackingWorkflowStageView["tone"] = "default";
+    if (state === "completed") tone = "green";
+    if (state === "current") {
+      tone = id === "cekim" ? "red" : "amber";
+    }
+
+    return {
+      id,
+      label: stageDefaultLabel(id, state),
+      state,
+      tone,
+    };
+  });
+
+  const isCompleted = false;
+
+  return {
+    primaryTitle: stageDefaultLabel(stageId, "current"),
+    isCompleted,
+    stages,
+    availableAdminActions: [],
+  };
+}
+
+export function getCurrentWorkflowStageId(
+  workflow: TrackingWorkflowView,
+): TrackingWorkflowStageId | null {
+  const current = workflow.stages.filter((stage) => stage.state === "current");
+  if (current.length === 1) return current[0].id;
+  if (workflow.isCompleted) {
+    const last = workflow.stages[workflow.stages.length - 1];
+    return last?.id ?? null;
+  }
+  return current[0]?.id ?? null;
+}
+
 export function buildTrackingWorkflowView(input: {
   shootDate: Date;
   postShoot: PostShootSnapshot;
@@ -155,9 +273,14 @@ export function buildTrackingWorkflowView(input: {
 }): TrackingWorkflowView {
   const now = input.now ?? new Date();
   const { postShoot, workflow } = input;
+  const hasPrinting = hasPrintingProducts(postShoot);
+
+  if (workflow.adminStage) {
+    return buildViewFromAdminStage(workflow.adminStage, hasPrinting);
+  }
+
   const shootDay = startOfDay(input.shootDate);
   const shootPassed = isAfter(now, endOfDay(shootDay));
-  const hasPrinting = hasPrintingProducts(postShoot);
 
   const pickupDays = parseDeadlineDaysFromPills(postShoot.digital.pills, 30);
   const editingDays = parseDeadlineDaysFromPills(postShoot.editing.pills, 70);
