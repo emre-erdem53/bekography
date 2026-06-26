@@ -1,5 +1,10 @@
 import type { PackageCategoryData } from "@/lib/package-types";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type {
+  PackageCategoryContent,
+  PackageDetailSection,
+  PackageServiceItem,
+} from "@/lib/package-seed-data";
+import { normalizeDetailSections } from "@/lib/package-detail-section";
 import { getOptionGalleryPreviewMedia } from "@/lib/package-media";
 
 export type ReservationProductSnapshot = {
@@ -15,6 +20,9 @@ export type ReservationProductSnapshot = {
   previewVideoUrl: string | null;
   shootTypeLabel: string;
   highlightTags: string[];
+  detailSections: PackageDetailSection[];
+  services: PackageServiceItem[];
+  shootDescription: string;
 };
 
 export function emptyProductSnapshot(): ReservationProductSnapshot {
@@ -31,6 +39,9 @@ export function emptyProductSnapshot(): ReservationProductSnapshot {
     previewVideoUrl: null,
     shootTypeLabel: "",
     highlightTags: [],
+    detailSections: [],
+    services: [],
+    shootDescription: "",
   };
 }
 
@@ -84,6 +95,21 @@ function toCategoryData(
   };
 }
 
+function getSnapshotDetailSections(
+  content: PackageCategoryContent,
+  optionId: string,
+  optionLabel: string,
+): PackageDetailSection[] {
+  const scoped =
+    content.detailSectionsByOption?.[optionId] ??
+    content.detailSectionsByOption?.[optionLabel] ??
+    content.detailSections;
+
+  return normalizeDetailSections(scoped).sort(
+    (a, b) => a.sortOrder - b.sortOrder,
+  );
+}
+
 export function buildProductSnapshotFromOption(
   option: PackageOptionWithCategory,
 ): ReservationProductSnapshot {
@@ -114,6 +140,9 @@ export function buildProductSnapshotFromOption(
     previewVideoUrl: preview?.type === "video" ? preview.url : null,
     shootTypeLabel: getShootTypeLabel(option.label),
     highlightTags,
+    detailSections: getSnapshotDetailSections(content, option.id, option.label),
+    services: content.services ?? [],
+    shootDescription: content.shootDescription ?? "",
   };
 }
 
@@ -145,6 +174,24 @@ export function parseProductSnapshot(value: unknown): ReservationProductSnapshot
     highlightTags: Array.isArray(data.highlightTags)
       ? data.highlightTags.filter((tag): tag is string => typeof tag === "string")
       : [],
+    detailSections: Array.isArray(data.detailSections)
+      ? normalizeDetailSections(
+          data.detailSections.filter(
+            (section): section is PackageDetailSection =>
+              !!section && typeof section === "object",
+          ),
+        )
+      : [],
+    services: Array.isArray(data.services)
+      ? data.services.filter(
+          (service): service is PackageServiceItem =>
+            !!service &&
+            typeof service === "object" &&
+            typeof (service as PackageServiceItem).title === "string",
+        )
+      : [],
+    shootDescription:
+      typeof data.shootDescription === "string" ? data.shootDescription : "",
   };
 }
 

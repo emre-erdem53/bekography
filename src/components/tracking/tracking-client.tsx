@@ -10,7 +10,7 @@ import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import { normalizeTcKimlik } from "@/lib/reservation-utils";
 
 function trackingStorageKey(slug: string) {
-  return `bekography-takip:v7:${slug}`;
+  return `bekography-takip:v10:${slug}`;
 }
 
 export function TrackingClient({ slug }: { slug: string }) {
@@ -64,7 +64,7 @@ export function TrackingClient({ slug }: { slug: string }) {
 
       const payloadRaw = await response.json().catch(() => ({}));
 
-      if (response.status === 404) {
+      if (response.status === 404 || response.status === 410) {
         setNotFound(true);
         return;
       }

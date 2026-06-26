@@ -1,23 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { ReservationStatus } from "@prisma/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import type { ReservationStatus } from "@prisma/client";
-import { StatusSelect } from "@/components/admin/status-select";
-import { changeReservationStatus } from "@/components/admin/reservation-status-actions";
-import {
-  RESERVATION_STATUS_LABELS,
-  formatPrice,
-} from "@/lib/constants";
+import { Check } from "lucide-react";
+import { completeReservation } from "@/components/admin/reservation-status-actions";
+import { formatPrice } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { formatCoupleName } from "@/lib/reservation-utils";
 import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import type { TrackingData } from "@/lib/tracking-types";
 import { parsePostShootSnapshot } from "@/lib/post-shoot";
+import {
+  getTrackingLinkExpiresAt,
+  isTrackingLinkExpired,
+  resolveReservationCompletedAt,
+} from "@/lib/tracking-access";
 
 type ReservationDetail = {
   id: string;
@@ -34,7 +36,8 @@ type ReservationDetail = {
   discountAmount: number;
   discountEnabled?: boolean;
   postShoot: unknown;
-  status: ReservationStatus;
+  status: string;
+  completedAt: string | null;
   notes: string | null;
   items: {
     id: string;
@@ -54,8 +57,8 @@ type ReservationDetail = {
       category: { title: string; slug: string; accentColor: string };
     };
   }[];
-  installments: { amount: number; dueDate: string }[];
-  statusHistory: { status: ReservationStatus; changedAt: string }[];
+  installments: { id: string; amount: number; dueDate: string; paidAt: string | null }[];
+  statusHistory: { status: string; changedAt: string }[];
 };
 
 export function ReservationDetailClient({
@@ -69,6 +72,10 @@ export function ReservationDetailClient({
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [togglingInstallmentId, setTogglingInstallmentId] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     Promise.all([
@@ -95,35 +102,18 @@ export function ReservationDetailClient({
     );
   }
 
-  async function updateStatus(status: ReservationStatus) {
-    if (!reservation) return;
+  async function handleCompleteReservation() {
+    if (!reservation || reservation.status === "teslim_edildi") return;
 
-    const result = await changeReservationStatus(
-      reservationId,
-      status,
-      reservation.status,
-    );
+    setCompleting(true);
+    const result = await completeReservation(reservationId);
+    setCompleting(false);
+
     if (!result) return;
 
     if (result.kind === "delivered") {
       router.push("/admin/rezervasyonlar/gecmis");
-      return;
     }
-
-    if (result.kind !== "updated") return;
-
-    setReservation((prev) =>
-      prev
-        ? {
-            ...prev,
-            status: result.status,
-            statusHistory: [
-              ...prev.statusHistory,
-              { status: result.status, changedAt: new Date().toISOString() },
-            ],
-          }
-        : prev,
-    );
   }
 
   async function copyLink() {
@@ -133,15 +123,51 @@ export function ReservationDetailClient({
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function toggleInstallmentPaid(
+    installmentId: string,
+    currentlyPaid: boolean,
+  ) {
+    setTogglingInstallmentId(installmentId);
+    try {
+      const response = await fetch(
+        `/api/admin/reservations/${reservationId}/installments/${installmentId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paid: !currentlyPaid }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        window.alert(data.error ?? "Ödeme durumu güncellenemedi");
+        return;
+      }
+
+      const updated = (await response.json()) as {
+        id: string;
+        paidAt: string | null;
+      };
+
+      setReservation((prev) =>
+        prev
+          ? {
+              ...prev,
+              installments: prev.installments.map((row) =>
+                row.id === updated.id
+                  ? { ...row, paidAt: updated.paidAt }
+                  : row,
+              ),
+            }
+          : prev,
+      );
+    } finally {
+      setTogglingInstallmentId(null);
+    }
+  }
+
   if (loading) return <p className="text-zinc-400">Yükleniyor...</p>;
   if (!reservation) return <p className="text-red-400">Rezervasyon bulunamadı.</p>;
-
-  const statusOptions = Object.entries(RESERVATION_STATUS_LABELS).map(
-    ([value, label]) => ({
-      value: value as ReservationStatus,
-      label,
-    }),
-  );
 
   const postShoot = parsePostShootSnapshot(reservation.postShoot);
   const coupleName = formatCoupleName(reservation.brideName, reservation.groomName);
@@ -149,6 +175,19 @@ export function ReservationDetailClient({
     reservation.items.some((item) =>
       item.packageOption.category.slug === "dis-cekim",
     );
+  const isCompleted = reservation.status === "teslim_edildi";
+  const completedAt = resolveReservationCompletedAt({
+    status: reservation.status as ReservationStatus,
+    completedAt: reservation.completedAt
+      ? new Date(reservation.completedAt)
+      : null,
+    statusHistory: reservation.statusHistory.map((entry) => ({
+      status: entry.status as ReservationStatus,
+      changedAt: new Date(entry.changedAt),
+    })),
+  });
+  const linkExpiresAt = getTrackingLinkExpiresAt(completedAt);
+  const linkExpired = isTrackingLinkExpired(completedAt);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -161,6 +200,14 @@ export function ReservationDetailClient({
             ← Rezervasyonlar
           </Link>
           <h1 className="mt-2 text-xl font-semibold text-white sm:text-2xl">{coupleName}</h1>
+          {isCompleted ? (
+            <p className="mt-1 text-sm text-emerald-400">
+              Tamamlandı
+              {completedAt
+                ? ` · ${format(completedAt, "d MMMM yyyy", { locale: tr })}`
+                : ""}
+            </p>
+          ) : null}
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <Link
@@ -175,11 +222,16 @@ export function ReservationDetailClient({
           >
             Düzenle
           </Link>
-          <StatusSelect
-            value={reservation.status}
-            options={statusOptions}
-            onChange={updateStatus}
-          />
+          {!isCompleted ? (
+            <button
+              type="button"
+              onClick={handleCompleteReservation}
+              disabled={completing}
+              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-50"
+            >
+              {completing ? "Kaydediliyor..." : "Rezervasyonu Tamamla"}
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -217,17 +269,31 @@ export function ReservationDetailClient({
         </Link>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 sm:flex-row sm:items-center">
-        <p className="min-w-0 flex-1 break-all text-sm text-zinc-400 sm:truncate">
-          {reservation.trackingUrl}
-        </p>
-        <button
-          type="button"
-          onClick={copyLink}
-          className="w-full shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black sm:w-auto"
-        >
-          {copied ? "Kopyalandı!" : "Takip Linkini Kopyala"}
-        </button>
+      <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <p className="min-w-0 flex-1 break-all text-sm text-zinc-400 sm:truncate">
+            {reservation.trackingUrl}
+          </p>
+          <button
+            type="button"
+            onClick={copyLink}
+            disabled={linkExpired}
+            className="w-full shrink-0 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-black disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+          >
+            {copied ? "Kopyalandı!" : "Takip Linkini Kopyala"}
+          </button>
+        </div>
+        {isCompleted && linkExpiresAt ? (
+          <p
+            className={`mt-3 text-sm ${
+              linkExpired ? "text-amber-300" : "text-zinc-500"
+            }`}
+          >
+            {linkExpired
+              ? `Müşteri linki ${format(linkExpiresAt, "d MMMM yyyy", { locale: tr })} tarihinde devre dışı kaldı.`
+              : `Müşteri linki ${format(linkExpiresAt, "d MMMM yyyy", { locale: tr })} tarihine kadar aktif.`}
+          </p>
+        ) : null}
       </div>
 
       <Section title="Müşteri Bilgileri">
@@ -247,7 +313,7 @@ export function ReservationDetailClient({
         <div className="space-y-3">
           {reservation.items.map((item, index) => (
             <div
-              key={index}
+              key={item.id ?? index}
               className="rounded-xl border border-white/10 p-4"
               style={{ borderColor: `${item.packageOption.category.accentColor}55` }}
             >
@@ -339,32 +405,42 @@ export function ReservationDetailClient({
           ) : null}
         </div>
         <ul className="mt-4 space-y-2">
-          {reservation.installments.map((row, index) => (
-            <li
-              key={index}
-              className="flex justify-between rounded-xl bg-white/5 px-4 py-3 text-sm"
-            >
-              <span className="text-zinc-300">
-                {format(new Date(row.dueDate), "d MMMM yyyy", { locale: tr })}
-              </span>
-              <span className="text-white">{formatPrice(row.amount)}</span>
-            </li>
-          ))}
-        </ul>
-      </Section>
+          {reservation.installments.map((row) => {
+            const isPaid = Boolean(row.paidAt);
 
-      <Section title="Durum Geçmişi">
-        <ul className="space-y-2">
-          {reservation.statusHistory.map((entry, index) => (
-            <li key={index} className="flex justify-between text-sm text-zinc-400">
-              <span>{RESERVATION_STATUS_LABELS[entry.status]}</span>
-              <span>
-                {format(new Date(entry.changedAt), "d MMM yyyy HH:mm", {
-                  locale: tr,
-                })}
-              </span>
-            </li>
-          ))}
+            return (
+              <li
+                key={row.id}
+                className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3 text-sm"
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleInstallmentPaid(row.id, isPaid)}
+                  disabled={togglingInstallmentId === row.id}
+                  aria-label={
+                    isPaid ? "Ödeme alındı işaretini kaldır" : "Ödeme alındı işaretle"
+                  }
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition disabled:opacity-50 ${
+                    isPaid
+                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
+                      : "border-white/15 bg-black/40 text-zinc-500 hover:border-white/30 hover:text-zinc-300"
+                  }`}
+                >
+                  {isPaid ? <Check className="h-4 w-4" strokeWidth={2.5} /> : null}
+                </button>
+                <span className="min-w-0 flex-1 text-zinc-300">
+                  {format(new Date(row.dueDate), "d MMMM yyyy", { locale: tr })}
+                </span>
+                <span
+                  className={`font-medium ${
+                    isPaid ? "text-zinc-500" : "text-emerald-400"
+                  }`}
+                >
+                  {formatPrice(row.amount)}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </Section>
     </div>

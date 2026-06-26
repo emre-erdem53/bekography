@@ -46,6 +46,26 @@ export async function restoreReservation(id: string): Promise<boolean> {
   return true;
 }
 
+export async function completeReservation(
+  id: string,
+): Promise<ReservationStatusChangeResult | null> {
+  if (!window.confirm(RESERVATION_DELIVERED_CONFIRM)) return null;
+
+  const response = await fetch(`/api/admin/reservations/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "teslim_edildi" }),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    window.alert(data.error ?? "Rezervasyon tamamlanamadı");
+    return null;
+  }
+
+  return { kind: "delivered" };
+}
+
 export async function changeReservationStatus(
   id: string,
   nextStatus: ReservationStatus,

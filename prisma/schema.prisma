@@ -109,6 +109,7 @@ model Reservation {
   discountEnabled     Boolean                      @default(false)
   postShoot           Json                         @default("{}")
   status              ReservationStatus            @default(planlandi)
+  completedAt         DateTime?
   notes               String?
   deletedAt           DateTime?
   createdAt           DateTime                     @default(now())
@@ -150,6 +151,7 @@ model ReservationPaymentInstallment {
   amount        Int
   dueDate       DateTime    @db.Date
   sortOrder     Int         @default(0)
+  paidAt        DateTime?
   reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@index([reservationId])

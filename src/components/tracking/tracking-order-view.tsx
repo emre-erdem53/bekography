@@ -97,26 +97,35 @@ export const ReservationOrderDocument = forwardRef<
           </div>
           {data.installments.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data.installments.map((row, index) => (
-                <div
-                  key={index}
-                  className="border-b border-white/10 px-5 py-4 last:border-b-0 sm:border-b-0"
-                >
-                  <p className="text-xs text-zinc-500">
-                    Ödenecek{" "}
-                    {format(new Date(row.dueDate), "d MMMM yyyy", {
-                      locale: tr,
-                    })}
-                  </p>
-                  <p
-                    className={`mt-2 text-xl font-semibold sm:text-2xl ${
-                      index % 2 === 0 ? "text-emerald-400" : "text-rose-400"
-                    }`}
+              {data.installments.map((row, index) => {
+                const isPaid = Boolean(row.paidAt);
+
+                return (
+                  <div
+                    key={index}
+                    className="border-b border-white/10 px-5 py-4 last:border-b-0 sm:border-b-0"
                   >
-                    {formatPrice(row.amount)}
-                  </p>
-                </div>
-              ))}
+                    <p className="text-xs text-zinc-500">
+                      Ödenecek{" "}
+                      {format(new Date(row.dueDate), "d MMMM yyyy", {
+                        locale: tr,
+                      })}
+                    </p>
+                    <p
+                      className={`mt-2 text-xl font-semibold sm:text-2xl ${
+                        isPaid ? "text-zinc-500" : "text-emerald-400"
+                      }`}
+                    >
+                      {formatPrice(row.amount)}
+                    </p>
+                    {isPaid ? (
+                      <p className="mt-2 text-xs text-zinc-500">
+                        (Bu vadeye ait ödeme tamamlandı)
+                      </p>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="px-5 py-4 text-sm text-zinc-500">

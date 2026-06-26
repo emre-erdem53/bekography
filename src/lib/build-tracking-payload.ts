@@ -18,6 +18,7 @@ import type { TrackingData } from "@/lib/tracking-types";
 import {
   buildTrackingWorkflowView,
 } from "@/lib/tracking-workflow";
+import { isReservationTrackingAccessible } from "@/lib/tracking-access";
 
 const reservationInclude = {
   items: {
@@ -102,6 +103,7 @@ function buildPayloadFromReservation(
     installments: reservation.installments.map((row) => ({
       amount: row.amount,
       dueDate: row.dueDate.toISOString(),
+      paidAt: row.paidAt?.toISOString() ?? null,
     })),
     items: reservation.items.map((item) => {
       const category = item.packageOption.category;
@@ -172,6 +174,10 @@ export async function buildTrackingPayloadBySlug(
     return null;
   }
 
+  if (!isReservationTrackingAccessible(reservation)) {
+    return null;
+  }
+
   return buildPayloadFromReservation(
     reservation,
     getPaymentTypeLabels(siteSettings),
@@ -190,6 +196,10 @@ export async function buildTrackingPayloadById(
   ]);
 
   if (!reservation || reservation.status === "iptal" || reservation.deletedAt) {
+    return null;
+  }
+
+  if (!isReservationTrackingAccessible(reservation)) {
     return null;
   }
 

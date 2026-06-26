@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
+import { getItemWorkflowFlags } from "@/lib/post-shoot";
 import {
   ADMIN_WORKFLOW_STAGE_OPTIONS,
   getCurrentWorkflowStageId,
@@ -32,8 +33,11 @@ export function ReservationItemWorkflowAdmin({
   const [error, setError] = useState<string | null>(null);
 
   const stageOrder = workflowStageOrder(hasPrinting);
+  const flags = getItemWorkflowFlags(postShoot, itemId);
   const currentStage =
-    getCurrentWorkflowStageId(workflow) ?? ("rezervasyon" as const);
+    flags.adminStage ??
+    getCurrentWorkflowStageId(workflow) ??
+    ("rezervasyon" as const);
 
   const options = ADMIN_WORKFLOW_STAGE_OPTIONS.filter((option) =>
     stageOrder.includes(option.id),

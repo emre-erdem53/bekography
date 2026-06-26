@@ -83,16 +83,6 @@ export function ReservationSummaryClient({
         </p>
       ) : null}
 
-      <div className="mx-auto w-full max-w-5xl px-4 pb-28 pt-24 sm:px-6 md:px-8">
-        <div className="mb-6 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-          <h1 className="text-lg font-semibold text-white">Müşteri Önizlemesi</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Müşterinin takip sayfasında gördüğü sipariş formu. Süreç yönetimi
-            ve metin düzenleme rezervasyon detay ekranından yapılır.
-          </p>
-        </div>
-      </div>
-
       <TrackingOrderView data={trackingData} exportRef={exportRef} />
     </div>
   );

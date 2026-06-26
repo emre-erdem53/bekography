@@ -41,6 +41,8 @@ export type TrackingWorkflowStageView = {
   label: string;
   state: TrackingWorkflowStageState;
   tone?: "green" | "red" | "amber" | "default";
+  /** Aşamanın hedef / tamamlanma tarihi (ISO). */
+  deadlineDate?: string;
 };
 
 export type TrackingWorkflowView = {
@@ -173,6 +175,264 @@ export function workflowStageOrder(hasPrinting: boolean): TrackingWorkflowStageI
   );
 }
 
+const DEFAULT_DIGITAL_SELECTION_DAYS = 30;
+const DEFAULT_EDITING_AFTER_SELECTION_DAYS = 70;
+const DEFAULT_PRINTING_AFTER_EDITING_DAYS = 30;
+
+export type WorkflowDeadlines = {
+  shoot: Date;
+  digitalSelection: Date;
+  editing: Date;
+  printing: Date;
+};
+
+export function computeWorkflowDeadlines(
+  shootDate: Date,
+  postShoot?: PostShootSnapshot,
+): WorkflowDeadlines {
+  const shootDay = startOfDay(shootDate);
+  const digitalDays = postShoot
+    ? parseDeadlineDaysFromPills(
+        postShoot.digital.pills,
+        DEFAULT_DIGITAL_SELECTION_DAYS,
+      )
+    : DEFAULT_DIGITAL_SELECTION_DAYS;
+  const editingDaysAfter = postShoot
+    ? parseDeadlineDaysFromPills(
+        postShoot.editing.pills,
+        DEFAULT_EDITING_AFTER_SELECTION_DAYS,
+      )
+    : DEFAULT_EDITING_AFTER_SELECTION_DAYS;
+  const printingDaysAfter = postShoot
+    ? parseDeadlineDaysFromPills(
+        postShoot.printing.pills,
+        DEFAULT_PRINTING_AFTER_EDITING_DAYS,
+      )
+    : DEFAULT_PRINTING_AFTER_EDITING_DAYS;
+
+  const digitalSelection = endOfDay(addDays(shootDay, digitalDays));
+  const editing = endOfDay(addDays(digitalSelection, editingDaysAfter));
+  const printing = endOfDay(addDays(editing, printingDaysAfter));
+
+  return {
+    shoot: endOfDay(shootDay),
+    digitalSelection,
+    editing,
+    printing,
+  };
+}
+
+function stageDeadlineDate(
+  id: TrackingWorkflowStageId,
+  deadlines: WorkflowDeadlines,
+): Date {
+  switch (id) {
+    case "rezervasyon":
+    case "cekim":
+      return deadlines.shoot;
+    case "dijital":
+    case "secim":
+      return deadlines.digitalSelection;
+    case "duzenleme":
+      return deadlines.editing;
+    case "baski":
+      return deadlines.printing;
+    default:
+      return deadlines.shoot;
+  }
+}
+
+function resolveEffectiveStage(
+  stageId: TrackingWorkflowStageId,
+  order: TrackingWorkflowStageId[],
+  shootPassed: boolean,
+): TrackingWorkflowStageId {
+  if (!shootPassed) return stageId;
+
+  const stageIndex = order.indexOf(stageId);
+  const cekimIndex = order.indexOf("cekim");
+  const dijitalIndex = order.indexOf("dijital");
+
+  if (stageIndex <= cekimIndex && dijitalIndex >= 0) {
+    return "dijital";
+  }
+
+  return stageId;
+}
+
+function isParallelDigitalSelectionStage(
+  stageId: TrackingWorkflowStageId,
+): boolean {
+  return stageId === "dijital" || stageId === "secim";
+}
+
+function computeStageState(
+  id: TrackingWorkflowStageId,
+  effectiveStageId: TrackingWorkflowStageId,
+  order: TrackingWorkflowStageId[],
+  shootPassed: boolean,
+): TrackingWorkflowStageState {
+  const effectiveIndex = order.indexOf(effectiveStageId);
+  const idIndex = order.indexOf(id);
+  const duzenlemeIndex = order.indexOf("duzenleme");
+
+  if (id === "dijital" || id === "secim") {
+    if (duzenlemeIndex >= 0 && effectiveIndex >= duzenlemeIndex) {
+      return "completed";
+    }
+    if (
+      shootPassed &&
+      isParallelDigitalSelectionStage(effectiveStageId)
+    ) {
+      return "current";
+    }
+    if (effectiveIndex > idIndex) return "completed";
+    return "upcoming";
+  }
+
+  if (id === "cekim") {
+    if (!shootPassed) {
+      return effectiveStageId === "rezervasyon" ? "upcoming" : "current";
+    }
+    return "completed";
+  }
+
+  if (id === "rezervasyon") {
+    if (!shootPassed && effectiveStageId === "rezervasyon") return "current";
+    return "completed";
+  }
+
+  if (idIndex < effectiveIndex) return "completed";
+  if (idIndex === effectiveIndex) return "current";
+  return "upcoming";
+}
+
+function computeStageTone(
+  id: TrackingWorkflowStageId,
+  state: TrackingWorkflowStageState,
+): TrackingWorkflowStageView["tone"] {
+  if (state === "completed") return "green";
+  if (state === "current") {
+    if (id === "cekim") return "red";
+    return "amber";
+  }
+  return "default";
+}
+
+function buildStagesFromEffectiveStage(
+  effectiveStageId: TrackingWorkflowStageId,
+  deadlines: WorkflowDeadlines,
+  hasPrinting: boolean,
+  shootPassed: boolean,
+  allCompleted: boolean,
+): TrackingWorkflowStageView[] {
+  const order = workflowStageOrder(hasPrinting);
+
+  if (allCompleted) {
+    return order.map((id) => ({
+      id,
+      label: stageCompletedLabel(id),
+      state: "completed" as const,
+      tone: "green" as const,
+      deadlineDate: stageDeadlineDate(id, deadlines).toISOString(),
+    }));
+  }
+
+  return order.map((id) => {
+    const state = computeStageState(
+      id,
+      effectiveStageId,
+      order,
+      shootPassed,
+    );
+    return {
+      id,
+      label: stageDefaultLabel(id, state),
+      state,
+      tone: computeStageTone(id, state),
+      deadlineDate: stageDeadlineDate(id, deadlines).toISOString(),
+    };
+  });
+}
+
+function inferEffectiveStageWithoutAdmin(
+  workflow: TrackingWorkflowFlags,
+  shootPassed: boolean,
+  pickupDeadlinePassed: boolean,
+  hasPrinting: boolean,
+): TrackingWorkflowStageId {
+  if (!shootPassed) return "cekim";
+
+  const editingDone = Boolean(workflow.editingCompletedAt);
+  const printingDone = Boolean(workflow.printingCompletedAt);
+
+  if (printingDone || (editingDone && !hasPrinting)) {
+    return hasPrinting ? "baski" : "duzenleme";
+  }
+  if (editingDone && hasPrinting && !printingDone) return "baski";
+  if (
+    !editingDone &&
+    (pickupDeadlinePassed || Boolean(workflow.selectionCompletedAt))
+  ) {
+    return "duzenleme";
+  }
+  return "dijital";
+}
+
+function buildPrimaryCopy(
+  effectiveStageId: TrackingWorkflowStageId,
+  deadlines: WorkflowDeadlines,
+  allCompleted: boolean,
+  hasPrinting: boolean,
+): Pick<
+  TrackingWorkflowView,
+  "primaryTitle" | "primarySubtitle" | "deadlineDate" | "deadlineLabel"
+> {
+  if (allCompleted) {
+    return {
+      primaryTitle: "Hizmet Tamamlandı",
+      primarySubtitle: "Tüm süreçler tamamlandı. Teşekkür ederiz.",
+    };
+  }
+
+  switch (effectiveStageId) {
+    case "rezervasyon":
+      return {
+        primaryTitle: "Rezervasyon",
+        primarySubtitle: `Çekim tarihi: ${formatDeadline(deadlines.shoot)}`,
+      };
+    case "cekim":
+      return {
+        primaryTitle: "Çekim Bekleniyor",
+        primarySubtitle: `Çekim tarihi: ${formatDeadline(deadlines.shoot)}`,
+      };
+    case "dijital":
+    case "secim":
+      return {
+        primaryTitle: "Dijital Teslimat ve Seçim",
+        primarySubtitle: `${formatDeadline(deadlines.digitalSelection)} tarihine kadar dijital içeriklerinizi teslim almalı ve seçim konusunda karar vermelisiniz.`,
+        deadlineDate: deadlines.digitalSelection.toISOString(),
+        deadlineLabel: "Son gün",
+      };
+    case "duzenleme":
+      return {
+        primaryTitle: "Düzenleniyor",
+        primarySubtitle: `${formatDeadline(deadlines.editing)} tarihine kadar düzenleme süreci devam ediyor.`,
+        deadlineDate: deadlines.editing.toISOString(),
+        deadlineLabel: "Son gün",
+      };
+    case "baski":
+      return {
+        primaryTitle: "Baskılı Ürünler Hazırlanıyor",
+        primarySubtitle: `${formatDeadline(deadlines.printing)} tarihine kadar baskı süreciniz devam ediyor.`,
+        deadlineDate: deadlines.printing.toISOString(),
+        deadlineLabel: "Son gün",
+      };
+    default:
+      return { primaryTitle: "Sipariş Durumu" };
+  }
+}
+
 export function workflowFlagsForAdminStage(
   stageId: TrackingWorkflowStageId,
   hasPrinting: boolean,
@@ -183,27 +443,17 @@ export function workflowFlagsForAdminStage(
   const flags = emptyTrackingWorkflowFlags();
   flags.adminStage = stageId;
 
-  const digitalIndex = order.indexOf("dijital");
-  const selectionIndex = order.indexOf("secim");
   const editingIndex = order.indexOf("duzenleme");
   const printingIndex = order.indexOf("baski");
 
-  if (stageIndex > digitalIndex && digitalIndex >= 0) {
-    flags.digitalDeliveredAt = now;
-  }
-  if (stageIndex > selectionIndex && selectionIndex >= 0) {
+  if (stageIndex >= editingIndex && editingIndex >= 0) {
     flags.digitalDeliveredAt = now;
     flags.selectionCompletedAt = now;
   }
   if (stageIndex > editingIndex && editingIndex >= 0) {
-    flags.digitalDeliveredAt = now;
-    flags.selectionCompletedAt = now;
     flags.editingCompletedAt = now;
   }
   if (printingIndex >= 0 && stageIndex > printingIndex) {
-    flags.digitalDeliveredAt = now;
-    flags.selectionCompletedAt = now;
-    flags.editingCompletedAt = now;
     flags.printingCompletedAt = now;
   }
 
@@ -213,41 +463,28 @@ export function workflowFlagsForAdminStage(
 function buildViewFromAdminStage(
   stageId: TrackingWorkflowStageId,
   hasPrinting: boolean,
+  shootDate: Date,
+  postShoot: PostShootSnapshot,
+  now: Date = new Date(),
 ): TrackingWorkflowView {
   const order = workflowStageOrder(hasPrinting);
-  const stageIndex = order.indexOf(stageId);
+  const deadlines = computeWorkflowDeadlines(shootDate, postShoot);
+  const shootPassed = isAfter(now, endOfDay(startOfDay(shootDate)));
+  const resolvedStage = resolveEffectiveStage(stageId, order, shootPassed);
 
-  if (stageIndex < 0) {
-    return buildViewFromAdminStage("rezervasyon", hasPrinting);
-  }
+  const stages = buildStagesFromEffectiveStage(
+    resolvedStage,
+    deadlines,
+    hasPrinting,
+    shootPassed,
+    false,
+  );
 
-  const stages = order.map((id, index) => {
-    const state: TrackingWorkflowStageState =
-      index < stageIndex
-        ? "completed"
-        : index === stageIndex
-          ? "current"
-          : "upcoming";
-
-    let tone: TrackingWorkflowStageView["tone"] = "default";
-    if (state === "completed") tone = "green";
-    if (state === "current") {
-      tone = id === "cekim" ? "red" : "amber";
-    }
-
-    return {
-      id,
-      label: stageDefaultLabel(id, state),
-      state,
-      tone,
-    };
-  });
-
-  const isCompleted = false;
+  const copy = buildPrimaryCopy(resolvedStage, deadlines, false, hasPrinting);
 
   return {
-    primaryTitle: stageDefaultLabel(stageId, "current"),
-    isCompleted,
+    ...copy,
+    isCompleted: false,
     stages,
     availableAdminActions: [],
   };
@@ -275,19 +512,10 @@ export function buildTrackingWorkflowView(input: {
   const now = input.now ?? new Date();
   const { postShoot, workflow } = input;
   const hasPrinting = input.hasPrinting ?? false;
-
-  if (workflow.adminStage) {
-    return buildViewFromAdminStage(workflow.adminStage, hasPrinting);
-  }
-
+  const deadlines = computeWorkflowDeadlines(input.shootDate, postShoot);
   const shootDay = startOfDay(input.shootDate);
   const shootPassed = isAfter(now, endOfDay(shootDay));
-
-  const pickupDays = parseDeadlineDaysFromPills(postShoot.digital.pills, 30);
-  const editingDays = parseDeadlineDaysFromPills(postShoot.editing.pills, 70);
-  const pickupDeadline = endOfDay(addDays(shootDay, pickupDays));
-  const editingDeadline = endOfDay(addDays(shootDay, editingDays));
-  const pickupDeadlinePassed = isAfter(now, pickupDeadline);
+  const pickupDeadlinePassed = isAfter(now, deadlines.digitalSelection);
 
   const digitalDone = Boolean(workflow.digitalDeliveredAt);
   const selectionDone = Boolean(workflow.selectionCompletedAt);
@@ -314,135 +542,63 @@ export function buildTrackingWorkflowView(input: {
     availableAdminActions.push("printing_completed");
   }
 
+  if (workflow.adminStage) {
+    return buildViewFromAdminStage(
+      workflow.adminStage,
+      hasPrinting,
+      input.shootDate,
+      postShoot,
+      now,
+    );
+  }
+
   if (serviceCompleted) {
     return {
       primaryTitle: "Hizmet Tamamlandı",
       primarySubtitle: "Tüm süreçler tamamlandı. Teşekkür ederiz.",
       isCompleted: true,
-      stages: TRACKING_WORKFLOW_STAGE_ORDER.filter(
-        (id) => id !== "baski" || hasPrinting,
-      ).map((id) => ({
-        id,
-        label: stageCompletedLabel(id),
-        state: "completed" as const,
-        tone: "green",
-      })),
+      stages: buildStagesFromEffectiveStage(
+        hasPrinting ? "baski" : "duzenleme",
+        deadlines,
+        hasPrinting,
+        shootPassed,
+        true,
+      ),
       availableAdminActions: [],
     };
   }
 
-  if (!shootPassed) {
-    return {
-      primaryTitle: "Çekim Bekleniyor",
-      primarySubtitle: `Çekim tarihi: ${formatDeadline(shootDay)}`,
-      isCompleted: false,
-      stages: buildStageStates({
-        rezervasyon: "completed",
-        cekim: "current",
-        dijital: "upcoming",
-        secim: "upcoming",
-        duzenleme: "upcoming",
-        baski: hasPrinting ? "upcoming" : "upcoming",
-        hasPrinting,
-        cekimTone: "red",
-      }),
-      availableAdminActions,
-    };
-  }
+  const effectiveStage = inferEffectiveStageWithoutAdmin(
+    workflow,
+    shootPassed,
+    pickupDeadlinePassed,
+    hasPrinting,
+  );
 
-  if (
-    !selectionDone &&
-    !editingDone &&
-    !pickupDeadlinePassed
-  ) {
-    const activeDigital = !digitalDone;
-    const activeSelection = !selectionDone;
-
-    const titleParts: string[] = [];
-    if (activeDigital) titleParts.push("Dijital Teslimat Yapılacak");
-    if (activeSelection) titleParts.push("Seçim Yapılacak");
-
-    return {
-      primaryTitle: titleParts.join(" ve "),
-      primarySubtitle:
-        activeDigital && activeSelection
-          ? `${formatDeadline(pickupDeadline)} tarihine kadar dijital içeriklerinizi teslim almalı ve seçim konusunda karar vermelisiniz.`
-          : activeSelection
-            ? `${formatDeadline(pickupDeadline)} tarihine kadar seçim konusunda karar vermelisiniz.`
-            : undefined,
-      deadlineDate: pickupDeadline.toISOString(),
-      deadlineLabel: "Son gün",
-      isCompleted: false,
-      stages: buildStageStates({
-        rezervasyon: "completed",
-        cekim: "completed",
-        dijital: activeDigital ? "current" : digitalDone ? "completed" : "upcoming",
-        secim: activeSelection ? "current" : selectionDone ? "completed" : "upcoming",
-        duzenleme: "upcoming",
-        baski: hasPrinting ? "upcoming" : "upcoming",
-        hasPrinting,
-        cekimTone: "green",
-      }),
-      availableAdminActions,
-    };
-  }
-
-  if (!editingDone) {
-    return {
-      primaryTitle: "Düzenleniyor",
-      primarySubtitle: `${formatDeadline(editingDeadline)} tarihine kadar düzenleme süreci devam ediyor.`,
-      summary: summarizePills(postShoot.editing.pills),
-      deadlineDate: editingDeadline.toISOString(),
-      deadlineLabel: "Son gün",
-      isCompleted: false,
-      stages: buildStageStates({
-        rezervasyon: "completed",
-        cekim: "completed",
-        dijital: "completed",
-        secim: "completed",
-        duzenleme: "current",
-        baski: hasPrinting ? "upcoming" : "upcoming",
-        hasPrinting,
-        cekimTone: "green",
-      }),
-      availableAdminActions,
-    };
-  }
-
-  if (hasPrinting && !printingDone) {
-    return {
-      primaryTitle: "Baskılı Ürünler Hazırlanıyor",
-      primarySubtitle: "Baskı süreciniz devam ediyor.",
-      summary: summarizePills(postShoot.printing.pills),
-      deadlineDate: editingDeadline.toISOString(),
-      deadlineLabel: "Son gün",
-      isCompleted: false,
-      stages: buildStageStates({
-        rezervasyon: "completed",
-        cekim: "completed",
-        dijital: "completed",
-        secim: "completed",
-        duzenleme: "completed",
-        baski: "current",
-        hasPrinting,
-        cekimTone: "green",
-      }),
-      availableAdminActions,
-    };
-  }
+  const copy = buildPrimaryCopy(
+    effectiveStage,
+    deadlines,
+    false,
+    hasPrinting,
+  );
 
   return {
-    primaryTitle: "Hizmet Tamamlandı",
-    isCompleted: true,
-    stages: TRACKING_WORKFLOW_STAGE_ORDER.filter(
-      (id) => id !== "baski" || hasPrinting,
-    ).map((id) => ({
-      id,
-      label: stageCompletedLabel(id),
-      state: "completed",
-      tone: "green",
-    })),
-    availableAdminActions: [],
+    ...copy,
+    summary:
+      effectiveStage === "duzenleme"
+        ? summarizePills(postShoot.editing.pills)
+        : effectiveStage === "baski"
+          ? summarizePills(postShoot.printing.pills)
+          : undefined,
+    isCompleted: false,
+    stages: buildStagesFromEffectiveStage(
+      effectiveStage,
+      deadlines,
+      hasPrinting,
+      shootPassed,
+      false,
+    ),
+    availableAdminActions,
   };
 }
 
@@ -508,53 +664,6 @@ function stageUpcomingLabel(id: TrackingWorkflowStageId): string {
     default:
       return id;
   }
-}
-
-function buildStageStates(input: {
-  rezervasyon: TrackingWorkflowStageState;
-  cekim: TrackingWorkflowStageState;
-  dijital: TrackingWorkflowStageState;
-  secim: TrackingWorkflowStageState;
-  duzenleme: TrackingWorkflowStageState;
-  baski: TrackingWorkflowStageState;
-  hasPrinting: boolean;
-  cekimTone?: "green" | "red";
-}): TrackingWorkflowStageView[] {
-  const entries: Array<{
-    id: TrackingWorkflowStageId;
-    state: TrackingWorkflowStageState;
-    tone?: TrackingWorkflowStageView["tone"];
-  }> = [
-    { id: "rezervasyon", state: input.rezervasyon, tone: "green" },
-    {
-      id: "cekim",
-      state: input.cekim,
-      tone:
-        input.cekim === "current"
-          ? input.cekimTone
-          : input.cekim === "completed"
-            ? "green"
-            : "default",
-    },
-    { id: "dijital", state: input.dijital },
-    { id: "secim", state: input.secim },
-    { id: "duzenleme", state: input.duzenleme },
-    { id: "baski", state: input.baski },
-  ];
-
-  return entries
-    .filter((entry) => entry.id !== "baski" || input.hasPrinting)
-    .map((entry) => ({
-      id: entry.id,
-      label: stageDefaultLabel(entry.id, entry.state),
-      state: entry.state,
-      tone:
-        entry.state === "completed"
-          ? entry.tone ?? "green"
-          : entry.state === "current"
-            ? entry.tone ?? "amber"
-            : "default",
-    }));
 }
 
 export const TRACKING_WORKFLOW_ACTION_LABELS: Record<

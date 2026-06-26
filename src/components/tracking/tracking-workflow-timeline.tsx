@@ -158,6 +158,21 @@ export function TrackingWorkflowTimeline({
                 >
                   {getTrackingStageLabel(stage.id, stage.state)}
                 </p>
+                {stage.deadlineDate ? (
+                  <p
+                    className={`mt-1 w-full px-0.5 text-center text-[9px] leading-tight sm:text-[10px] ${
+                      isCurrent
+                        ? "text-amber-200/80"
+                        : isCompleted
+                          ? "text-emerald-400/70"
+                          : "text-zinc-600"
+                    }`}
+                  >
+                    {format(new Date(stage.deadlineDate), "d MMM yyyy", {
+                      locale: tr,
+                    })}
+                  </p>
+                ) : null}
               </li>
             );
           })}

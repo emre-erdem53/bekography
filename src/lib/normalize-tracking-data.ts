@@ -104,7 +104,11 @@ export function normalizeTrackingData(
     postShoot,
     workflow,
     workflowFlags,
-    installments: value.installments ?? [],
+    installments: (value.installments ?? []).map((row) => ({
+      amount: row.amount,
+      dueDate: row.dueDate,
+      paidAt: row.paidAt ?? null,
+    })),
     items,
     purchasedProducts: value.purchasedProducts ?? [],
   };

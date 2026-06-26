@@ -38,6 +38,7 @@ export type TrackingShootItem = {
 export type TrackingInstallment = {
   amount: number;
   dueDate: string;
+  paidAt: string | null;
 };
 
 export type TrackingData = {

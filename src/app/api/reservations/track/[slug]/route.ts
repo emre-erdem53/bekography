@@ -3,6 +3,11 @@ import { buildTrackingPayloadBySlug } from "@/lib/build-tracking-payload";
 import { reservationTcMatches } from "@/lib/reservations";
 import { prisma } from "@/lib/prisma";
 import { trackReservationSchema } from "@/lib/validations";
+import {
+  getTrackingLinkExpiresAt,
+  isReservationTrackingAccessible,
+  resolveReservationCompletedAt,
+} from "@/lib/tracking-access";
 
 export async function GET() {
   return NextResponse.json(
@@ -32,15 +37,41 @@ export async function POST(
       select: {
         id: true,
         status: true,
+        completedAt: true,
+        deletedAt: true,
         brideTc: true,
         groomTc: true,
+        statusHistory: {
+          where: { status: "teslim_edildi" },
+          orderBy: { changedAt: "desc" },
+          take: 1,
+          select: { status: true, changedAt: true },
+        },
       },
     });
 
-    if (!reservation || reservation.status === "iptal") {
+    if (
+      !reservation ||
+      reservation.status === "iptal" ||
+      reservation.deletedAt
+    ) {
       return NextResponse.json(
         { error: "Rezervasyon bulunamadı" },
         { status: 404 },
+      );
+    }
+
+    if (!isReservationTrackingAccessible(reservation)) {
+      const completedAt = resolveReservationCompletedAt(reservation);
+      const expiresAt = getTrackingLinkExpiresAt(completedAt);
+      return NextResponse.json(
+        {
+          error:
+            "Bu takip linkinin süresi dolmuştur. Rezervasyon tamamlandıktan sonra 30 gün boyunca erişilebilirdi.",
+          code: "LINK_EXPIRED",
+          expiresAt: expiresAt?.toISOString() ?? null,
+        },
+        { status: 410 },
       );
     }
 

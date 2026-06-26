@@ -96,7 +96,13 @@ export async function PATCH(
 
       const updated = await prisma.reservation.update({
         where: { id },
-        data: { status: parsed.data.status },
+        data: {
+          status: parsed.data.status,
+          completedAt:
+            parsed.data.status === "teslim_edildi"
+              ? existing.completedAt ?? new Date()
+              : existing.completedAt,
+        },
       });
 
       return NextResponse.json(updated);
@@ -154,6 +160,10 @@ export async function PATCH(
         postShoot: data.postShoot,
         notes: data.notes !== undefined ? data.notes : undefined,
         status: data.status,
+        completedAt:
+          data.status === "teslim_edildi"
+            ? existing.completedAt ?? new Date()
+            : existing.completedAt,
       },
     });
 
