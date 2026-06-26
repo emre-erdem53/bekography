@@ -40,6 +40,8 @@ export const ReservationOrderDocument = forwardRef<
   HTMLDivElement,
   { data: TrackingData; showCoupleHeader?: boolean }
 >(function ReservationOrderDocument({ data, showCoupleHeader = true }, ref) {
+  const showPrinting = data.items.some((item) => item.isOutdoor);
+
   return (
     <div ref={ref} className="mx-auto max-w-5xl">
       {showCoupleHeader ? (
@@ -59,15 +61,25 @@ export const ReservationOrderDocument = forwardRef<
         <SectionHeading>Çekim Sonrası</SectionHeading>
         <div className="mt-5 rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
           <PostShootBlock title="Dijital" section={data.postShoot.digital} />
-          <PostShootBlock title="Düzenleme" section={data.postShoot.editing} />
-          <PostShootBlock title="Baskı" section={data.postShoot.printing} last />
+          <PostShootBlock
+            title="Düzenleme"
+            section={data.postShoot.editing}
+            last={!showPrinting}
+          />
+          {showPrinting ? (
+            <PostShootBlock title="Baskı" section={data.postShoot.printing} last />
+          ) : null}
         </div>
       </section>
 
       <section className="mt-10">
         <SectionHeading>Ödeme Planı</SectionHeading>
         <div className="mt-5 rounded-2xl border border-white/15 bg-[#0a0a0a]">
-          <div className="grid grid-cols-1 border-b border-white/10 md:grid-cols-3">
+          <div
+            className={`grid grid-cols-1 border-b border-white/10 ${
+              data.discountEnabled ? "md:grid-cols-3" : "md:grid-cols-2"
+            }`}
+          >
             <PaymentSummaryCell
               label="Toplam Fiyat"
               value={formatPrice(data.totalPrice)}
@@ -76,10 +88,12 @@ export const ReservationOrderDocument = forwardRef<
               label="Cayma Bedeli"
               value={formatPrice(data.cancellationFeeMax)}
             />
-            <PaymentSummaryCell
-              label="İndirim"
-              value={formatPrice(data.discountAmount)}
-            />
+            {data.discountEnabled ? (
+              <PaymentSummaryCell
+                label="İndirim"
+                value={formatPrice(data.discountAmount)}
+              />
+            ) : null}
           </div>
           {data.installments.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

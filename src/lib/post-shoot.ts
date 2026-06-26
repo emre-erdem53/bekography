@@ -1,44 +1,46 @@
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
+  buildPostShootFromInspect,
+  syncPostShootWithInspectItems,
+  type InspectCategory,
+} from "@/lib/post-shoot-from-inspect";
+import {
   emptyTrackingWorkflowFlags,
   parseTrackingWorkflowFlags,
   type TrackingWorkflowFlags,
 } from "@/lib/tracking-workflow";
-import {
-  getDefaultPostShootTokensForCategory,
-  type PostShootTemplateSettingsData,
-  type PostShootVariableDefinition,
-} from "@/lib/post-shoot-template-settings";
 
 export type PostShootSection = {
   pills: string[];
   description: string;
 };
 
-/** @deprecated Paket bazlı şablonlar kaldırıldı; global şablon + token kullanın. */
-export type PostShootTemplates = {
-  digital: PostShootSection;
-  editing: PostShootSection;
-  printing?: PostShootSection;
+export type PostShootWorkflowFlags = {
+  digitalDeliveredAt?: string | null;
+  selectionCompletedAt?: string | null;
+  editingCompletedAt?: string | null;
+  printingCompletedAt?: string | null;
+  adminStage?: string | null;
 };
 
 export type PostShootSnapshot = {
   digital: PostShootSection;
   editing: PostShootSection;
   printing: PostShootSection;
-  source?: "template" | "manual";
+  source?: "inspect" | "manual" | "template";
   workflow?: TrackingWorkflowFlags;
-  /** Paket (rezervasyon kalemi) bazında süreç bayrakları. */
   itemWorkflows?: Record<string, TrackingWorkflowFlags>;
 };
 
-type PackageLike = {
-  id: string;
-  slug: string;
-  title: string;
-  accentColor: string;
-  content: Partial<PackageCategoryContent>;
-};
+export function emptyPostShootSnapshot(): PostShootSnapshot {
+  return {
+    digital: { pills: [], description: "" },
+    editing: { pills: [], description: "" },
+    printing: { pills: [], description: "" },
+    source: "inspect",
+    workflow: emptyTrackingWorkflowFlags(),
+  };
+}
 
 type LegacyPostShootPackageBlock = {
   categoryId: string;
@@ -49,19 +51,6 @@ type LegacyPostShootPackageBlock = {
 type LegacyPostShootSectionGroup = {
   items: LegacyPostShootPackageBlock[];
 };
-
-function parseSection(value: unknown): PostShootSection {
-  if (!value || typeof value !== "object") {
-    return { pills: [], description: "" };
-  }
-  const obj = value as Partial<PostShootSection>;
-  return {
-    pills: Array.isArray(obj.pills)
-      ? obj.pills.filter((pill): pill is string => typeof pill === "string")
-      : [],
-    description: typeof obj.description === "string" ? obj.description : "",
-  };
-}
 
 function isLegacySectionGroup(value: unknown): value is PostShootSection {
   return (
@@ -104,27 +93,15 @@ function collapseLegacyGroup(value: unknown): PostShootSection {
   return { pills, description };
 }
 
-export function emptyPostShootSnapshot(): PostShootSnapshot {
-  return {
-    digital: { pills: [], description: "" },
-    editing: { pills: [], description: "" },
-    printing: { pills: [], description: "" },
-    source: "template",
-    workflow: emptyTrackingWorkflowFlags(),
-  };
-}
-
-export function parsePostShootSnapshot(value: unknown): PostShootSnapshot {
-  if (!value || typeof value !== "object") {
-    return emptyPostShootSnapshot();
-  }
-
-  const data = value as Partial<PostShootSnapshot> & {
-    digital?: unknown;
-    editing?: unknown;
-    printing?: unknown;
-    workflow?: unknown;
-  };
+export function parsePostShootSnapshot(raw: unknown): PostShootSnapshot {
+  if (!raw || typeof raw !== "object") return emptyPostShootSnapshot();
+  const data = raw as Record<string, unknown>;
+  const source =
+    data.source === "manual"
+      ? "manual"
+      : data.source === "inspect" || data.source === "template"
+        ? "inspect"
+        : undefined;
 
   const digital = data.digital
     ? collapseLegacyGroup(data.digital)
@@ -140,7 +117,7 @@ export function parsePostShootSnapshot(value: unknown): PostShootSnapshot {
     digital,
     editing,
     printing,
-    source: data.source === "manual" ? "manual" : "template",
+    source,
     workflow: parseTrackingWorkflowFlags(data.workflow),
     itemWorkflows:
       data.itemWorkflows && typeof data.itemWorkflows === "object"
@@ -151,6 +128,19 @@ export function parsePostShootSnapshot(value: unknown): PostShootSnapshot {
             ]),
           )
         : undefined,
+  };
+}
+
+function parseSection(raw: unknown): PostShootSection {
+  if (!raw || typeof raw !== "object") {
+    return { pills: [], description: "" };
+  }
+  const data = raw as Record<string, unknown>;
+  return {
+    pills: Array.isArray(data.pills)
+      ? data.pills.filter((entry): entry is string => typeof entry === "string")
+      : [],
+    description: typeof data.description === "string" ? data.description : "",
   };
 }
 
@@ -200,214 +190,53 @@ export function isOutdoorCategory(
   return content.scheduleType === "outdoor" || slug === "dis-cekim";
 }
 
-export function getUniqueCategoriesFromItems(
-  items: { packageOptionId: string }[],
-  categories: (PackageLike & { options?: { id: string }[] })[],
-): PackageLike[] {
-  const seen = new Set<string>();
-  const result: PackageLike[] = [];
+type ReservationItemInput = {
+  packageOptionId: string;
+  categoryTitle?: string;
+};
 
-  for (const item of items) {
-    const category = categories.find((c) =>
-      c.options?.some((o) => o.id === item.packageOptionId),
-    );
-    if (!category || seen.has(category.id)) continue;
-    seen.add(category.id);
-    result.push(category);
-  }
-
-  return result;
-}
-
-export function hasPrintingPackages(
-  categories: { slug: string; content: Partial<PackageCategoryContent> }[],
-): boolean {
-  return categories.some(
-    (category) => !isOutdoorCategory(category.slug, category.content),
-  );
-}
-
-/** @deprecated Global şablon sistemi kullanın. */
-export function shouldShowPrintingSection(
-  categories: {
-    slug: string;
-    content: Partial<PackageCategoryContent>;
-  }[],
-): boolean {
-  return hasPrintingPackages(categories);
-}
-
-function parseNumericValue(value: string): number | null {
-  const digits = value.replace(/\D/g, "");
-  if (!digits) return null;
-  const parsed = Number.parseInt(digits, 10);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-export function mergeTokenValues(
-  values: string[],
-  strategy: PostShootVariableDefinition["mergeStrategy"],
-): string {
-  const nonEmpty = values.map((value) => value.trim()).filter(Boolean);
-  if (nonEmpty.length === 0) return "";
-
-  switch (strategy) {
-    case "join":
-      return nonEmpty.join(" ve ");
-    case "sum": {
-      const numbers = nonEmpty
-        .map(parseNumericValue)
-        .filter((value): value is number => value !== null);
-      if (numbers.length === 0) return nonEmpty[0] ?? "";
-      return String(numbers.reduce((sum, value) => sum + value, 0));
-    }
-    case "max": {
-      const numbers = nonEmpty
-        .map(parseNumericValue)
-        .filter((value): value is number => value !== null);
-      if (numbers.length === 0) return nonEmpty[0] ?? "";
-      return String(Math.max(...numbers));
-    }
-    case "first":
-      return nonEmpty[0] ?? "";
-    case "unique_list":
-      return [...new Set(nonEmpty)].join(" ve ");
-    default:
-      return nonEmpty[0] ?? "";
-  }
-}
-
-export function renderPostShootTemplate(
-  template: string,
-  tokenValues: Record<string, string>,
-): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
-    return tokenValues[key] ?? "";
-  });
-}
-
-function renderPills(
-  pills: string[],
-  tokenValues: Record<string, string>,
-): string[] {
-  return pills
-    .map((pill) => renderPostShootTemplate(pill, tokenValues).trim())
-    .filter(Boolean);
-}
-
-function collectTokenValues(
-  categories: PackageLike[],
-  variables: PostShootVariableDefinition[],
-): Record<string, string> {
-  const buckets = new Map<string, string[]>();
-
-  for (const variable of variables) {
-    buckets.set(variable.key, []);
-  }
-
-  for (const category of categories) {
-    const defaults = getDefaultPostShootTokensForCategory(
-      category.slug,
-      category.content.scheduleType,
-    );
-    const packageTokens = {
-      ...defaults,
-      ...(category.content.postShootTokens ?? {}),
-    };
-
-    for (const variable of variables) {
-      const value = packageTokens[variable.key];
-      if (typeof value === "string" && value.trim()) {
-        buckets.get(variable.key)?.push(value.trim());
-      }
-    }
-  }
-
-  const merged: Record<string, string> = {};
-  for (const variable of variables) {
-    const values = buckets.get(variable.key) ?? [];
-    merged[variable.key] = mergeTokenValues(values, variable.mergeStrategy);
-  }
-
-  return merged;
-}
-
-function buildSectionFromTemplate(
-  templateSection: PostShootSection,
-  tokenValues: Record<string, string>,
-): PostShootSection {
-  return {
-    pills: renderPills(templateSection.pills, tokenValues),
-    description: renderPostShootTemplate(
-      templateSection.description,
-      tokenValues,
-    ).trim(),
-  };
-}
-
-export function buildPostShootSnapshot(
-  items: { packageOptionId: string }[],
-  categories: (PackageLike & { options?: { id: string }[] })[],
-  settings: PostShootTemplateSettingsData,
-): PostShootSnapshot {
-  const activeCategories = getUniqueCategoriesFromItems(items, categories);
-  const tokenValues = collectTokenValues(
-    activeCategories,
-    settings.variables,
-  );
-
-  const digital = buildSectionFromTemplate(settings.digital, tokenValues);
-  const editing = buildSectionFromTemplate(settings.editing, tokenValues);
-
-  const printing = hasPrintingPackages(activeCategories)
-    ? buildSectionFromTemplate(settings.printing, tokenValues)
-    : {
-        pills: [],
-        description: settings.noPrintingText,
-      };
-
-  return {
-    digital,
-    editing,
-    printing,
-    source: "template",
-  };
-}
+type CategoryInput = {
+  slug: string;
+  title: string;
+  content: Partial<PackageCategoryContent>;
+  options?: { id: string; label: string }[];
+};
 
 export function syncPostShootWithItems(
   current: PostShootSnapshot,
-  items: { packageOptionId: string }[],
-  categories: (PackageLike & { options?: { id: string }[] })[],
-  settings: PostShootTemplateSettingsData,
+  items: ReservationItemInput[],
+  categories: CategoryInput[],
   options?: { forceReset?: boolean },
 ): PostShootSnapshot {
-  if (current.source === "manual" && !options?.forceReset) {
-    return current;
-  }
-
-  const built = buildPostShootSnapshot(items, categories, settings);
-  return {
-    ...built,
-    workflow: current.workflow ?? emptyTrackingWorkflowFlags(),
-  };
+  return syncPostShootWithInspectItems(
+    current,
+    items,
+    categories as InspectCategory[],
+    options,
+  );
 }
 
-export function getPackagePostShootTokens(
-  content: Partial<PackageCategoryContent>,
-  slug: string,
-  variableKeys: string[],
-): Record<string, string> {
-  const defaults = getDefaultPostShootTokensForCategory(
-    slug,
-    content.scheduleType,
+export { buildPostShootFromInspect };
+
+export function hasPrintingPackages(categories: { slug: string }[]): boolean {
+  return categories.some((category) => category.slug === "dis-cekim");
+}
+
+export function hasPrintingProducts(postShoot: PostShootSnapshot): boolean {
+  return (
+    postShoot.printing.pills.length > 0 ||
+    postShoot.printing.description.trim().length > 0
   );
-  const stored = content.postShootTokens ?? {};
-  const result: Record<string, string> = {};
+}
 
-  for (const key of variableKeys) {
-    const value = stored[key] ?? defaults[key] ?? "";
-    result[key] = typeof value === "string" ? value : "";
-  }
-
-  return result;
+export function hasOutdoorPackageInItems(
+  items: ReservationItemInput[],
+  categories: CategoryInput[],
+): boolean {
+  return items.some((item) => {
+    const category = categories.find((entry) =>
+      entry.options?.some((option) => option.id === item.packageOptionId),
+    );
+    return category?.slug === "dis-cekim";
+  });
 }

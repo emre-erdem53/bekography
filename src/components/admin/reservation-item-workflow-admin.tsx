@@ -5,7 +5,6 @@ import type { PostShootSnapshot } from "@/lib/post-shoot";
 import {
   ADMIN_WORKFLOW_STAGE_OPTIONS,
   getCurrentWorkflowStageId,
-  hasPrintingProducts,
   workflowStageOrder,
   type TrackingWorkflowStageId,
   type TrackingWorkflowView,
@@ -18,6 +17,7 @@ export function ReservationItemWorkflowAdmin({
   itemTitle,
   postShoot,
   workflow,
+  hasPrinting = false,
   onWorkflowChange,
 }: {
   reservationId: string;
@@ -25,12 +25,12 @@ export function ReservationItemWorkflowAdmin({
   itemTitle: string;
   postShoot: PostShootSnapshot;
   workflow: TrackingWorkflowView;
+  hasPrinting?: boolean;
   onWorkflowChange?: (postShoot: PostShootSnapshot) => void;
 }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasPrinting = hasPrintingProducts(postShoot);
   const stageOrder = workflowStageOrder(hasPrinting);
   const currentStage =
     getCurrentWorkflowStageId(workflow) ?? ("rezervasyon" as const);

@@ -90,6 +90,7 @@ export function normalizeTrackingData(
     totalPrice: value.totalPrice ?? 0,
     cancellationFeeMax: value.cancellationFeeMax ?? 0,
     discountAmount: value.discountAmount ?? 0,
+    discountEnabled: value.discountEnabled ?? false,
     postShoot,
     workflow,
     workflowFlags,

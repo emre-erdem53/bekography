@@ -12,14 +12,14 @@ import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
   emptyPostShootSnapshot,
+  hasOutdoorPackageInItems,
   isOutdoorCategory,
   parsePostShootSnapshot,
   syncPostShootWithItems,
   type PostShootSection,
   type PostShootSnapshot,
 } from "@/lib/post-shoot";
-import type { PostShootTemplateSettingsData } from "@/lib/post-shoot-template-settings";
-import { PostShootSectionEditor } from "@/components/admin/post-shoot-templates-admin-client";
+import { PostShootSectionEditor } from "@/components/admin/post-shoot-section-editor";
 import { formatCoupleName } from "@/lib/reservation-utils";
 
 const TIME_STEP_SECONDS = 900;
@@ -127,6 +127,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [totalPrice, setTotalPrice] = useState(0);
   const [cancellationFeeMax, setCancellationFeeMax] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountEnabled, setDiscountEnabled] = useState(false);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<SelectedItem[]>([]);
   const [installments, setInstallments] = useState<Installment[]>([
@@ -141,8 +142,6 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [totalPriceManual, setTotalPriceManual] = useState(false);
-  const [templateSettings, setTemplateSettings] =
-    useState<PostShootTemplateSettingsData | null>(null);
   const [defaultShootDate, setDefaultShootDate] = useState("");
 
   const itemsTotal = useMemo(
@@ -155,7 +154,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     [installments],
   );
 
-  const expectedPayable = totalPrice - discountAmount;
+  const effectiveDiscount = discountEnabled ? discountAmount : 0;
+  const expectedPayable = totalPrice - effectiveDiscount;
 
   const hasTaksitliPayment = useMemo(
     () => hasPartialPayment(items),
@@ -165,6 +165,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const installmentMismatch = installmentTotal !== expectedPayable;
 
   const minInstallmentCount = hasTaksitliPayment ? 2 : 1;
+
+  const showPrintingSection = useMemo(
+    () => hasOutdoorPackageInItems(items, categories),
+    [items, categories],
+  );
 
   function addInstallment() {
     setInstallments((prev) =>
@@ -189,28 +194,26 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   }
 
   function applyPostShootSync(nextItems: SelectedItem[], forceReset = false) {
-    if (!templateSettings) return;
+    if (categories.length === 0) return;
+    if (
+      forceReset &&
+      postShoot.source === "manual" &&
+      !window.confirm(
+        "Manuel düzenlenmiş çekim sonrası metinleri paket incele içeriklerinden yeniden oluşturulacak. Devam edilsin mi?",
+      )
+    ) {
+      return;
+    }
     setPostShoot((prev) =>
-      syncPostShootWithItems(
-        prev,
-        nextItems,
-        categories,
-        templateSettings,
-        { forceReset },
-      ),
+      syncPostShootWithItems(prev, nextItems, categories, { forceReset }),
     );
   }
 
   useEffect(() => {
     async function load() {
-      const [packagesRes, templatesRes] = await Promise.all([
-        fetch("/api/admin/packages"),
-        fetch("/api/admin/post-shoot-templates"),
-      ]);
+      const packagesRes = await fetch("/api/admin/packages");
       const packages: PackageCategory[] = await packagesRes.json();
-      const templates: PostShootTemplateSettingsData = await templatesRes.json();
       setCategories(packages);
-      setTemplateSettings(templates);
 
       if (reservationId) {
         const reservationRes = await fetch(
@@ -227,6 +230,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         setTotalPriceManual(true);
         setCancellationFeeMax(reservation.cancellationFeeMax);
         setDiscountAmount(reservation.discountAmount);
+        setDiscountEnabled(
+          reservation.discountEnabled ?? reservation.discountAmount > 0,
+        );
         setNotes(reservation.notes ?? "");
         setPostShoot(parsePostShootSnapshot(reservation.postShoot));
         setItems(
@@ -361,7 +367,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   }, [requestId, reservationId, prefillDateParam]);
 
   useEffect(() => {
-    if (!templateSettings || categories.length === 0 || items.length === 0) {
+    if (categories.length === 0 || items.length === 0) {
       return;
     }
     if (reservationId) return;
@@ -371,10 +377,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         emptyPostShootSnapshot(),
         items,
         categories,
-        templateSettings,
       ),
     );
-  }, [templateSettings, categories, requestId, reservationId, items]);
+  }, [categories, requestId, reservationId, items]);
 
   useEffect(() => {
     if (!totalPriceManual && items.length > 0) {
@@ -524,7 +529,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       groomPhone,
       totalPrice,
       cancellationFeeMax,
-      discountAmount,
+      discountAmount: discountEnabled ? discountAmount : 0,
+      discountEnabled,
       postShoot,
       notes: notes || undefined,
       items: items.map((item) => {
@@ -897,8 +903,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
       <Section title="3. Çekim Sonrası">
         <p className="text-sm text-zinc-400">
-          Global şablondan otomatik oluşturulur; seçilen tüm paketler tek metinde
-          birleştirilir. Düzenlerseniz manuel kayda geçer.
+          Seçilen paketlerin İncele bölümlerinden otomatik oluşturulur; tüm
+          paketler tek metinde birleştirilir. Düzenlerseniz manuel kayda geçer.
           {postShoot.source === "manual" ? (
             <span className="mt-1 block text-amber-300/90">
               Bu rezervasyon için metinler manuel düzenlendi.
@@ -915,22 +921,28 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           section={postShoot.editing}
           onChange={(section) => updatePostShootSection("editing", section)}
         />
-        <PostShootSectionEditor
-          title="Baskı"
-          section={postShoot.printing}
-          onChange={(section) => updatePostShootSection("printing", section)}
-        />
+        {showPrintingSection ? (
+          <PostShootSectionEditor
+            title="Baskı"
+            section={postShoot.printing}
+            onChange={(section) => updatePostShootSection("printing", section)}
+          />
+        ) : null}
         <button
           type="button"
           onClick={() => applyPostShootSync(items, true)}
           className="text-sm text-zinc-400 hover:text-white"
         >
-          Global şablondan yeniden doldur
+          Paket incele metinlerinden yeniden doldur
         </button>
       </Section>
 
       <Section title="4. Ödeme Planı">
-        <div className="grid-safe grid gap-4 md:grid-cols-3">
+        <div
+          className={`grid-safe grid gap-4 ${
+            discountEnabled ? "md:grid-cols-3" : "md:grid-cols-2"
+          }`}
+        >
           <Field label="Toplam Fiyat (₺)">
             <input
               type="number"
@@ -951,15 +963,32 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               className={inputClass}
             />
           </Field>
-          <Field label="İndirim (₺)">
-            <input
-              type="number"
-              value={discountAmount}
-              onChange={(e) => setDiscountAmount(Number(e.target.value))}
-              className={inputClass}
-            />
-          </Field>
+          {discountEnabled ? (
+            <Field label="İndirim (₺)">
+              <input
+                type="number"
+                min={0}
+                value={discountAmount}
+                onChange={(e) => setDiscountAmount(Number(e.target.value))}
+                className={inputClass}
+              />
+            </Field>
+          ) : null}
         </div>
+
+        <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-zinc-300">
+          <input
+            type="checkbox"
+            checked={discountEnabled}
+            onChange={(event) => {
+              setDiscountEnabled(event.target.checked);
+              if (!event.target.checked) {
+                setDiscountAmount(0);
+              }
+            }}
+          />
+          İndirim uygula
+        </label>
 
         <div className="mt-4 space-y-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

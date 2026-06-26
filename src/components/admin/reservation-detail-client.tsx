@@ -29,6 +29,7 @@ type ReservationDetail = {
   totalPrice: number;
   cancellationFeeMax: number;
   discountAmount: number;
+  discountEnabled?: boolean;
   postShoot: unknown;
   status: ReservationStatus;
   notes: string | null;
@@ -261,13 +262,21 @@ export function ReservationDetailClient({
       </Section>
 
       <Section title="Ödeme Planı">
-        <div className="grid-safe grid gap-4 md:grid-cols-3">
+        <div
+          className={`grid-safe grid gap-4 ${
+            reservation.discountEnabled ?? reservation.discountAmount > 0
+              ? "md:grid-cols-3"
+              : "md:grid-cols-2"
+          }`}
+        >
           <Info label="Toplam Fiyat" value={formatPrice(reservation.totalPrice)} />
           <Info
             label="Cayma Bedeli Maks."
             value={formatPrice(reservation.cancellationFeeMax)}
           />
-          <Info label="İndirim" value={formatPrice(reservation.discountAmount)} />
+          {reservation.discountEnabled ?? reservation.discountAmount > 0 ? (
+            <Info label="İndirim" value={formatPrice(reservation.discountAmount)} />
+          ) : null}
         </div>
         <ul className="mt-4 space-y-2">
           {reservation.installments.map((row, index) => (

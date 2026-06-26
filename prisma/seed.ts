@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
   defaultRequestFieldLabels,
+  enrichSeedCategoryContent,
   seedPackageCategories,
 } from "../src/lib/package-seed-data";
 
@@ -21,7 +22,11 @@ function enrichContent(
   );
 
   return {
-    ...category.content,
+    ...enrichSeedCategoryContent(
+      category.slug,
+      category.content,
+      category.options.map((option) => option.label),
+    ),
     requestFieldLabels:
       category.content.requestFieldLabels ??
       defaultRequestFieldLabels(category.title, scheduleType),

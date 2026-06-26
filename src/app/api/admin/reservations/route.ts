@@ -109,6 +109,7 @@ export async function POST(request: Request) {
         totalPrice: data.totalPrice,
         cancellationFeeMax: data.cancellationFeeMax,
         discountAmount: data.discountAmount,
+        discountEnabled: data.discountEnabled ?? false,
         postShoot: data.postShoot,
         notes: data.notes ?? null,
         items: {

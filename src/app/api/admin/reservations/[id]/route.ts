@@ -150,6 +150,7 @@ export async function PATCH(
         totalPrice: data.totalPrice,
         cancellationFeeMax: data.cancellationFeeMax,
         discountAmount: data.discountAmount,
+        discountEnabled: data.discountEnabled ?? false,
         postShoot: data.postShoot,
         notes: data.notes !== undefined ? data.notes : undefined,
         status: data.status,

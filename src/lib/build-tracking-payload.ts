@@ -90,6 +90,7 @@ function buildPayloadFromReservation(
     totalPrice: reservation.totalPrice,
     cancellationFeeMax: reservation.cancellationFeeMax,
     discountAmount: reservation.discountAmount,
+    discountEnabled: reservation.discountEnabled,
     postShoot,
     workflow,
     workflowFlags,
@@ -113,6 +114,7 @@ function buildPayloadFromReservation(
         shootDate: item.shootDate,
         postShoot,
         workflow: itemWorkflowFlags,
+        hasPrinting: category.slug === "dis-cekim",
       });
 
       return {

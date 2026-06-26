@@ -56,6 +56,7 @@ export type TrackingData = {
   totalPrice: number;
   cancellationFeeMax: number;
   discountAmount: number;
+  discountEnabled: boolean;
   postShoot: PostShootSnapshot;
   workflow: TrackingWorkflowView;
   workflowFlags: TrackingWorkflowFlags;

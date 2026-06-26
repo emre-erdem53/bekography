@@ -6,6 +6,7 @@ import { Download, Pencil, ArrowLeft } from "lucide-react";
 import { toPng } from "html-to-image";
 import { TrackingOrderView } from "@/components/tracking/tracking-order-view";
 import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
+import { ReservationPostShootAdmin } from "@/components/admin/reservation-post-shoot-admin";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import type { TrackingData } from "@/lib/tracking-types";
 
@@ -61,6 +62,10 @@ export function ReservationSummaryClient({
     setData((prev) => normalizeTrackingData({ ...prev, postShoot }));
   }
 
+  function handlePostShootSaved(postShoot: TrackingData["postShoot"]) {
+    setData((prev) => normalizeTrackingData({ ...prev, postShoot }));
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col bg-black">
       <div className="fixed bottom-6 right-4 z-[70] flex max-w-[calc(100vw-2rem)] flex-col gap-2 sm:right-6 sm:flex-row sm:items-center">
@@ -113,11 +118,19 @@ export function ReservationSummaryClient({
                 itemTitle={`${item.categoryTitle} · ${item.shootTypeLabel}`}
                 postShoot={trackingData.postShoot}
                 workflow={item.workflow}
+                hasPrinting={item.isOutdoor}
                 onWorkflowChange={handleWorkflowChange}
               />
             ))}
           </div>
         </section>
+
+        <ReservationPostShootAdmin
+          reservationId={reservationId}
+          postShoot={trackingData.postShoot}
+          items={trackingData.items}
+          onSaved={handlePostShootSaved}
+        />
       </div>
 
       <TrackingOrderView data={trackingData} exportRef={exportRef} />

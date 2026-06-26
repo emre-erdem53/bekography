@@ -11,14 +11,12 @@ import type {
   PackageGalleryMedia,
 } from "@/lib/package-seed-data";
 import {
-  defaultIndoorPostShootTokens,
-  defaultOutdoorPostShootTokens,
   defaultRequestFieldLabels,
 } from "@/lib/package-seed-data";
 import {
-  getDefaultPostShootTokensForCategory,
-  type PostShootVariableDefinition,
-} from "@/lib/post-shoot-template-settings";
+  buildDefaultInspectSections,
+  STANDARD_INSPECT_SECTION_TITLES,
+} from "@/lib/default-inspect-sections";
 import { normalizeHexColor } from "@/lib/color-utils";
 import { applyPackageServiceTheme, PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
@@ -40,7 +38,6 @@ const defaultContent: PackageCategoryContent = {
   afterShootTitle: "Çekim Sonrası",
   afterShootDescription: "",
   scheduleType: "indoor",
-  postShootTokens: defaultIndoorPostShootTokens(),
   highlightTags: [],
   highlightTagsByOption: {},
   optionIconKeys: {},
@@ -167,9 +164,6 @@ export function PackageForm({
   const [loading, setLoading] = useState(!!packageId);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [templateVariables, setTemplateVariables] = useState<
-    PostShootVariableDefinition[]
-  >([]);
   const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>(
     {},
   );
@@ -181,13 +175,6 @@ export function PackageForm({
       [key]: !prev[key],
     }));
   }
-
-  useEffect(() => {
-    fetch("/api/admin/post-shoot-templates")
-      .then((res) => res.json())
-      .then((data) => setTemplateVariables(data.variables ?? []))
-      .catch(() => setTemplateVariables([]));
-  }, []);
 
   useEffect(() => {
     if (!packageId) return;
@@ -214,13 +201,6 @@ export function PackageForm({
           ...loadedContent,
           ...PACKAGE_SERVICE_THEME,
           scheduleType: loadedContent.scheduleType ?? "indoor",
-          postShootTokens: {
-            ...getDefaultPostShootTokensForCategory(
-              data.slug,
-              loadedContent.scheduleType ?? "indoor",
-            ),
-            ...(loadedContent.postShootTokens ?? {}),
-          },
           highlightTags: loadedContent.highlightTags ?? [],
           highlightTagsByOption: loadedContent.highlightTagsByOption ?? {},
           optionIconKeys: loadedContent.optionIconKeys ?? {},
@@ -385,7 +365,6 @@ export function PackageForm({
       galleryMediaByOption,
       galleryImages: [],
       scheduleType: content.scheduleType ?? "indoor",
-      postShootTokens: content.postShootTokens ?? {},
     });
 
     const payload = {
@@ -905,32 +884,59 @@ export function PackageForm({
                         />
                         İncele butonu aktif
                       </label>
+                      <p className="mt-1 text-xs text-zinc-500">
+                        Rezervasyon çekim sonrası metinleri bu bölümlerden
+                        üretilir. Standart başlıklar:{" "}
+                        {STANDARD_INSPECT_SECTION_TITLES.join(", ")}.
+                      </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextSections = [
-                          ...sections,
-                          {
-                            id: crypto.randomUUID(),
-                            title: "",
-                            body: "",
-                            tags: [],
-                            sortOrder: sections.length,
-                          },
-                        ];
-                        setContent({
-                          ...content,
-                          detailSectionsByOption: {
-                            ...(content.detailSectionsByOption ?? {}),
-                            [key]: nextSections,
-                          },
-                        });
-                      }}
-                      className="text-sm text-zinc-400 hover:text-white"
-                    >
-                      + Bölüm Ekle
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setContent({
+                            ...content,
+                            detailSectionsByOption: {
+                              ...(content.detailSectionsByOption ?? {}),
+                              [key]: buildDefaultInspectSections(
+                                content.scheduleType === "outdoor"
+                                  ? "dis-cekim"
+                                  : "dugun",
+                                content.scheduleType ?? "indoor",
+                              ),
+                            },
+                          });
+                        }}
+                        className="text-sm text-zinc-400 hover:text-white"
+                      >
+                        Standart bölümleri doldur
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextSections = [
+                            ...sections,
+                            {
+                              id: crypto.randomUUID(),
+                              title: "",
+                              body: "",
+                              tags: [],
+                              sortOrder: sections.length,
+                            },
+                          ];
+                          setContent({
+                            ...content,
+                            detailSectionsByOption: {
+                              ...(content.detailSectionsByOption ?? {}),
+                              [key]: nextSections,
+                            },
+                          });
+                        }}
+                        className="text-sm text-zinc-400 hover:text-white"
+                      >
+                        + Bölüm Ekle
+                      </button>
+                    </div>
                   </div>
 
                   {sections.length === 0 ? (
@@ -1037,8 +1043,7 @@ export function PackageForm({
           <h2 className="font-semibold text-white">İçerik</h2>
           <p className="mt-1 text-sm text-zinc-400">
             Rezervasyon oluşturma formunda kullanılacak metinler. Çekim sonrası
-            metinleri global şablondan üretilir; bu paket için yalnızca dinamik
-            alan değerleri aşağıda tanımlanır.
+            metinleri her çekim türünün İncele bölümlerinden üretilir.
           </p>
         </div>
 
@@ -1073,55 +1078,6 @@ export function PackageForm({
             Rezervasyon detayında referans metin olarak saklanır.
           </p>
         </Field>
-
-        <div className="space-y-4 border-t border-white/10 pt-5">
-          <div>
-            <h3 className="text-sm font-medium text-white">
-              Çekim Sonrası Değişkenleri
-            </h3>
-            <p className="mt-1 text-xs text-zinc-500">
-              Global şablonda kullanılan dinamik alanlar için bu pakete özel
-              değerler. Metinler{" "}
-              <Link
-                href="/admin/cekim-sonrasi-sablonlari"
-                className="text-zinc-300 underline hover:text-white"
-              >
-                Çekim Sonrası Şablonları
-              </Link>{" "}
-              sayfasından yönetilir.
-            </p>
-          </div>
-
-          {templateVariables.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              Henüz dinamik alan tanımlanmamış.
-            </p>
-          ) : (
-            <div className="grid-safe grid gap-3 md:grid-cols-2">
-              {templateVariables.map((variable) => (
-                <Field key={variable.key} label={variable.label}>
-                  <input
-                    value={content.postShootTokens?.[variable.key] ?? ""}
-                    onChange={(e) =>
-                      setContent({
-                        ...content,
-                        postShootTokens: {
-                          ...(content.postShootTokens ?? {}),
-                          [variable.key]: e.target.value,
-                        },
-                      })
-                    }
-                    placeholder={variable.hint ?? variable.key}
-                    className={inputClass}
-                  />
-                  <p className="mt-1 font-mono text-[11px] text-zinc-500">
-                    {`{{${variable.key}}}`}
-                  </p>
-                </Field>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}

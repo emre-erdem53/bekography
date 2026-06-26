@@ -106,6 +106,7 @@ model Reservation {
   totalPrice          Int
   cancellationFeeMax  Int                          @default(0)
   discountAmount      Int                          @default(0)
+  discountEnabled     Boolean                      @default(false)
   postShoot           Json                         @default("{}")
   status              ReservationStatus            @default(planlandi)
   notes               String?
@@ -162,16 +163,6 @@ model ReservationStatusHistory {
   reservation   Reservation       @relation(fields: [reservationId], references: [id], onDelete: Cascade)
 
   @@index([reservationId])
-}
-
-model PostShootTemplateSettings {
-  id             String   @id @default("default")
-  variables      Json     @default("[]")
-  digital        Json     @default("{}")
-  editing        Json     @default("{}")
-  printing       Json     @default("{}")
-  noPrintingText String   @default("Baskı yok")
-  updatedAt      DateTime @updatedAt
 }
 
 model AppSettings {

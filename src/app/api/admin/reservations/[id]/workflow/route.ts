@@ -55,7 +55,16 @@ export async function POST(
 
     const reservation = await prisma.reservation.findUnique({
       where: { id },
-      include: { items: { select: { id: true } } },
+      include: {
+        items: {
+          select: {
+            id: true,
+            packageOption: {
+              select: { category: { select: { slug: true } } },
+            },
+          },
+        },
+      },
     });
     if (!reservation) {
       return NextResponse.json(
@@ -80,7 +89,8 @@ export async function POST(
       reservation.items.map((item) => item.id),
     );
 
-    const hasPrinting = postShoot.printing.pills.length > 0;
+    const item = reservation.items.find((entry) => entry.id === itemId);
+    const hasPrinting = item?.packageOption.category.slug === "dis-cekim";
     const currentFlags = parseTrackingWorkflowFlags(
       postShoot.itemWorkflows?.[itemId],
     );

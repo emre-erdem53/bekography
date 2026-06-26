@@ -84,7 +84,6 @@ export const packageCategorySchema = z.object({
   content: z
     .object({
       scheduleType: z.enum(["outdoor", "indoor"]).optional(),
-      postShootTokens: z.record(z.string(), z.string()).optional(),
       highlightTags: z.array(z.string()).optional(),
       highlightTagsByOption: z.record(z.string(), z.array(z.string())).optional(),
       galleryImages: z.array(packageGalleryImageSchema).optional(),
@@ -139,14 +138,16 @@ const trackingWorkflowFlagsSchema = z.object({
   selectionCompletedAt: z.string().nullable().optional(),
   editingCompletedAt: z.string().nullable().optional(),
   printingCompletedAt: z.string().nullable().optional(),
+  adminStage: z.string().nullable().optional(),
 });
 
 const postShootSnapshotSchema = z.object({
   digital: postShootSectionSchema,
   editing: postShootSectionSchema,
   printing: postShootSectionSchema,
-  source: z.enum(["template", "manual"]).optional(),
+  source: z.enum(["template", "manual", "inspect"]).optional(),
   workflow: trackingWorkflowFlagsSchema.optional(),
+  itemWorkflows: z.record(z.string(), trackingWorkflowFlagsSchema).optional(),
 });
 
 export const createReservationSchema = z.object({
@@ -160,6 +161,7 @@ export const createReservationSchema = z.object({
   totalPrice: z.number().int().positive(),
   cancellationFeeMax: z.number().int().min(0),
   discountAmount: z.number().int().min(0),
+  discountEnabled: z.boolean().default(false),
   postShoot: postShootSnapshotSchema,
   notes: z.string().optional(),
   items: z.array(reservationItemSchema).min(1, "En az bir paket seçin"),
