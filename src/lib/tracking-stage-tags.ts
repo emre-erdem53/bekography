@@ -27,8 +27,7 @@ function mapSectionTitleToWorkflowStage(
 
   if (key.includes("rezervasyon")) return "rezervasyon";
   if (key.includes("seçim") || key.includes("secim")) return "secim";
-  if (key.includes("çekim öncesi") || key === "çekim" || key.startsWith("çekim "))
-    return "cekim";
+  if (key === "çekim") return "cekim";
 
   const postShootKind = normalizePostShootSectionTitle(title);
   if (postShootKind === "digital") return "dijital";

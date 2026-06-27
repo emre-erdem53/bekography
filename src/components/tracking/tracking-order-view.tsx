@@ -3,7 +3,7 @@
 import { forwardRef, type Ref } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle, Camera, Check, Phone, ShieldCheck } from "lucide-react";
 import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ORDER,
@@ -11,6 +11,11 @@ import {
 } from "@/lib/constants";
 import type { TrackingData } from "@/lib/tracking-types";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
+import {
+  firstNameFromFullName,
+  formatPersonDisplayName,
+  formatTurkishPhone,
+} from "@/lib/reservation-utils";
 import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
 import { TrackingPurchasedProducts } from "@/components/tracking/tracking-purchased-products";
 
@@ -46,7 +51,7 @@ export const ReservationOrderDocument = forwardRef<
       ) : null}
 
       <section className={showCoupleHeader ? "mt-10" : "mt-0"}>
-        <SectionHeading>Çekim Hizmeti</SectionHeading>
+        <SectionHeading icon={Camera}>Çekim Hizmeti</SectionHeading>
         <div className="mt-5 space-y-4">
           {data.items.map((item) => (
             <ShootServiceCard key={item.id || item.categoryTitle} item={item} />
@@ -232,24 +237,90 @@ function TrackingOrderBody({
 }
 
 function CoupleOrderHeader({ data }: { data: TrackingData }) {
-  return (
-    <header className="border-b border-white/10 pb-8 pt-2 text-center sm:pt-4">
-      <p className="text-xs font-medium uppercase tracking-[0.28em] text-zinc-500">
-        {data.formYear} / bekography — Sipariş Formu
-      </p>
+  const coupleTitle = `${firstNameFromFullName(data.brideName)} & ${firstNameFromFullName(data.groomName)}`;
 
-      <div className="mt-8 flex flex-row items-end justify-center gap-3 px-2 sm:gap-8 md:gap-12">
-        <CoupleName label="Gelin" name={data.brideName} iconSrc="/bride.svg" />
-        <span className="font-couple mb-8 shrink-0 text-xl text-zinc-600 sm:text-2xl md:text-3xl">
-          &
-        </span>
-        <CoupleName label="Damat" name={data.groomName} iconSrc="/groom.svg" />
+  return (
+    <header className="pb-2 pt-2 text-center sm:pt-4">
+      <h1 className="font-couple text-4xl leading-none text-white sm:text-5xl md:text-6xl">
+        {coupleTitle}
+      </h1>
+
+      <div className="mx-auto mt-8 max-w-3xl space-y-3">
+        <ContactPersonBar
+          iconSrc="/bride.svg"
+          name={formatPersonDisplayName(data.brideName)}
+          phone={formatTurkishPhone(data.bridePhone)}
+          tc={data.brideTc}
+        />
+        <ContactPersonBar
+          iconSrc="/groom.svg"
+          name={formatPersonDisplayName(data.groomName)}
+          phone={formatTurkishPhone(data.groomPhone)}
+          tc={data.groomTc}
+        />
       </div>
     </header>
   );
 }
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+function ContactPersonBar({
+  iconSrc,
+  name,
+  phone,
+  tc,
+}: {
+  iconSrc: string;
+  name: string;
+  phone: string;
+  tc: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-full border border-white/10 bg-[#141414] px-4 py-3 sm:gap-x-6 sm:px-5">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1.5">
+          <img
+            src={iconSrc}
+            alt=""
+            className="h-full w-full object-contain brightness-0 invert"
+          />
+        </span>
+        <p className="truncate text-sm font-medium tracking-wide text-zinc-200 sm:text-base">
+          {name}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
+        <span className="inline-flex items-center gap-1.5">
+          <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{phone}</span>
+        </span>
+        {tc ? (
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="tracking-wide">{tc}</span>
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeading({
+  children,
+  icon: Icon,
+}: {
+  children: React.ReactNode;
+  icon?: React.ComponentType<{ className?: string }>;
+}) {
+  if (Icon) {
+    return (
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-zinc-500" aria-hidden />
+        <h2 className="text-sm font-medium text-zinc-400">{children}</h2>
+      </div>
+    );
+  }
+
   return (
     <h2 className="text-sm font-semibold uppercase tracking-[0.22em] text-zinc-400">
       {children}
@@ -257,83 +328,80 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CoupleName({
-  label,
-  name,
-  iconSrc,
-}: {
-  label: string;
-  name: string;
-  iconSrc: string;
-}) {
-  return (
-    <div className="flex min-w-0 flex-1 flex-col items-center gap-2.5 sm:gap-3">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 p-2 sm:h-12 sm:w-12">
-        <img
-          src={iconSrc}
-          alt=""
-          className="h-full w-full object-contain brightness-0 invert"
-        />
-      </span>
-      <div className="w-full text-center">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-500">
-          {label}
-        </p>
-        <p className="font-couple mt-1 break-words text-2xl leading-tight text-white sm:text-3xl md:text-4xl">
-          {name}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
-  const shootDateLabel = format(new Date(item.shootDate), "d MMMM yyyy", {
+  const shootDayLabel = format(new Date(item.shootDate), "d MMMM", {
     locale: tr,
   });
-  const timeLabel = item.isOutdoor
-    ? `${item.departureTime || "—"} — ${item.arrivalTime || "—"}`
-    : `${item.startTime || "—"} — ${item.endTime || "—"}`;
-  const timeCaption = item.isOutdoor ? "Rize Çıkış — Varış" : "Başlangıç — Bitiş";
+  const shootContentLabel =
+    item.shootContent.trim() || item.shootTypeLabel || "—";
+  const locationLabel = item.location.trim() || "Belirlenecek";
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
       <h3
-        className="text-xl font-semibold leading-none sm:text-2xl"
+        className="text-center text-2xl font-semibold leading-none sm:text-3xl md:text-4xl"
         style={{ color: item.accentColor }}
       >
         {item.categoryTitle}
       </h3>
 
-      <div className="mt-6 grid gap-5 border-y border-white/10 py-5 sm:grid-cols-3">
-        <ShootMetaLarge label="Tarih" value={shootDateLabel} />
-        <ShootMetaLarge label={timeCaption} value={timeLabel} />
-        <ShootMetaLarge label="Çekim Türü" value={item.shootTypeLabel} />
-      </div>
+      <div className="mt-6 border-t border-white/10 pt-6">
+        {item.isOutdoor ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <ShootMetaBlock
+              label="Çekim Günü"
+              value={shootDayLabel}
+              sub={
+                item.readyTime
+                  ? `Hazır Olma Saati: ${item.readyTime}`
+                  : undefined
+              }
+            />
+            <ShootMetaBlock
+              label="Çekim İçeriği"
+              value={shootContentLabel}
+              sub={`Çekim Yeri: ${locationLabel}`}
+            />
+            <ShootMetaBlock
+              label="Rize'den Çıkış"
+              value={item.departureTime || "—"}
+              sub={`B. Fiyat: ${formatPrice(item.agreedUnitPrice)}`}
+            />
+            <ShootMetaBlock
+              label="Rize'ye Varış"
+              value={item.arrivalTime || "—"}
+            />
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <ShootMetaBlock
+              label="Çekim Günü"
+              value={shootDayLabel}
+              sub={
+                item.readyTime
+                  ? `Hazır Olma Saati: ${item.readyTime}`
+                  : undefined
+              }
+            />
+            <ShootMetaBlock
+              label="Çekim İçeriği"
+              value={shootContentLabel}
+              sub={`Çekim Yeri: ${locationLabel}`}
+            />
+            <ShootMetaBlock
+              label="Başlangıç"
+              value={item.startTime || "—"}
+              sub={`B. Fiyat: ${formatPrice(item.agreedUnitPrice)}`}
+            />
+            <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} />
+          </div>
+        )}
 
-      <div className="mt-4 space-y-1.5 text-sm text-zinc-500">
-        {item.shootContent ? (
-          <p>
-            İçerik: <span className="text-zinc-300">{item.shootContent}</span>
+        {item.paymentType ? (
+          <p className="mt-4 text-right text-sm text-zinc-500">
+            Ödeme: <span className="text-zinc-300">{item.paymentType}</span>
           </p>
         ) : null}
-        {item.readyTime ? (
-          <p>
-            Hazır Olma: <span className="text-zinc-300">{item.readyTime}</span>
-          </p>
-        ) : null}
-        {item.location ? (
-          <p>
-            Çekim Yeri: <span className="text-zinc-300">{item.location}</span>
-          </p>
-        ) : null}
-        <p>
-          B. Fiyat:{" "}
-          <span className="text-zinc-300">{formatPrice(item.agreedUnitPrice)}</span>
-        </p>
-        <p>
-          Ödeme: <span className="text-zinc-300">{item.paymentType}</span>
-        </p>
       </div>
 
       {item.workflow ? (
@@ -352,13 +420,22 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
   );
 }
 
-function ShootMetaLarge({ label, value }: { label: string; value: string }) {
+function ShootMetaBlock({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">{label}</p>
+      <p className="text-xs text-zinc-500">{label}</p>
       <p className="mt-2 text-xl font-semibold leading-tight text-white sm:text-2xl md:text-3xl">
         {value}
       </p>
+      {sub ? <p className="mt-2 text-xs text-zinc-500">{sub}</p> : null}
     </div>
   );
 }
