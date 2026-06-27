@@ -78,7 +78,7 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
   }
 
   return (
-    <main className="flex-1 bg-black pt-24 pb-10 text-white">
+    <main className="flex-1 bg-black pt-24 pb-28 text-white">
       <section className={`${contentWidth} pb-16 pt-4`}>
         <div className="flex items-center justify-between gap-4">
           <div>
@@ -198,32 +198,37 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
           </ul>
         )}
 
-        {items.length > 1 ? (
-          <div className="mt-6 rounded-2xl border border-[#93f8b6]/25 bg-[#93f8b6]/10 p-4 md:p-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-base font-semibold text-white sm:text-lg">
-                Sepet Toplamı
-              </h2>
-              {cartTotals.selectedCount < items.length ? (
-                <p className="text-xs text-zinc-500">
+        {items.length > 0 ? (
+          <div className="mt-8 rounded-3xl border-2 border-[#93f8b6]/40 bg-gradient-to-b from-[#93f8b6]/20 via-[#93f8b6]/10 to-transparent p-6 shadow-[0_0_48px_rgba(147,248,182,0.14)] md:mt-10 md:p-8">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#93f8b6]/20 pb-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#93f8b6]">
+                  Özet
+                </p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white md:text-3xl">
+                  Sepet Toplamı
+                </h2>
+              </div>
+              {items.length > 1 && cartTotals.selectedCount < items.length ? (
+                <p className="text-sm text-zinc-400">
                   Seçili {cartTotals.selectedCount} / {items.length} ürün
                 </p>
               ) : null}
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-4 sm:gap-6">
+            <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-10 md:mt-8">
               <PaymentTypePrice
                 type="pesin"
                 price={cartTotals.cash}
-                variant="stacked"
+                variant="featured"
               />
               <PaymentTypePrice
                 type="taksitli"
                 price={cartTotals.installment}
-                variant="stacked"
+                variant="featured"
               />
             </div>
             {cartTotals.selectedCount === 0 ? (
-              <p className="mt-3 text-xs text-zinc-500">
+              <p className="mt-5 text-sm text-zinc-400">
                 Toplamı görmek için en az bir ürün seçin.
               </p>
             ) : null}

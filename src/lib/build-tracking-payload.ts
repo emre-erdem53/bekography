@@ -19,6 +19,7 @@ import type { TrackingData } from "@/lib/tracking-types";
 import {
   buildTrackingWorkflowView,
 } from "@/lib/tracking-workflow";
+import { buildWorkflowStageTags } from "@/lib/tracking-stage-tags";
 import { isReservationTrackingAccessible } from "@/lib/tracking-access";
 
 const reservationInclude = {
@@ -155,6 +156,10 @@ function buildPayloadFromReservation(
         workflow: itemWorkflowFlags,
         hasPrinting,
       });
+      const workflowStageTags = buildWorkflowStageTags(
+        snapshot.detailSections ?? [],
+        postShoot,
+      );
 
       return {
         id: item.id,
@@ -179,6 +184,7 @@ function buildPayloadFromReservation(
         productSnapshot: snapshot,
         workflow: itemWorkflow,
         workflowFlags: itemWorkflowFlags,
+        workflowStageTags,
       };
     }),
     purchasedProducts: reservation.items.map((item) =>

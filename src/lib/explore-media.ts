@@ -1223,16 +1223,36 @@ const manuallyOrderedMediaItems = (() => {
   return packExploreGrid(buildAsymmetricLayout(ordered));
 })();
 
-export const exploreMediaItems: ExploreMediaItem[] = manuallyOrderedMediaItems;
+/** Anasayfa akışında gösterilecek son medya. */
+export const HOME_EXPLORE_FEED_LAST_FILE = "video5.mp4";
+
+const fullExploreMediaItems: ExploreMediaItem[] = manuallyOrderedMediaItems;
+
+export function truncateExploreFeedAt(
+  items: ExploreMediaItem[],
+  lastFileName: string,
+): ExploreMediaItem[] {
+  const lastIndex = items.findIndex((item) => item.fileName === lastFileName);
+  if (lastIndex === -1) return items;
+  return items.slice(0, lastIndex + 1);
+}
+
+export const exploreMediaItems: ExploreMediaItem[] = fullExploreMediaItems;
+
+/** Anasayfa: video5.mp4 dahil, sonrası gizli. */
+export const homeExploreMediaItems = truncateExploreFeedAt(
+  fullExploreMediaItems,
+  HOME_EXPLORE_FEED_LAST_FILE,
+);
 
 export const photoMediaItems = packImageOnlyGrid(
   buildAsymmetricLayout(
-    manuallyOrderedMediaItems.filter((item) => item.type === "image"),
+    fullExploreMediaItems.filter((item) => item.type === "image"),
   ),
 );
 
 export const videoMediaItems = packMediaGrid(
   buildAsymmetricLayout(
-    manuallyOrderedMediaItems.filter((item) => item.type === "video"),
+    fullExploreMediaItems.filter((item) => item.type === "video"),
   ),
 );

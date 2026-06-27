@@ -1,7 +1,7 @@
 import { HomePageClient } from "@/components/home/home-page-client";
 import { AboutPageContent } from "@/components/about/about-page-content";
 import { ContactPageClient } from "@/components/contact/contact-page-client";
-import { exploreMediaItems } from "@/lib/explore-media";
+import { homeExploreMediaItems } from "@/lib/explore-media";
 import {
   getActivePackages,
   serializePackageCategories,
@@ -26,7 +26,7 @@ export default async function HomePage() {
 
   return (
     <main className="flex-1">
-      <HomePageClient exploreItems={exploreMediaItems} categories={categories} />
+      <HomePageClient exploreItems={homeExploreMediaItems} categories={categories} />
       <AboutPageContent variant="section" />
       <ContactPageClient variant="section" />
     </main>

@@ -4,14 +4,35 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { RequestActionLabel, requestActionSurfaceClass } from "@/components/packages/request-action-label";
 import {
-  canCreateRequestForItems,
-} from "@/lib/cart-companion-rules";
+  RequestActionLabel,
+  requestActionSurfaceClass,
+} from "@/components/packages/request-action-label";
+import { canCreateRequestForItems } from "@/lib/cart-companion-rules";
 import { useCartStore } from "@/stores/cart-store";
 import { useCartUiStore } from "@/stores/cart-ui-store";
 
+export const PACKAGE_CART_BAR_PATH = "/paketler";
+export const PACKAGE_CART_PAGE_PATH = "/paketler/sepet";
+
+export function isPackageCartBarRoute(pathname: string | null): boolean {
+  return (
+    pathname === PACKAGE_CART_BAR_PATH ||
+    pathname === PACKAGE_CART_PAGE_PATH
+  );
+}
+
+export function isPackageCartPageRoute(pathname: string | null): boolean {
+  return pathname === PACKAGE_CART_PAGE_PATH;
+}
+
+export function usePackageCartBarVisible(): boolean {
+  const pathname = usePathname();
+  return isPackageCartBarRoute(pathname);
+}
+
 export function useCartBottomInset(): string | undefined {
+  const pathname = usePathname();
   const items = useCartStore((state) => state.items);
   const [mounted, setMounted] = useState(false);
 
@@ -19,12 +40,16 @@ export function useCartBottomInset(): string | undefined {
     setMounted(true);
   }, []);
 
-  if (!mounted || items.length === 0) return undefined;
+  if (!mounted || !isPackageCartBarRoute(pathname) || items.length === 0) {
+    return undefined;
+  }
 
-  return getCartBottomPadding(items.length);
+  const compact = isPackageCartPageRoute(pathname);
+  return compact ? "pb-24" : getCartBottomPadding(items.length);
 }
 
-function getCartBarHeight(itemCount: number): string {
+function getCartBarHeight(itemCount: number, compact = false): string {
+  if (compact) return "4.5rem";
   if (itemCount <= 1) return "4.5rem";
   if (itemCount === 2) return "5.75rem";
   return "7rem";
@@ -36,6 +61,17 @@ function getCartBottomPadding(itemCount: number): string {
   return "pb-44";
 }
 
+function CartBarIconBadge({ count }: { count: number }) {
+  return (
+    <span className="relative shrink-0">
+      <ShoppingBag className="h-5 w-5 text-white" aria-hidden />
+      <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#93f8b6] px-1 text-[10px] font-bold leading-none text-black">
+        {count}
+      </span>
+    </span>
+  );
+}
+
 function CartBarItemList({
   items,
 }: {
@@ -43,12 +79,7 @@ function CartBarItemList({
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-start gap-2.5">
-      <span className="relative mt-0.5 shrink-0">
-        <ShoppingBag className="h-5 w-5 text-white" aria-hidden />
-        <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#93f8b6] px-1 text-[10px] font-bold leading-none text-black">
-          {items.length}
-        </span>
-      </span>
+      <CartBarIconBadge count={items.length} />
       <ul className="min-w-0 flex-1 space-y-0.5">
         {items.map((item) => (
           <li
@@ -68,6 +99,7 @@ function CartBarItemList({
 export function useCartOverlayBottomPadding(
   basePadding = "max(env(safe-area-inset-bottom), 1.75rem)",
 ): string {
+  const pathname = usePathname();
   const items = useCartStore((state) => state.items);
   const [mounted, setMounted] = useState(false);
 
@@ -75,9 +107,12 @@ export function useCartOverlayBottomPadding(
     setMounted(true);
   }, []);
 
-  if (!mounted || items.length === 0) return basePadding;
+  if (!mounted || !isPackageCartBarRoute(pathname) || items.length === 0) {
+    return basePadding;
+  }
 
-  return `calc(${basePadding} + ${getCartBarHeight(items.length)})`;
+  const compact = isPackageCartPageRoute(pathname);
+  return `calc(${basePadding} + ${getCartBarHeight(items.length, compact)})`;
 }
 
 export function PackageCartBar() {
@@ -94,9 +129,11 @@ export function PackageCartBar() {
     setMounted(true);
   }, []);
 
-  if (!mounted || items.length === 0) return null;
+  if (!mounted || !isPackageCartBarRoute(pathname) || items.length === 0) {
+    return null;
+  }
 
-  const isCartPage = pathname === "/paketler/sepet";
+  const isCartPage = isPackageCartPageRoute(pathname);
   const canRequest = canCreateRequestForItems(
     selectedItems.length > 0 ? selectedItems : items,
   );
@@ -106,9 +143,9 @@ export function PackageCartBar() {
       <div className="border-t border-white/10 bg-black/95 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-3 sm:max-w-3xl sm:gap-4 sm:px-6 lg:max-w-4xl xl:max-w-5xl">
           {isCartPage ? (
-            <CartBarItemList items={items} />
+            <CartBarIconBadge count={items.length} />
           ) : (
-            <Link href="/paketler/sepet" className="min-w-0 flex-1">
+            <Link href={PACKAGE_CART_PAGE_PATH} className="min-w-0 flex-1">
               <CartBarItemList items={items} />
             </Link>
           )}
@@ -124,7 +161,7 @@ export function PackageCartBar() {
             </button>
           ) : (
             <Link
-              href="/paketler/sepet"
+              href={PACKAGE_CART_PAGE_PATH}
               className={`${requestActionSurfaceClass} shrink-0 rounded-2xl bg-[#93f8b6] px-6 py-3 text-sm font-semibold text-black`}
             >
               Sepete Git

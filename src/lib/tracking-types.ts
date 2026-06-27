@@ -2,6 +2,7 @@ import type { PostShootSnapshot } from "@/lib/post-shoot";
 import type { ReservationProductSnapshot } from "@/lib/reservation-product-snapshot";
 import type {
   TrackingWorkflowFlags,
+  TrackingWorkflowStageId,
   TrackingWorkflowView,
 } from "@/lib/tracking-workflow";
 import type { ReservationStatus } from "@prisma/client";
@@ -33,6 +34,7 @@ export type TrackingShootItem = {
   productSnapshot: ReservationProductSnapshot;
   workflow: TrackingWorkflowView;
   workflowFlags: TrackingWorkflowFlags;
+  workflowStageTags: Record<TrackingWorkflowStageId, string[]>;
 };
 
 export type TrackingInstallment = {

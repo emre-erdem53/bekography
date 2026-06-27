@@ -12,6 +12,7 @@ import {
   buildTrackingWorkflowView,
   emptyTrackingWorkflowFlags,
 } from "@/lib/tracking-workflow";
+import { buildWorkflowStageTags } from "@/lib/tracking-stage-tags";
 
 /** Eski önbellek / eksik API yanıtlarında workflow alanını tamamlar. */
 export function normalizeTrackingData(
@@ -43,6 +44,10 @@ export function normalizeTrackingData(
       workflow: itemWorkflowFlags,
       hasPrinting,
     });
+    const workflowStageTags = buildWorkflowStageTags(
+      item.productSnapshot?.detailSections ?? [],
+      postShoot,
+    );
 
     return {
       id: itemId,
@@ -65,6 +70,7 @@ export function normalizeTrackingData(
       endTime: item.endTime ?? null,
       workflow,
       workflowFlags: itemWorkflowFlags,
+      workflowStageTags,
     };
   });
 

@@ -5,15 +5,19 @@ import { tr } from "date-fns/locale";
 import { Check } from "lucide-react";
 import {
   getTrackingStageLabel,
+  type TrackingWorkflowStageId,
   type TrackingWorkflowView,
 } from "@/lib/tracking-workflow";
+import { getStageTagsForWorkflow } from "@/lib/tracking-stage-tags";
 
 export function TrackingWorkflowTimeline({
   workflow,
+  stageTags,
   compact = false,
   embedded = false,
 }: {
   workflow: TrackingWorkflowView | undefined;
+  stageTags?: Record<TrackingWorkflowStageId, string[]>;
   compact?: boolean;
   embedded?: boolean;
 }) {
@@ -104,6 +108,10 @@ export function TrackingWorkflowTimeline({
               ? "bg-transparent"
               : connectorClass;
 
+            const stageTagList = stageTags
+              ? getStageTagsForWorkflow(stageTags, stage.id)
+              : [];
+
             return (
               <li
                 key={stage.id}
@@ -172,6 +180,25 @@ export function TrackingWorkflowTimeline({
                       locale: tr,
                     })}
                   </p>
+                ) : null}
+                {stageTagList.length > 0 ? (
+                  <div className="mt-2 flex w-full flex-col items-center gap-1 px-0.5">
+                    {stageTagList.map((tag) => (
+                      <span
+                        key={tag}
+                        className={`max-w-full truncate rounded-full border px-1.5 py-0.5 text-[8px] leading-tight sm:text-[9px] ${
+                          isCurrent
+                            ? "border-white/20 bg-white/10 text-zinc-200"
+                            : isCompleted
+                              ? "border-white/10 bg-white/5 text-zinc-400"
+                              : "border-white/10 bg-transparent text-zinc-600"
+                        }`}
+                        title={tag}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 ) : null}
               </li>
             );

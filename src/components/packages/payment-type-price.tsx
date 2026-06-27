@@ -6,7 +6,7 @@ import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 type PaymentTypePriceProps = {
   type: PaymentType;
   price: number;
-  variant?: "stacked" | "compact" | "minimal";
+  variant?: "stacked" | "compact" | "minimal" | "featured";
   align?: "left" | "right";
   className?: string;
 };
@@ -27,6 +27,26 @@ export function PaymentTypePrice({
   const priceClass = emphasized
     ? "font-bold text-white"
     : "font-semibold text-zinc-500";
+
+  if (variant === "featured") {
+    return (
+      <div className={`${alignClass} ${className}`}>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400 sm:text-sm">
+          {label}
+        </p>
+        <p
+          className={`mt-2 text-2xl font-bold sm:text-3xl md:text-4xl ${
+            emphasized ? "text-white" : "text-zinc-400"
+          }`}
+        >
+          {formatPrice(price)}
+        </p>
+        <p className="mt-2 max-w-xs text-xs leading-relaxed text-zinc-500 sm:text-sm">
+          {description}
+        </p>
+      </div>
+    );
+  }
 
   if (variant === "minimal") {
     return (

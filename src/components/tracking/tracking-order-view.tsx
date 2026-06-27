@@ -9,7 +9,6 @@ import {
   RESERVATION_STATUS_ORDER,
   formatPrice,
 } from "@/lib/constants";
-import type { PostShootSection } from "@/lib/post-shoot";
 import type { TrackingData } from "@/lib/tracking-types";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
@@ -40,8 +39,6 @@ export const ReservationOrderDocument = forwardRef<
   HTMLDivElement,
   { data: TrackingData; showCoupleHeader?: boolean }
 >(function ReservationOrderDocument({ data, showCoupleHeader = true }, ref) {
-  const showPrinting = data.items.some((item) => item.hasPrinting);
-
   return (
     <div ref={ref} className="mx-auto max-w-5xl">
       {showCoupleHeader ? (
@@ -54,21 +51,6 @@ export const ReservationOrderDocument = forwardRef<
           {data.items.map((item) => (
             <ShootServiceCard key={item.id || item.categoryTitle} item={item} />
           ))}
-        </div>
-      </section>
-
-      <section className="mt-10">
-        <SectionHeading>Çekim Sonrası</SectionHeading>
-        <div className="mt-5 rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
-          <PostShootBlock title="Dijital" section={data.postShoot.digital} />
-          <PostShootBlock
-            title="Düzenleme"
-            section={data.postShoot.editing}
-            last={!showPrinting}
-          />
-          {showPrinting ? (
-            <PostShootBlock title="Baskı" section={data.postShoot.printing} last />
-          ) : null}
         </div>
       </section>
 
@@ -359,7 +341,11 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
           <p className="mb-3 text-xs font-medium uppercase tracking-[0.2em] text-zinc-500">
             Sipariş Durumu
           </p>
-          <TrackingWorkflowTimeline workflow={item.workflow} embedded />
+          <TrackingWorkflowTimeline
+            workflow={item.workflow}
+            stageTags={item.workflowStageTags}
+            embedded
+          />
         </div>
       ) : null}
     </article>
@@ -373,43 +359,6 @@ function ShootMetaLarge({ label, value }: { label: string; value: string }) {
       <p className="mt-2 text-xl font-semibold leading-tight text-white sm:text-2xl md:text-3xl">
         {value}
       </p>
-    </div>
-  );
-}
-
-function PostShootBlock({
-  title,
-  section,
-  last = false,
-}: {
-  title: string;
-  section: PostShootSection;
-  last?: boolean;
-}) {
-  if (!section.description.trim() && section.pills.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className={last ? "" : "mb-6 border-b border-white/10 pb-6"}>
-      <h3 className="text-base font-semibold text-white">{title}</h3>
-      {section.pills.length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {section.pills.map((pill) => (
-            <span
-              key={pill}
-              className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-zinc-200"
-            >
-              {pill}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {section.description ? (
-        <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-          {section.description}
-        </p>
-      ) : null}
     </div>
   );
 }

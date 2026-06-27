@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
@@ -189,16 +190,16 @@ export function PackageDetailSheet({
           }
         >
           <div className="flex items-center justify-between gap-3">
-            <button
-              type="button"
+            <Link
+              href="/paketler"
               onClick={onClose}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-              aria-label="Paket listesine dön"
+              aria-label="Paketler sayfasına dön"
             >
               <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
               Paketler
-            </button>
-            <BekographyBrand size="sm" href={null} className="hover:opacity-100" />
+            </Link>
+            <BekographyBrand size="sm" className="hover:opacity-100" />
           </div>
         </header>
 
