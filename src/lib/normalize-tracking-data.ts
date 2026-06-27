@@ -44,9 +44,16 @@ export function normalizeTrackingData(
       workflow: itemWorkflowFlags,
       hasPrinting,
     });
+    const snapshot = item.productSnapshot ?? emptyProductSnapshot();
     const workflowStageTags = buildWorkflowStageTags(
-      item.productSnapshot?.detailSections ?? [],
+      snapshot.detailSections ?? [],
       postShoot,
+      {
+        categorySlug: snapshot.categorySlug,
+        categoryTitle: item.categoryTitle ?? snapshot.categoryTitle,
+        optionLabel: item.optionLabel ?? snapshot.optionLabel,
+        packageOptionId: snapshot.packageOptionId || undefined,
+      },
     );
 
     return {

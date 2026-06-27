@@ -8,6 +8,7 @@ import { getPaymentTypeLabels } from "@/lib/site-settings";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import { formatCoupleName } from "@/lib/reservation-utils";
 import { isOutdoorCategory, itemHasPrintingStage, parsePostShootSnapshot, getItemWorkflowFlags, ensureItemWorkflows, reservationHasPrintingPackage } from "@/lib/post-shoot";
+import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
   buildProductSnapshotFromOption,
   getShootTypeLabel,
@@ -156,9 +157,20 @@ function buildPayloadFromReservation(
         workflow: itemWorkflowFlags,
         hasPrinting,
       });
+      const categoryContent =
+        category.content && typeof category.content === "object"
+          ? (category.content as PackageCategoryContent)
+          : undefined;
       const workflowStageTags = buildWorkflowStageTags(
         snapshot.detailSections ?? [],
         postShoot,
+        {
+          categorySlug: snapshot.categorySlug || category.slug,
+          categoryTitle: snapshot.categoryTitle || category.title,
+          optionLabel: snapshot.optionLabel || item.packageOption.label,
+          packageOptionId: snapshot.packageOptionId || item.packageOption.id,
+          categoryContent,
+        },
       );
 
       return {
