@@ -70,6 +70,24 @@ function mergeSnapshotSectionTags(
   });
 }
 
+function sectionsHaveBodyText(sections: PackageDetailSection[]): boolean {
+  return sections.some((section) => Boolean(section.body?.trim()));
+}
+
+function pickInspectSectionBase(
+  fromLivePackage: PackageDetailSection[],
+  fromTemplate: PackageDetailSection[],
+): PackageDetailSection[] {
+  if (hasRichInspectSections(fromLivePackage) && sectionsHaveBodyText(fromLivePackage)) {
+    return fromLivePackage;
+  }
+  if (hasRichInspectSections(fromTemplate) && sectionsHaveBodyText(fromTemplate)) {
+    return fromTemplate;
+  }
+  if (fromLivePackage.length > 0) return fromLivePackage;
+  return fromTemplate;
+}
+
 /** Takip ekranı için en eksiksiz inceleme bölüm listesini seçer. */
 export function resolveDetailSectionsForStageTags(input: {
   detailSections: PackageDetailSection[];
@@ -88,11 +106,10 @@ export function resolveDetailSectionsForStageTags(input: {
         )
       : [];
 
-  if (hasRichInspectSections(fromLivePackage)) {
-    return fromLivePackage;
-  }
-
-  if (hasRichInspectSections(input.detailSections)) {
+  if (
+    hasRichInspectSections(input.detailSections) &&
+    sectionsHaveBodyText(input.detailSections)
+  ) {
     return input.detailSections;
   }
 
@@ -103,11 +120,13 @@ export function resolveDetailSectionsForStageTags(input: {
     scheduleType: scheduleTypeForSlug(input.categorySlug),
   });
 
+  const base = pickInspectSectionBase(fromLivePackage, fromTemplate);
+
   if (input.detailSections.length === 0) {
-    return fromTemplate;
+    return base;
   }
 
-  return mergeSnapshotSectionTags(fromTemplate, input.detailSections);
+  return mergeSnapshotSectionTags(base, input.detailSections);
 }
 
 function appendUniqueTags(

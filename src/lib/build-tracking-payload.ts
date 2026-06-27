@@ -22,7 +22,11 @@ import type { TrackingData } from "@/lib/tracking-types";
 import {
   buildTrackingWorkflowView,
 } from "@/lib/tracking-workflow";
-import { buildWorkflowStageTags } from "@/lib/tracking-stage-tags";
+import {
+  buildWorkflowStageTags,
+  resolveDetailSectionsForStageTags,
+} from "@/lib/tracking-stage-tags";
+import type { ReservationProductSnapshot } from "@/lib/reservation-product-snapshot";
 import { isReservationTrackingAccessible } from "@/lib/tracking-access";
 
 const reservationInclude = {
@@ -55,6 +59,29 @@ function resolveItemProductSnapshot(
     item.packageOption,
     item.productSnapshot,
   );
+}
+
+function enrichPurchasedProductSnapshot(
+  item: ReservationWithTracking["items"][number],
+  snapshot: ReservationProductSnapshot,
+): ReservationProductSnapshot {
+  const category = item.packageOption.category;
+  const categoryContent =
+    category.content && typeof category.content === "object"
+      ? (category.content as PackageCategoryContent)
+      : undefined;
+
+  return {
+    ...snapshot,
+    detailSections: resolveDetailSectionsForStageTags({
+      detailSections: snapshot.detailSections,
+      categorySlug: snapshot.categorySlug || category.slug,
+      categoryTitle: snapshot.categoryTitle || category.title,
+      optionLabel: snapshot.optionLabel || item.packageOption.label,
+      packageOptionId: snapshot.packageOptionId || item.packageOption.id,
+      categoryContent,
+    }),
+  };
 }
 
 async function persistLegacyProductSnapshots(
@@ -208,7 +235,7 @@ function buildPayloadFromReservation(
       };
     }),
     purchasedProducts: reservation.items.map((item) =>
-      resolveItemProductSnapshot(item),
+      enrichPurchasedProductSnapshot(item, resolveItemProductSnapshot(item)),
     ),
   };
 }

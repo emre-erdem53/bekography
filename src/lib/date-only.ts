@@ -1,4 +1,5 @@
 import { format } from "date-fns";
+import { tr } from "date-fns/locale";
 
 /** HTML date input (YYYY-MM-DD) → local calendar date at midnight. */
 export function parseDateOnlyInput(value: string): Date {
@@ -27,7 +28,7 @@ export function formatDateOnlyDisplay(
       : typeof value === "string"
         ? new Date(value)
         : value;
-  return format(date, pattern);
+  return format(date, pattern, { locale: tr });
 }
 
 export function dateOnlyToIsoDate(value: string): string {

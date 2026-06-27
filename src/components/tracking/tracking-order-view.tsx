@@ -262,7 +262,7 @@ function CoupleOrderHeader({ data }: { data: TrackingData }) {
         {coupleTitle}
       </h1>
 
-      <div className="mx-auto mt-8 max-w-3xl space-y-3">
+      <div className="mt-8 w-full space-y-4">
         <ContactPersonBar
           iconSrc="/bride.svg"
           name={formatPersonDisplayName(data.brideName)}
@@ -292,9 +292,9 @@ function ContactPersonBar({
   tc: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-full border border-white/10 bg-[#141414] px-4 py-3 sm:gap-x-6 sm:px-5">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1.5">
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-white/15 bg-[#0a0a0a] px-5 py-4 sm:px-6 sm:py-5">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1.5 sm:h-10 sm:w-10">
           <img
             src={iconSrc}
             alt=""
@@ -306,7 +306,7 @@ function ContactPersonBar({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-zinc-400">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-zinc-400">
         <span className="inline-flex items-center gap-1.5">
           <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
           <span>{phone}</span>
@@ -353,7 +353,6 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
     item.shootContent.trim() || item.shootTypeLabel || "—";
   const locationLabel = item.location.trim() || "Belirlenecek";
   const readyTimeLabel = item.readyTime.trim() || "Belirlenecek";
-  const shootDaySub = `Hazır Olma Saati: ${readyTimeLabel}`;
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
@@ -365,22 +364,18 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
       </h3>
 
       <div className="mt-6 border-t border-white/10 pt-6">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <ShootMetaBlock label="Hazır Olma Saati" value={readyTimeLabel} />
+          <ShootMetaBlock label="Çekim Yeri" value={locationLabel} />
+        </div>
+
         {item.isOutdoor ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <ShootMetaBlock
-              label="Çekim Günü"
-              value={shootDayLabel}
-              sub={shootDaySub}
-            />
-            <ShootMetaBlock
-              label="Çekim İçeriği"
-              value={shootContentLabel}
-              sub={`Çekim Yeri: ${locationLabel}`}
-            />
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} />
+            <ShootMetaBlock label="Çekim İçeriği" value={shootContentLabel} />
             <ShootMetaBlock
               label="Rize'den Çıkış"
               value={item.departureTime || "—"}
-              sub={`B. Fiyat: ${formatPrice(item.agreedUnitPrice)}`}
             />
             <ShootMetaBlock
               label="Rize'ye Varış"
@@ -388,31 +383,13 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
             />
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <ShootMetaBlock
-              label="Çekim Günü"
-              value={shootDayLabel}
-              sub={shootDaySub}
-            />
-            <ShootMetaBlock
-              label="Çekim İçeriği"
-              value={shootContentLabel}
-              sub={`Çekim Yeri: ${locationLabel}`}
-            />
-            <ShootMetaBlock
-              label="Başlangıç"
-              value={item.startTime || "—"}
-              sub={`B. Fiyat: ${formatPrice(item.agreedUnitPrice)}`}
-            />
+          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} />
+            <ShootMetaBlock label="Çekim İçeriği" value={shootContentLabel} />
+            <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} />
             <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} />
           </div>
         )}
-
-        {item.paymentType ? (
-          <p className="mt-4 text-right text-sm text-zinc-500">
-            Ödeme: <span className="text-zinc-300">{item.paymentType}</span>
-          </p>
-        ) : null}
       </div>
 
       {item.workflow ? (
@@ -434,19 +411,18 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
 function ShootMetaBlock({
   label,
   value,
-  sub,
 }: {
   label: string;
   value: string;
-  sub?: string;
 }) {
   return (
     <div>
-      <p className="text-xs text-zinc-500">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 sm:text-sm">
+        {label}
+      </p>
       <p className="mt-2 text-xl font-semibold leading-tight text-white sm:text-2xl md:text-3xl">
         {value}
       </p>
-      {sub ? <p className="mt-2 text-xs text-zinc-500">{sub}</p> : null}
     </div>
   );
 }

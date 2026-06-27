@@ -6,9 +6,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Check } from "lucide-react";
-import { changeReservationStatus } from "@/components/admin/reservation-status-actions";
-import { StatusSelect } from "@/components/admin/status-select";
-import { formatPrice, RESERVATION_STATUS_LABELS } from "@/lib/constants";
+import { formatPrice } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { formatCoupleName, formatTurkishPhone } from "@/lib/reservation-utils";
 import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
@@ -76,7 +74,6 @@ export function ReservationDetailClient({
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [statusChanging, setStatusChanging] = useState(false);
   const [togglingInstallmentId, setTogglingInstallmentId] = useState<
     string | null
   >(null);
@@ -103,54 +100,6 @@ export function ReservationDetailClient({
     );
     setReservation((prev) =>
       prev ? { ...prev, postShoot } : prev,
-    );
-  }
-
-  async function handleStatusChange(nextStatus: ReservationStatus) {
-    if (!reservation || nextStatus === reservation.status) return;
-
-    setStatusChanging(true);
-    const result = await changeReservationStatus(
-      reservationId,
-      nextStatus,
-      reservation.status as ReservationStatus,
-    );
-    setStatusChanging(false);
-
-    if (!result) return;
-
-    const changedAt = new Date().toISOString();
-
-    if (result.kind === "delivered") {
-      setReservation((prev) =>
-        prev
-          ? {
-              ...prev,
-              status: "teslim_edildi",
-              completedAt: changedAt,
-              statusHistory: [
-                ...prev.statusHistory,
-                { status: "teslim_edildi", changedAt },
-              ],
-            }
-          : prev,
-      );
-      return;
-    }
-
-    if (result.kind !== "updated") return;
-
-    setReservation((prev) =>
-      prev
-        ? {
-            ...prev,
-            status: result.status,
-            statusHistory: [
-              ...prev.statusHistory,
-              { status: result.status, changedAt },
-            ],
-          }
-        : prev,
     );
   }
 
@@ -222,12 +171,6 @@ export function ReservationDetailClient({
   });
   const linkExpiresAt = getTrackingLinkExpiresAt(completedAt);
   const linkExpired = isTrackingLinkExpired(completedAt);
-  const statusOptions = Object.entries(RESERVATION_STATUS_LABELS).map(
-    ([value, label]) => ({
-      value: value as ReservationStatus,
-      label,
-    }),
-  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -250,24 +193,15 @@ export function ReservationDetailClient({
           ) : null}
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="space-y-1">
-            <span className="block text-xs font-medium text-zinc-500">Durum</span>
-            <StatusSelect
-              value={reservation.status as ReservationStatus}
-              options={statusOptions}
-              disabled={statusChanging}
-              onChange={handleStatusChange}
-            />
-          </div>
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/ozet`}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5 sm:mt-5"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
           >
             Müşteri Önizlemesi
           </Link>
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5 sm:mt-5"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
           >
             Düzenle
           </Link>

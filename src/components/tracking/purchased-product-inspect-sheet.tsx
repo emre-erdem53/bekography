@@ -29,6 +29,9 @@ export function PurchasedProductInspectSheet({
     (a, b) => a.sortOrder - b.sortOrder,
   );
 
+  const galleryMedia = product?.galleryMedia ?? [];
+  const showGallery = !sectionsTagsOnly && galleryMedia.length > 0;
+
   return (
     <AnimatePresence>
       {product ? (
@@ -62,10 +65,17 @@ export function PurchasedProductInspectSheet({
                 cashPrice={product.cashPrice}
                 installmentPrice={product.installmentPrice}
                 detailSections={sections}
-                showGallery={false}
+                galleryMedia={galleryMedia}
+                showGallery={showGallery}
                 sectionsEmptyMessage="Bu ürün için kayıtlı inceleme metni bulunmuyor."
                 sectionsTagsOnly={sectionsTagsOnly}
-                scrollHint={sectionsTagsOnly ? "" : undefined}
+                scrollHint={
+                  sectionsTagsOnly
+                    ? ""
+                    : showGallery
+                      ? "Detaylar için aşağı kaydırın"
+                      : undefined
+                }
               />
             </div>
           </div>

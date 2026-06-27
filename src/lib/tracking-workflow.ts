@@ -179,18 +179,7 @@ const DEFAULT_DIGITAL_SELECTION_DAYS = 30;
 const DEFAULT_EDITING_AFTER_SELECTION_DAYS = 70;
 const DEFAULT_PRINTING_AFTER_EDITING_DAYS = 30;
 
-export type WorkflowDeadlines = {
-  shoot: Date;
-  digitalSelection: Date;
-  editing: Date;
-  printing: Date;
-};
-
-export function computeWorkflowDeadlines(
-  shootDate: Date,
-  postShoot?: PostShootSnapshot,
-): WorkflowDeadlines {
-  const shootDay = startOfDay(shootDate);
+function getWorkflowDayCounts(postShoot?: PostShootSnapshot) {
   const digitalDays = postShoot
     ? parseDeadlineDaysFromPills(
         postShoot.digital.pills,
@@ -210,9 +199,50 @@ export function computeWorkflowDeadlines(
       )
     : DEFAULT_PRINTING_AFTER_EDITING_DAYS;
 
+  return { digitalDays, editingDaysAfter, printingDaysAfter };
+}
+
+function completionDay(iso: string | null | undefined): Date | null {
+  if (!iso) return null;
+  return endOfDay(startOfDay(new Date(iso)));
+}
+
+export type WorkflowDeadlines = {
+  shoot: Date;
+  digitalSelection: Date;
+  editing: Date;
+  printing: Date;
+};
+
+/** Çekim tarihine göre varsayılan son günleri hesaplar (erken tamamlama yok). */
+export function computeWorkflowDeadlines(
+  shootDate: Date,
+  postShoot?: PostShootSnapshot,
+): WorkflowDeadlines {
+  return computeEffectiveWorkflowDeadlines(
+    shootDate,
+    postShoot,
+    emptyTrackingWorkflowFlags(),
+  );
+}
+
+/** Tamamlanma tarihlerine göre sonraki aşama son günlerini kaydırır. */
+export function computeEffectiveWorkflowDeadlines(
+  shootDate: Date,
+  postShoot?: PostShootSnapshot,
+  workflow: TrackingWorkflowFlags = emptyTrackingWorkflowFlags(),
+): WorkflowDeadlines {
+  const shootDay = startOfDay(shootDate);
+  const { digitalDays, editingDaysAfter, printingDaysAfter } =
+    getWorkflowDayCounts(postShoot);
+
   const digitalSelection = endOfDay(addDays(shootDay, digitalDays));
-  const editing = endOfDay(addDays(digitalSelection, editingDaysAfter));
-  const printing = endOfDay(addDays(editing, printingDaysAfter));
+  const selectionAnchor =
+    completionDay(workflow.selectionCompletedAt) ?? digitalSelection;
+  const editing = endOfDay(addDays(selectionAnchor, editingDaysAfter));
+  const editingAnchor =
+    completionDay(workflow.editingCompletedAt) ?? editing;
+  const printing = endOfDay(addDays(editingAnchor, printingDaysAfter));
 
   return {
     shoot: endOfDay(shootDay),
@@ -222,21 +252,27 @@ export function computeWorkflowDeadlines(
   };
 }
 
-function stageDeadlineDate(
+function resolveStageDeadlineDate(
   id: TrackingWorkflowStageId,
   deadlines: WorkflowDeadlines,
+  workflow: TrackingWorkflowFlags,
 ): Date {
   switch (id) {
     case "rezervasyon":
     case "cekim":
       return deadlines.shoot;
     case "dijital":
+      return (
+        completionDay(workflow.digitalDeliveredAt) ?? deadlines.digitalSelection
+      );
     case "secim":
-      return deadlines.digitalSelection;
+      return (
+        completionDay(workflow.selectionCompletedAt) ?? deadlines.digitalSelection
+      );
     case "duzenleme":
-      return deadlines.editing;
+      return completionDay(workflow.editingCompletedAt) ?? deadlines.editing;
     case "baski":
-      return deadlines.printing;
+      return completionDay(workflow.printingCompletedAt) ?? deadlines.printing;
     default:
       return deadlines.shoot;
   }
@@ -325,6 +361,7 @@ function buildStagesFromEffectiveStage(
   hasPrinting: boolean,
   shootPassed: boolean,
   allCompleted: boolean,
+  workflow: TrackingWorkflowFlags,
 ): TrackingWorkflowStageView[] {
   const order = workflowStageOrder(hasPrinting);
 
@@ -334,7 +371,7 @@ function buildStagesFromEffectiveStage(
       label: stageCompletedLabel(id),
       state: "completed" as const,
       tone: "green" as const,
-      deadlineDate: stageDeadlineDate(id, deadlines).toISOString(),
+      deadlineDate: resolveStageDeadlineDate(id, deadlines, workflow).toISOString(),
     }));
   }
 
@@ -350,7 +387,7 @@ function buildStagesFromEffectiveStage(
       label: stageDefaultLabel(id, state),
       state,
       tone: computeStageTone(id, state),
-      deadlineDate: stageDeadlineDate(id, deadlines).toISOString(),
+      deadlineDate: resolveStageDeadlineDate(id, deadlines, workflow).toISOString(),
     };
   });
 }
@@ -465,10 +502,15 @@ function buildViewFromAdminStage(
   hasPrinting: boolean,
   shootDate: Date,
   postShoot: PostShootSnapshot,
+  workflow: TrackingWorkflowFlags,
   now: Date = new Date(),
 ): TrackingWorkflowView {
   const order = workflowStageOrder(hasPrinting);
-  const deadlines = computeWorkflowDeadlines(shootDate, postShoot);
+  const deadlines = computeEffectiveWorkflowDeadlines(
+    shootDate,
+    postShoot,
+    workflow,
+  );
   const shootPassed = isAfter(now, endOfDay(startOfDay(shootDate)));
   const resolvedStage = resolveEffectiveStage(stageId, order, shootPassed);
 
@@ -478,6 +520,7 @@ function buildViewFromAdminStage(
     hasPrinting,
     shootPassed,
     false,
+    workflow,
   );
 
   const copy = buildPrimaryCopy(resolvedStage, deadlines, false, hasPrinting);
@@ -512,10 +555,15 @@ export function buildTrackingWorkflowView(input: {
   const now = input.now ?? new Date();
   const { postShoot, workflow } = input;
   const hasPrinting = input.hasPrinting ?? false;
-  const deadlines = computeWorkflowDeadlines(input.shootDate, postShoot);
+  const baseDeadlines = computeWorkflowDeadlines(input.shootDate, postShoot);
+  const deadlines = computeEffectiveWorkflowDeadlines(
+    input.shootDate,
+    postShoot,
+    workflow,
+  );
   const shootDay = startOfDay(input.shootDate);
   const shootPassed = isAfter(now, endOfDay(shootDay));
-  const pickupDeadlinePassed = isAfter(now, deadlines.digitalSelection);
+  const pickupDeadlinePassed = isAfter(now, baseDeadlines.digitalSelection);
 
   const digitalDone = Boolean(workflow.digitalDeliveredAt);
   const selectionDone = Boolean(workflow.selectionCompletedAt);
@@ -548,6 +596,7 @@ export function buildTrackingWorkflowView(input: {
       hasPrinting,
       input.shootDate,
       postShoot,
+      workflow,
       now,
     );
   }
@@ -563,6 +612,7 @@ export function buildTrackingWorkflowView(input: {
         hasPrinting,
         shootPassed,
         true,
+        workflow,
       ),
       availableAdminActions: [],
     };
@@ -597,6 +647,7 @@ export function buildTrackingWorkflowView(input: {
       hasPrinting,
       shootPassed,
       false,
+      workflow,
     ),
     availableAdminActions,
   };

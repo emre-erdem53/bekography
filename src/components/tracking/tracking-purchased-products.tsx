@@ -4,6 +4,10 @@ import { useState } from "react";
 import type { ReservationProductSnapshot } from "@/lib/reservation-product-snapshot";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PurchasedProductInspectSheet } from "@/components/tracking/purchased-product-inspect-sheet";
+import { CartItemThumbnail } from "@/components/packages/cart-item-thumbnail";
+
+const previewClassName =
+  "relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl bg-[#1a1a1a] sm:w-24";
 
 export function TrackingPurchasedProducts({
   products,
@@ -27,28 +31,48 @@ export function TrackingPurchasedProducts({
               <button
                 type="button"
                 onClick={() => setSelectedProduct(product)}
-                className="w-full rounded-2xl border border-white/10 bg-black p-5 text-left transition hover:border-white/25 sm:p-6"
+                className="w-full rounded-2xl border p-4 text-left transition hover:brightness-110 sm:p-5"
+                style={{
+                  borderColor: `${product.accentColor}55`,
+                  backgroundColor: `${product.accentColor}0c`,
+                }}
               >
-                <h3 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                  {product.categoryTitle}
-                </h3>
-                <p className="mt-1 text-lg font-semibold text-white/90 sm:text-xl">
-                  {product.optionLabel}
-                </p>
-                {product.highlightTags.length > 0 ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
-                    {product.highlightTags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full border border-white/80 px-2.5 py-0.5 text-[11px] text-white sm:px-3 sm:py-1 sm:text-xs"
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                <div className="flex gap-3 sm:gap-4">
+                  <CartItemThumbnail
+                    imageUrl={product.previewImageUrl}
+                    videoUrl={product.previewVideoUrl}
+                    className={previewClassName}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <h3
+                      className="text-xl font-bold tracking-tight sm:text-2xl"
+                      style={{ color: product.accentColor }}
+                    >
+                      {product.categoryTitle}
+                    </h3>
+                    <p className="mt-0.5 text-base font-semibold text-white/90 sm:text-lg">
+                      {product.optionLabel}
+                    </p>
+                    {product.highlightTags.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {product.highlightTags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-full border px-2.5 py-0.5 text-[11px] sm:text-xs"
+                            style={{
+                              borderColor: `${product.accentColor}88`,
+                              color: product.accentColor,
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
+                </div>
 
-                <div className="mt-4 flex items-start gap-6 sm:mt-5 sm:gap-8">
+                <div className="mt-4 flex items-start gap-6 border-t border-white/10 pt-4 sm:mt-5 sm:gap-8">
                   <PaymentTypePrice type="pesin" price={product.cashPrice} />
                   <PaymentTypePrice
                     type="taksitli"
