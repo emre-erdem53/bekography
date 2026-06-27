@@ -16,6 +16,11 @@ import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import type { TrackingData } from "@/lib/tracking-types";
 import { parsePostShootSnapshot } from "@/lib/post-shoot";
 import {
+  emptyItemWorkflowStageTags,
+  getEditableStagesForCategory,
+  WORKFLOW_STAGE_TAG_LABELS,
+} from "@/lib/item-workflow-stage-tags";
+import {
   getTrackingLinkExpiresAt,
   isTrackingLinkExpired,
   resolveReservationCompletedAt,
@@ -204,10 +209,6 @@ export function ReservationDetailClient({
 
   const postShoot = parsePostShootSnapshot(reservation.postShoot);
   const coupleName = formatCoupleName(reservation.brideName, reservation.groomName);
-  const showPrinting = trackingData?.items.some((item) => item.hasPrinting) ??
-    reservation.items.some((item) =>
-      item.packageOption.category.slug === "dis-cekim",
-    );
   const isCompleted = reservation.status === "teslim_edildi";
   const completedAt = resolveReservationCompletedAt({
     status: reservation.status as ReservationStatus,
@@ -408,11 +409,45 @@ export function ReservationDetailClient({
       </Section>
 
       <Section title="Süreç Etiketleri">
-        <PostShootTagsReadOnly title="Dijital" tags={postShoot.digital.pills} />
-        <PostShootTagsReadOnly title="Düzenleme" tags={postShoot.editing.pills} />
-        {showPrinting ? (
-          <PostShootTagsReadOnly title="Baskı" tags={postShoot.printing.pills} />
-        ) : null}
+        <div className="space-y-4">
+          {reservation.items.map((item) => {
+            const stageTags =
+              postShoot.itemStageTags?.[item.id] ?? emptyItemWorkflowStageTags();
+            const stages = getEditableStagesForCategory(
+              item.packageOption.category.slug,
+            );
+
+            return (
+              <div
+                key={item.id}
+                className="rounded-xl border border-white/10 bg-white/5 p-4"
+                style={{
+                  borderColor: `${item.packageOption.category.accentColor}55`,
+                }}
+              >
+                <h3
+                  className="text-sm font-semibold"
+                  style={{ color: item.packageOption.category.accentColor }}
+                >
+                  {item.packageOption.category.title} · {item.shootContent}
+                </h3>
+                <div className="mt-3 space-y-3">
+                  {stages.map((stage) => {
+                    const tags = stageTags[stage] ?? [];
+                    if (tags.length === 0) return null;
+                    return (
+                      <PostShootTagsReadOnly
+                        key={stage}
+                        title={WORKFLOW_STAGE_TAG_LABELS[stage]}
+                        tags={tags}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
         <p className="mt-2 text-xs text-zinc-500">
           Etiketleri düzenlemek için{" "}
           <Link

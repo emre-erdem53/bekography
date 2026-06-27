@@ -178,6 +178,7 @@ function buildPayloadFromReservation(
           packageOptionId: snapshot.packageOptionId || item.packageOption.id,
           categoryContent,
         },
+        item.id,
       );
 
       return {

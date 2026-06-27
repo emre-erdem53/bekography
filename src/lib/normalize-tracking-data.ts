@@ -54,6 +54,7 @@ export function normalizeTrackingData(
         optionLabel: item.optionLabel ?? snapshot.optionLabel,
         packageOptionId: snapshot.packageOptionId || undefined,
       },
+      itemId,
     );
 
     return {

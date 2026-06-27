@@ -9,6 +9,7 @@ import {
   parseTrackingWorkflowFlags,
   type TrackingWorkflowFlags,
 } from "@/lib/tracking-workflow";
+import type { ItemWorkflowStageTags } from "@/lib/item-workflow-stage-tags";
 
 export type PostShootSection = {
   pills: string[];
@@ -30,6 +31,7 @@ export type PostShootSnapshot = {
   source?: "inspect" | "manual" | "template";
   workflow?: TrackingWorkflowFlags;
   itemWorkflows?: Record<string, TrackingWorkflowFlags>;
+  itemStageTags?: Record<string, ItemWorkflowStageTags>;
 };
 
 export function emptyPostShootSnapshot(): PostShootSnapshot {
@@ -128,7 +130,42 @@ export function parsePostShootSnapshot(raw: unknown): PostShootSnapshot {
             ]),
           )
         : undefined,
+    itemStageTags: parseItemStageTags(data.itemStageTags),
   };
+}
+
+function parseItemStageTags(raw: unknown): Record<string, ItemWorkflowStageTags> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+
+  const entries = Object.entries(raw as Record<string, unknown>).map(
+    ([key, value]) => {
+      if (!value || typeof value !== "object") return [key, undefined] as const;
+      const stageData = value as Record<string, unknown>;
+      const tags: ItemWorkflowStageTags = {
+        rezervasyon: [],
+        cekim: [],
+        dijital: [],
+        secim: [],
+        duzenleme: [],
+        baski: [],
+      };
+      for (const stage of Object.keys(tags) as Array<keyof ItemWorkflowStageTags>) {
+        const pills = stageData[stage];
+        if (Array.isArray(pills)) {
+          tags[stage] = pills.filter(
+            (entry): entry is string => typeof entry === "string",
+          );
+        }
+      }
+      return [key, tags] as const;
+    },
+  );
+
+  const filtered = entries.filter((entry): entry is [string, ItemWorkflowStageTags] =>
+    Boolean(entry[1]),
+  );
+
+  return filtered.length > 0 ? Object.fromEntries(filtered) : undefined;
 }
 
 function parseSection(raw: unknown): PostShootSection {

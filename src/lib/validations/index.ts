@@ -4,6 +4,7 @@ import {
   isValidTurkishMobilePhone,
   normalizeTurkishMobileForStorage,
 } from "@/lib/phone-utils";
+import { normalizePersonNamePartForStorage } from "@/lib/person-name-input";
 
 const hexColorSchema = z
   .string()
@@ -23,8 +24,16 @@ const tcSchema = z
   .regex(/^\d{11}$/, "TC kimlik numarası 11 haneli olmalıdır")
   .or(z.literal(""));
 
-const personFirstNameSchema = z.string().min(1, "Ad girin").max(80);
-const personLastNameSchema = z.string().min(1, "Soyad girin").max(80);
+const personFirstNameSchema = z
+  .string()
+  .min(1, "Ad girin")
+  .max(80)
+  .transform((value) => normalizePersonNamePartForStorage(value));
+const personLastNameSchema = z
+  .string()
+  .min(1, "Soyad girin")
+  .max(80)
+  .transform((value) => normalizePersonNamePartForStorage(value));
 
 const turkishMobilePhoneSchema = z
   .string()
@@ -126,6 +135,15 @@ export const packageCategorySchema = z.object({
     .optional(),
 });
 
+const workflowStageTagsSchema = z.object({
+  rezervasyon: z.array(z.string()),
+  cekim: z.array(z.string()),
+  dijital: z.array(z.string()),
+  secim: z.array(z.string()),
+  duzenleme: z.array(z.string()),
+  baski: z.array(z.string()),
+});
+
 const reservationItemSchema = z.object({
   packageOptionId: z.string().min(1),
   paymentType: z.enum(["pesin", "taksitli"]),
@@ -139,6 +157,8 @@ const reservationItemSchema = z.object({
   arrivalTime: z.string().nullable().optional(),
   startTime: z.string().nullable().optional(),
   endTime: z.string().nullable().optional(),
+  itemKey: z.string().optional(),
+  workflowStageTags: workflowStageTagsSchema.optional(),
 });
 
 const installmentSchema = z.object({
@@ -161,6 +181,7 @@ const postShootSnapshotSchema = z.object({
   source: z.enum(["template", "manual", "inspect"]).optional(),
   workflow: trackingWorkflowFlagsSchema.optional(),
   itemWorkflows: z.record(z.string(), trackingWorkflowFlagsSchema).optional(),
+  itemStageTags: z.record(z.string(), workflowStageTagsSchema).optional(),
 });
 
 export const createReservationSchema = z.object({

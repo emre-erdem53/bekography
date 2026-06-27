@@ -26,6 +26,7 @@ import {
   getCompanionRequirementMessage,
 } from "@/lib/cart-companion-rules";
 import { PhoneInput } from "@/components/forms/phone-input";
+import { PersonNameInput } from "@/components/forms/person-name-input";
 import { isValidTurkishMobilePhone } from "@/lib/phone-utils";
 
 type RequestModalProps = {
@@ -375,20 +376,20 @@ export function RequestModal({
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <Field label="Ad" required>
-                        <input
+                        <PersonNameInput
                           value={contactFirstName}
-                          onChange={(e) => setContactFirstName(e.target.value)}
+                          onChange={setContactFirstName}
                           required
-                          minLength={1}
+                          autoComplete="given-name"
                           className={inputClass}
                         />
                       </Field>
                       <Field label="Soyad" required>
-                        <input
+                        <PersonNameInput
                           value={contactLastName}
-                          onChange={(e) => setContactLastName(e.target.value)}
+                          onChange={setContactLastName}
                           required
-                          minLength={1}
+                          autoComplete="family-name"
                           className={inputClass}
                         />
                       </Field>

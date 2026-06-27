@@ -6,20 +6,25 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { AlertTriangle, Plus, X } from "lucide-react";
+import { nanoid } from "nanoid";
 import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/date-only";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
   emptyPostShootSnapshot,
-  hasOutdoorPackageInItems,
   isOutdoorCategory,
   parsePostShootSnapshot,
   syncPostShootWithItems,
   type PostShootSnapshot,
 } from "@/lib/post-shoot";
-import { PostShootTagsEditor } from "@/components/admin/post-shoot-section-editor";
+import { ReservationPackageStageTagsEditor } from "@/components/admin/reservation-package-stage-tags-editor";
 import { PhoneInput } from "@/components/forms/phone-input";
+import { PersonNameInput } from "@/components/forms/person-name-input";
+import {
+  emptyItemWorkflowStageTags,
+  type ItemWorkflowStageTags,
+} from "@/lib/item-workflow-stage-tags";
 import {
   calculateCancellationFeeMax,
   CANCELLATION_POLICY,
@@ -28,6 +33,7 @@ import {
   resolveCancellationFeeRate,
 } from "@/lib/cancellation-fee";
 import { isValidTurkishMobilePhone, normalizeTurkishMobileForStorage } from "@/lib/phone-utils";
+import { enforcePersonNamePartInput } from "@/lib/person-name-input";
 import {
   formatCoupleName,
   joinPersonName,
@@ -72,6 +78,7 @@ type PackageCategory = {
 };
 
 type SelectedItem = {
+  itemKey: string;
   packageOptionId: string;
   categoryId: string;
   paymentType: "pesin" | "taksitli";
@@ -192,10 +199,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
   const minInstallmentCount = hasTaksitliPayment ? 2 : 1;
 
-  const showPrintingSection = useMemo(
-    () => hasOutdoorPackageInItems(items, categories),
-    [items, categories],
-  );
+  const itemKeysSignature = items.map((item) => item.itemKey).join(",");
 
   function addInstallment() {
     setInstallments((prev) =>
@@ -231,7 +235,16 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       return;
     }
     setPostShoot((prev) =>
-      syncPostShootWithItems(prev, nextItems, categories, { forceReset }),
+      syncPostShootWithItems(
+        prev,
+        nextItems.map((item) => ({
+          packageOptionId: item.packageOptionId,
+          categoryTitle: item.categoryTitle,
+          itemKey: item.itemKey,
+        })),
+        categories,
+        { forceReset },
+      ),
     );
   }
 
@@ -248,12 +261,28 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         const reservation = await reservationRes.json();
         const brideParts = splitPersonName(reservation.brideName);
         const groomParts = splitPersonName(reservation.groomName);
-        setBrideFirstName(reservation.brideFirstName || brideParts.firstName);
-        setBrideLastName(reservation.brideLastName || brideParts.lastName);
+        setBrideFirstName(
+          enforcePersonNamePartInput(
+            reservation.brideFirstName || brideParts.firstName,
+          ),
+        );
+        setBrideLastName(
+          enforcePersonNamePartInput(
+            reservation.brideLastName || brideParts.lastName,
+          ),
+        );
         setBrideTc(reservation.brideTc ?? "");
         setBridePhone(normalizeTurkishMobileForStorage(reservation.bridePhone));
-        setGroomFirstName(reservation.groomFirstName || groomParts.firstName);
-        setGroomLastName(reservation.groomLastName || groomParts.lastName);
+        setGroomFirstName(
+          enforcePersonNamePartInput(
+            reservation.groomFirstName || groomParts.firstName,
+          ),
+        );
+        setGroomLastName(
+          enforcePersonNamePartInput(
+            reservation.groomLastName || groomParts.lastName,
+          ),
+        );
         setGroomTc(reservation.groomTc ?? "");
         setGroomPhone(normalizeTurkishMobileForStorage(reservation.groomPhone));
         setTotalPrice(reservation.totalPrice);
@@ -267,6 +296,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         setItems(
           reservation.items.map(
             (item: {
+              id: string;
               packageOption: {
                 id: string;
                 label: string;
@@ -294,6 +324,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 {},
               );
               return {
+              itemKey: item.id,
               packageOptionId: item.packageOption.id,
               categoryId: item.packageOption.category.id,
               paymentType: item.paymentType,
@@ -340,14 +371,14 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           request.contactLastName?.trim() || parsedContact.lastName;
 
         if (contactRole === "gelin") {
-          setBrideFirstName(contactFirstName);
-          setBrideLastName(contactLastName);
+          setBrideFirstName(enforcePersonNamePartInput(contactFirstName));
+          setBrideLastName(enforcePersonNamePartInput(contactLastName));
           if (request.customerPhone && request.customerPhone !== "—") {
             setBridePhone(normalizeTurkishMobileForStorage(request.customerPhone));
           }
         } else if (contactRole === "damat") {
-          setGroomFirstName(contactFirstName);
-          setGroomLastName(contactLastName);
+          setGroomFirstName(enforcePersonNamePartInput(contactFirstName));
+          setGroomLastName(enforcePersonNamePartInput(contactLastName));
           if (request.customerPhone && request.customerPhone !== "—") {
             setGroomPhone(normalizeTurkishMobileForStorage(request.customerPhone));
           }
@@ -374,6 +405,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               item.packageOption.category.content ?? {},
             );
             return {
+              itemKey: nanoid(10),
               packageOptionId: item.packageOption.id,
               categoryId: item.packageOption.category.id,
               paymentType: item.paymentType,
@@ -425,6 +457,25 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       ),
     );
   }, [categories, requestId, reservationId, items]);
+
+  useEffect(() => {
+    if (loading || categories.length === 0 || items.length === 0) return;
+
+    setPostShoot((prev) => {
+      const allKeysPresent = items.every((item) => prev.itemStageTags?.[item.itemKey]);
+      if (allKeysPresent) return prev;
+
+      return syncPostShootWithItems(
+        prev,
+        items.map((item) => ({
+          packageOptionId: item.packageOptionId,
+          categoryTitle: item.categoryTitle,
+          itemKey: item.itemKey,
+        })),
+        categories,
+      );
+    });
+  }, [loading, categories, itemKeysSignature, items]);
 
   useEffect(() => {
     if (!totalPriceManual && items.length > 0) {
@@ -502,6 +553,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     );
 
     const newItem: SelectedItem = {
+      itemKey: nanoid(10),
       packageOptionId: option.id,
       categoryId: category.id,
       paymentType: "pesin",
@@ -540,13 +592,13 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     });
   }
 
-  function updatePostShootTags(
-    key: "digital" | "editing" | "printing",
-    pills: string[],
-  ) {
+  function updateItemStageTags(itemKey: string, stageTags: ItemWorkflowStageTags) {
     setPostShoot((prev) => ({
       ...prev,
-      [key]: { ...prev[key], pills },
+      itemStageTags: {
+        ...(prev.itemStageTags ?? {}),
+        [itemKey]: stageTags,
+      },
       source: "manual",
     }));
   }
@@ -597,6 +649,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         );
         return {
           packageOptionId: item.packageOptionId,
+          itemKey: item.itemKey,
+          workflowStageTags: postShoot.itemStageTags?.[item.itemKey],
           paymentType: item.paymentType,
           unitPrice: item.unitPrice,
           shootDate: item.shootDate,
@@ -701,18 +755,20 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         <div className="space-y-4">
           <div className="grid-safe grid grid-cols-2 gap-4 lg:grid-cols-4">
             <Field label="Damat Ad">
-              <input
+              <PersonNameInput
                 value={groomFirstName}
-                onChange={(e) => setGroomFirstName(e.target.value)}
+                onChange={setGroomFirstName}
                 required
+                autoComplete="given-name"
                 className={inputClass}
               />
             </Field>
             <Field label="Damat Soyad">
-              <input
+              <PersonNameInput
                 value={groomLastName}
-                onChange={(e) => setGroomLastName(e.target.value)}
+                onChange={setGroomLastName}
                 required
+                autoComplete="family-name"
                 className={inputClass}
               />
             </Field>
@@ -737,18 +793,20 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
           <div className="grid-safe grid grid-cols-2 gap-4 lg:grid-cols-4">
             <Field label="Gelin Ad">
-              <input
+              <PersonNameInput
                 value={brideFirstName}
-                onChange={(e) => setBrideFirstName(e.target.value)}
+                onChange={setBrideFirstName}
                 required
+                autoComplete="given-name"
                 className={inputClass}
               />
             </Field>
             <Field label="Gelin Soyad">
-              <input
+              <PersonNameInput
                 value={brideLastName}
-                onChange={(e) => setBrideLastName(e.target.value)}
+                onChange={setBrideLastName}
                 required
+                autoComplete="family-name"
                 className={inputClass}
               />
             </Field>
@@ -984,36 +1042,42 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
       <Section title="3. Süreç Etiketleri">
         <p className="text-sm text-zinc-400">
-          Sipariş takibindeki süreç adımlarında gösterilecek etiketler. Paket
-          incele bölümlerinden otomatik doldurulur; bu rezervasyon için
-          özelleştirebilirsiniz.
+          Sipariş takibindeki her paket ve süreç adımı için gösterilecek etiketler.
+          Paket incele bölümlerinden otomatik doldurulur; bu rezervasyon için
+          paket bazında özelleştirebilirsiniz.
           {postShoot.source === "manual" ? (
             <span className="mt-1 block text-amber-300/90">
               Etiketler bu rezervasyon için özelleştirildi.
             </span>
           ) : null}
         </p>
-        <PostShootTagsEditor
-          title="Dijital"
-          tags={postShoot.digital.pills}
-          onChange={(pills) => updatePostShootTags("digital", pills)}
-        />
-        <PostShootTagsEditor
-          title="Düzenleme"
-          tags={postShoot.editing.pills}
-          onChange={(pills) => updatePostShootTags("editing", pills)}
-        />
-        {showPrintingSection ? (
-          <PostShootTagsEditor
-            title="Baskı"
-            tags={postShoot.printing.pills}
-            onChange={(pills) => updatePostShootTags("printing", pills)}
-          />
-        ) : null}
+        {items.length === 0 ? (
+          <p className="mt-4 text-sm text-zinc-500">
+            Etiketleri düzenlemek için önce paket ekleyin.
+          </p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {items.map((item) => (
+              <ReservationPackageStageTagsEditor
+                key={item.itemKey}
+                categoryTitle={item.categoryTitle}
+                optionLabel={item.label}
+                categorySlug={item.categorySlug}
+                accentColor={item.accentColor}
+                stageTags={
+                  postShoot.itemStageTags?.[item.itemKey] ??
+                  emptyItemWorkflowStageTags()
+                }
+                onChange={(tags) => updateItemStageTags(item.itemKey, tags)}
+              />
+            ))}
+          </div>
+        )}
         <button
           type="button"
           onClick={() => applyPostShootSync(items, true)}
-          className="text-sm text-zinc-400 hover:text-white"
+          disabled={items.length === 0}
+          className="mt-4 text-sm text-zinc-400 hover:text-white disabled:opacity-40"
         >
           Paket incele etiketlerinden yeniden doldur
         </button>

@@ -16,6 +16,7 @@ import {
   loadProductSnapshotsForItems,
   mapReservationItemCreatesForNewReservation,
 } from "@/lib/reservation-item-snapshots";
+import { remapItemStageTagsByKeys } from "@/lib/item-workflow-stage-tags";
 import {
   buildYearOptions,
   getCurrentReservationYear,
@@ -180,8 +181,36 @@ export async function POST(request: Request) {
       },
     });
 
+    const keyToId = new Map(
+      data.items
+        .map((item, index) => [
+          item.itemKey ?? `${item.packageOptionId}:${index}`,
+          reservation.items[index]?.id ?? "",
+        ] as const)
+        .filter(([, id]) => Boolean(id)),
+    );
+    const remappedTags = remapItemStageTagsByKeys(
+      data.postShoot.itemStageTags,
+      keyToId,
+    );
+
+    if (remappedTags) {
+      await prisma.reservation.update({
+        where: { id: reservation.id },
+        data: {
+          postShoot: {
+            ...data.postShoot,
+            itemStageTags: remappedTags,
+          },
+        },
+      });
+    }
+
     return NextResponse.json({
       ...reservation,
+      postShoot: remappedTags
+        ? { ...data.postShoot, itemStageTags: remappedTags }
+        : reservation.postShoot,
       trackingUrl: getTrackingUrl(reservation.trackingSlug),
     });
   } catch (error) {

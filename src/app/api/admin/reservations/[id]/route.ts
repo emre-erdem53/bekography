@@ -13,6 +13,7 @@ import {
   updateReservationStatusSchema,
 } from "@/lib/validations";
 import { buildReservationItemCreates } from "@/lib/reservation-item-snapshots";
+import { remapItemStageTagsByKeys } from "@/lib/item-workflow-stage-tags";
 import { reservationNameFieldsFromInput } from "@/lib/reservation-utils";
 
 export async function GET(
@@ -215,6 +216,36 @@ export async function PATCH(
       await prisma.reservationItem.createMany({
         data: itemCreates,
       });
+
+      if (data.postShoot?.itemStageTags) {
+        const recreatedItems = await prisma.reservationItem.findMany({
+          where: { reservationId: id },
+          orderBy: { shootDate: "asc" },
+        });
+        const keyToId = new Map(
+          data.items
+            .map((item, index) => [
+              item.itemKey ?? `${item.packageOptionId}:${index}`,
+              recreatedItems[index]?.id ?? "",
+            ] as const)
+            .filter(([, itemId]) => Boolean(itemId)),
+        );
+        const remappedTags = remapItemStageTagsByKeys(
+          data.postShoot.itemStageTags,
+          keyToId,
+        );
+        if (remappedTags) {
+          await prisma.reservation.update({
+            where: { id },
+            data: {
+              postShoot: {
+                ...data.postShoot,
+                itemStageTags: remappedTags,
+              },
+            },
+          });
+        }
+      }
     }
 
     if (data.installments) {

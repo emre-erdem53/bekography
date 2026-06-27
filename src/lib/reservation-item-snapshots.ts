@@ -1,6 +1,10 @@
 import { parseDateOnlyInput } from "@/lib/date-only";
 import { prisma } from "@/lib/prisma";
 import {
+  applyStageTagsToDetailSections,
+  type ItemWorkflowStageTags,
+} from "@/lib/item-workflow-stage-tags";
+import {
   buildProductSnapshotFromOption,
   emptyProductSnapshot,
   mergeProductSnapshot,
@@ -21,7 +25,23 @@ export type ReservationItemInput = {
   arrivalTime?: string | null;
   startTime?: string | null;
   endTime?: string | null;
+  itemKey?: string;
+  workflowStageTags?: ItemWorkflowStageTags;
 };
+
+function withStageTags(
+  snapshot: ReservationProductSnapshot,
+  workflowStageTags?: ItemWorkflowStageTags,
+): ReservationProductSnapshot {
+  if (!workflowStageTags) return snapshot;
+  return {
+    ...snapshot,
+    detailSections: applyStageTagsToDetailSections(
+      snapshot.detailSections,
+      workflowStageTags,
+    ),
+  };
+}
 
 function mapItemBase(
   reservationId: string,
@@ -60,14 +80,17 @@ export async function buildReservationItemCreates(
   return items.map((item) => {
     const option = optionMap.get(item.packageOptionId);
     const preserved = preservedSnapshots?.get(item.packageOptionId);
-    const productSnapshot = preserved
-      ? mergeProductSnapshot(
-          parseProductSnapshot(preserved),
-          option ? buildProductSnapshotFromOption(option) : emptyProductSnapshot(),
-        )
-      : option
-        ? buildProductSnapshotFromOption(option)
-        : emptyProductSnapshot();
+    const productSnapshot = withStageTags(
+      preserved
+        ? mergeProductSnapshot(
+            parseProductSnapshot(preserved),
+            option ? buildProductSnapshotFromOption(option) : emptyProductSnapshot(),
+          )
+        : option
+          ? buildProductSnapshotFromOption(option)
+          : emptyProductSnapshot(),
+      item.workflowStageTags,
+    );
 
     return mapItemBase(reservationId, item, productSnapshot);
   });
@@ -78,9 +101,10 @@ export function mapReservationItemCreatesForNewReservation(
   productSnapshots: Map<string, ReservationProductSnapshot>,
 ) {
   return items.map((item) => {
-    const productSnapshot =
-      productSnapshots.get(item.packageOptionId) ??
-      ({} as ReservationProductSnapshot);
+    const productSnapshot = withStageTags(
+      resolveProductSnapshotForItem(item, productSnapshots),
+      item.workflowStageTags,
+    );
 
     return {
       packageOptionId: item.packageOptionId,
@@ -108,9 +132,31 @@ export async function loadProductSnapshotsForItems(
     include: { category: true },
   });
 
+  const optionMap = new Map(options.map((option) => [option.id, option]));
   const snapshots = new Map<string, ReservationProductSnapshot>();
-  for (const option of options) {
-    snapshots.set(option.id, buildProductSnapshotFromOption(option));
+
+  for (const item of items) {
+    const option = optionMap.get(item.packageOptionId);
+    const snapshotKey = item.itemKey ?? item.packageOptionId;
+    if (snapshots.has(snapshotKey)) continue;
+
+    const base = option
+      ? buildProductSnapshotFromOption(option)
+      : emptyProductSnapshot();
+    snapshots.set(snapshotKey, base);
   }
+
   return snapshots;
+}
+
+export function resolveProductSnapshotForItem(
+  item: ReservationItemInput,
+  snapshots: Map<string, ReservationProductSnapshot>,
+): ReservationProductSnapshot {
+  const snapshotKey = item.itemKey ?? item.packageOptionId;
+  return (
+    snapshots.get(snapshotKey) ??
+    snapshots.get(item.packageOptionId) ??
+    emptyProductSnapshot()
+  );
 }

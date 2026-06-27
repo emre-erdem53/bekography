@@ -10,6 +10,7 @@ import {
 import { normalizePostShootSectionTitle } from "@/lib/post-shoot-from-inspect";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
 import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
+import { TRACKING_WORKFLOW_STAGE_ORDER } from "@/lib/tracking-workflow";
 
 const EMPTY_STAGE_TAGS: Record<TrackingWorkflowStageId, string[]> = {
   rezervasyon: [],
@@ -36,6 +37,8 @@ function mapSectionTitleToWorkflowStage(
 
   return null;
 }
+
+export { mapSectionTitleToWorkflowStage };
 
 type PackageInspectContextScheduleType = "outdoor" | "indoor";
 
@@ -133,7 +136,17 @@ export function buildWorkflowStageTags(
     packageOptionId?: string;
     categoryContent?: Partial<PackageCategoryContent>;
   },
+  itemId?: string,
 ): Record<TrackingWorkflowStageId, string[]> {
+  if (itemId && postShoot?.itemStageTags?.[itemId]) {
+    const overrides = postShoot.itemStageTags[itemId];
+    const tags = emptyStageTagsFromOverrides(overrides);
+    const hasAny = TRACKING_WORKFLOW_STAGE_ORDER.some(
+      (stage) => tags[stage].length > 0,
+    );
+    if (hasAny) return tags;
+  }
+
   const sections = context
     ? resolveDetailSectionsForStageTags({
         detailSections,
@@ -169,6 +182,19 @@ export function buildWorkflowStageTags(
   }
 
   return tags;
+}
+
+function emptyStageTagsFromOverrides(
+  overrides: Record<TrackingWorkflowStageId, string[]>,
+): Record<TrackingWorkflowStageId, string[]> {
+  return {
+    rezervasyon: [...(overrides.rezervasyon ?? [])],
+    cekim: [...(overrides.cekim ?? [])],
+    dijital: [...(overrides.dijital ?? [])],
+    secim: [...(overrides.secim ?? [])],
+    duzenleme: [...(overrides.duzenleme ?? [])],
+    baski: [...(overrides.baski ?? [])],
+  };
 }
 
 export function getStageTagsForWorkflow(

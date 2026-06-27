@@ -4,6 +4,8 @@ import { WHATSAPP_NUMBER } from "@/lib/constants";
 
 const WHATSAPP_GREETING_NAME = "Bekir Bey";
 
+export const CONTACT_WHATSAPP_MESSAGE = `Merhaba ${WHATSAPP_GREETING_NAME}`;
+
 type CartItemForMessage = {
   categoryTitle: string;
   optionLabel: string;
@@ -33,10 +35,14 @@ export function buildRequestWhatsAppMessage(
     )
     .join("\n");
 
-  return `Merhaba ${WHATSAPP_GREETING_NAME}. 😊 Ben ${contactName} (${formatContactRole(contactRole)}). Aşağıdaki bilgilerle çekim talep ediyorum.\n\n${packageLines}`;
+  return `Merhaba ${WHATSAPP_GREETING_NAME}. Ben ${contactName} (${formatContactRole(contactRole)}). Aşağıdaki bilgilerle çekim talep ediyorum.\n\n${packageLines}`;
 }
 
 export function buildWhatsAppUrl(message: string) {
   const encoded = encodeURIComponent(message);
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encoded}`;
+}
+
+export function buildContactWhatsAppUrl() {
+  return buildWhatsAppUrl(CONTACT_WHATSAPP_MESSAGE);
 }

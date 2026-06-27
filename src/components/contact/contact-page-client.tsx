@@ -14,6 +14,7 @@ import {
   BEKOGRAPHY_PHONE_TEL,
 } from "@/lib/site-location";
 import { turkishUppercase } from "@/lib/turkish-text";
+import { buildContactWhatsAppUrl } from "@/lib/whatsapp";
 
 export function ContactPageClient({
   variant = "page",
@@ -21,8 +22,7 @@ export function ContactPageClient({
   variant?: "page" | "section";
 }) {
   const reduce = useReducedMotion();
-  const whatsappNumber = "905469370464";
-  const whatsappLink = `https://wa.me/${whatsappNumber}?text=Merhaba%20Bekography%2C%20bilgi%20almak%20istiyorum.`;
+  const whatsappLink = buildContactWhatsAppUrl();
   const contactImage = getAboutTeamPortraitSrc(
     ABOUT_TEAM_PORTRAIT_FILES.bekirContact,
   );

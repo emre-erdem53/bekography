@@ -1,12 +1,14 @@
 import type { PackageCategoryContent, PackageDetailSection } from "@/lib/package-seed-data";
 import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
 import type { PostShootSection, PostShootSnapshot } from "@/lib/post-shoot";
+import { syncItemStageTagsForItems } from "@/lib/item-workflow-stage-tags";
 
 export type PostShootSectionKind = "digital" | "editing" | "printing";
 
 type InspectPackageItem = {
   packageOptionId: string;
   categoryTitle?: string;
+  itemKey?: string;
 };
 
 export type InspectCategory = {
@@ -188,10 +190,31 @@ export function syncPostShootWithInspectItems(
   }
 
   const built = buildPostShootFromInspect(items, categories);
+  const itemKeys = items
+    .filter((item): item is InspectPackageItem & { itemKey: string } =>
+      Boolean(item.itemKey),
+    )
+    .map((item) => ({
+      itemKey: item.itemKey,
+      packageOptionId: item.packageOptionId,
+      categoryTitle: item.categoryTitle ?? "",
+    }));
+
+  const itemStageTags =
+    itemKeys.length > 0
+      ? syncItemStageTagsForItems(
+          current.itemStageTags,
+          itemKeys,
+          categories,
+          options,
+        )
+      : current.itemStageTags;
+
   return {
     ...built,
     workflow: current.workflow,
     itemWorkflows: current.itemWorkflows,
+    itemStageTags,
   };
 }
 
