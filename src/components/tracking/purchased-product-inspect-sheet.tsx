@@ -2,11 +2,15 @@
 
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft } from "lucide-react";
+import { ChevronDown, ChevronLeft } from "lucide-react";
 import type { ReservationProductSnapshot } from "@/lib/reservation-product-snapshot";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PackageGalleryCarousel } from "@/components/packages/package-gallery-carousel";
-import { PackageDetailSectionsList } from "@/components/packages/package-detail-sections-list";
+import {
+  PackageInspectSections,
+  PackageSnapshotServicesGrid,
+  PackageSnapshotShootBlocks,
+} from "@/components/packages/package-snapshot-content-blocks";
 import { BekographyBrand } from "@/components/bekography-brand";
 
 export function PurchasedProductInspectSheet({
@@ -25,7 +29,7 @@ export function PurchasedProductInspectSheet({
     };
   }, [product]);
 
-  const sections = [...product?.detailSections ?? []].sort(
+  const sections = [...(product?.detailSections ?? [])].sort(
     (a, b) => a.sortOrder - b.sortOrder,
   );
 
@@ -90,6 +94,9 @@ export function PurchasedProductInspectSheet({
                 />
               ) : null}
 
+              <PackageSnapshotServicesGrid product={product} />
+              <PackageSnapshotShootBlocks product={product} />
+
               <div className="mt-4 flex items-start gap-6 sm:mt-5 sm:gap-8">
                 <PaymentTypePrice type="pesin" price={product.cashPrice} />
                 <PaymentTypePrice
@@ -98,14 +105,20 @@ export function PurchasedProductInspectSheet({
                 />
               </div>
 
-              <p className="mt-3 text-center text-[11px] text-zinc-500 sm:text-xs">
-                Detaylar için aşağı kaydırın
-              </p>
+              <section className="mt-5 border-t border-white/10 pt-5 sm:mt-6 sm:pt-6">
+                <div className="flex items-center justify-center gap-1.5 text-sm text-zinc-500">
+                  <ChevronDown
+                    className="h-4 w-4 shrink-0 animate-bounce"
+                    aria-hidden
+                  />
+                  <span>İncele</span>
+                </div>
 
-              <PackageDetailSectionsList
-                sections={sections}
-                emptyMessage="Bu ürün için kayıtlı detay bilgisi bulunmuyor."
-              />
+                <PackageInspectSections
+                  sections={sections}
+                  emptyMessage="Bu ürün için kayıtlı inceleme metni bulunmuyor."
+                />
+              </section>
             </div>
           </div>
         </motion.div>

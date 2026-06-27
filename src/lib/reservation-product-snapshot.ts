@@ -6,7 +6,10 @@ import type {
   PackageServiceItem,
 } from "@/lib/package-seed-data";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
+import { getDetailSectionsForOption } from "@/lib/post-shoot-from-inspect";
 import { getOptionGalleryMedia, getOptionGalleryPreviewMedia } from "@/lib/package-media";
+
+export const PRODUCT_SNAPSHOT_VERSION = 2;
 
 export type ReservationProductSnapshot = {
   packageOptionId: string;
@@ -23,8 +26,13 @@ export type ReservationProductSnapshot = {
   highlightTags: string[];
   detailSections: PackageDetailSection[];
   services: PackageServiceItem[];
+  shootTitle: string;
   shootDescription: string;
+  afterShootTitle: string;
+  afterShootDescription: string;
+  afterShootExtra: string;
   galleryMedia: PackageGalleryMedia[];
+  snapshotVersion: number;
 };
 
 export function emptyProductSnapshot(): ReservationProductSnapshot {
@@ -43,8 +51,13 @@ export function emptyProductSnapshot(): ReservationProductSnapshot {
     highlightTags: [],
     detailSections: [],
     services: [],
+    shootTitle: "Çekim",
     shootDescription: "",
+    afterShootTitle: "Çekim Sonrası",
+    afterShootDescription: "",
+    afterShootExtra: "",
     galleryMedia: [],
+    snapshotVersion: PRODUCT_SNAPSHOT_VERSION,
   };
 }
 
@@ -103,14 +116,7 @@ function getSnapshotDetailSections(
   optionId: string,
   optionLabel: string,
 ): PackageDetailSection[] {
-  const scoped =
-    content.detailSectionsByOption?.[optionId] ??
-    content.detailSectionsByOption?.[optionLabel] ??
-    content.detailSections;
-
-  return normalizeDetailSections(scoped).sort(
-    (a, b) => a.sortOrder - b.sortOrder,
-  );
+  return getDetailSectionsForOption(content, optionId, optionLabel);
 }
 
 export function buildProductSnapshotFromOption(
@@ -146,8 +152,13 @@ export function buildProductSnapshotFromOption(
     highlightTags,
     detailSections: getSnapshotDetailSections(content, option.id, option.label),
     services: content.services ?? [],
+    shootTitle: content.shootTitle ?? "Çekim",
     shootDescription: content.shootDescription ?? "",
+    afterShootTitle: content.afterShootTitle ?? "Çekim Sonrası",
+    afterShootDescription: content.afterShootDescription ?? "",
+    afterShootExtra: content.afterShootExtra ?? "",
     galleryMedia,
+    snapshotVersion: PRODUCT_SNAPSHOT_VERSION,
   };
 }
 
@@ -163,7 +174,8 @@ function hasSnapshotDetailContent(snapshot: ReservationProductSnapshot): boolean
 export function snapshotNeedsDetailEnrichment(value: unknown): boolean {
   if (!value || typeof value !== "object") return true;
   const data = value as Record<string, unknown>;
-  return !("detailSections" in data) || !("galleryMedia" in data);
+  if (data.snapshotVersion !== PRODUCT_SNAPSHOT_VERSION) return true;
+  return !Array.isArray(data.detailSections) || !Array.isArray(data.galleryMedia);
 }
 
 /** Satın alma anındaki alanları korur; eksik detay alanlarını kayıt anındaki tam snapshot ile tamamlar. */
@@ -197,10 +209,21 @@ export function mergeProductSnapshot(
         ? stored.detailSections
         : fresh.detailSections,
     services: stored.services.length > 0 ? stored.services : fresh.services,
+    shootTitle: stored.shootTitle?.trim() ? stored.shootTitle : fresh.shootTitle,
     shootDescription: stored.shootDescription.trim()
       ? stored.shootDescription
       : fresh.shootDescription,
+    afterShootTitle: stored.afterShootTitle?.trim()
+      ? stored.afterShootTitle
+      : fresh.afterShootTitle,
+    afterShootDescription: stored.afterShootDescription.trim()
+      ? stored.afterShootDescription
+      : fresh.afterShootDescription,
+    afterShootExtra: stored.afterShootExtra?.trim()
+      ? stored.afterShootExtra
+      : fresh.afterShootExtra,
     galleryMedia,
+    snapshotVersion: PRODUCT_SNAPSHOT_VERSION,
   };
 }
 
@@ -289,6 +312,18 @@ export function parseProductSnapshot(value: unknown): ReservationProductSnapshot
       : [],
     shootDescription:
       typeof data.shootDescription === "string" ? data.shootDescription : "",
+    shootTitle:
+      typeof data.shootTitle === "string" ? data.shootTitle : "Çekim",
+    afterShootTitle:
+      typeof data.afterShootTitle === "string"
+        ? data.afterShootTitle
+        : "Çekim Sonrası",
+    afterShootDescription:
+      typeof data.afterShootDescription === "string"
+        ? data.afterShootDescription
+        : "",
+    afterShootExtra:
+      typeof data.afterShootExtra === "string" ? data.afterShootExtra : "",
     galleryMedia: Array.isArray(data.galleryMedia)
       ? data.galleryMedia.filter(
           (item): item is PackageGalleryMedia =>
@@ -297,6 +332,10 @@ export function parseProductSnapshot(value: unknown): ReservationProductSnapshot
             typeof (item as PackageGalleryMedia).url === "string",
         )
       : [],
+    snapshotVersion:
+      typeof data.snapshotVersion === "number"
+        ? data.snapshotVersion
+        : 0,
   };
 }
 

@@ -6,7 +6,7 @@ import {
   ensureItemWorkflows,
   reservationHasPrintingPackage,
 } from "@/lib/post-shoot";
-import { emptyProductSnapshot } from "@/lib/reservation-product-snapshot";
+import { emptyProductSnapshot, parseProductSnapshot } from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
 import {
   buildTrackingWorkflowView,
@@ -110,6 +110,8 @@ export function normalizeTrackingData(
       paidAt: row.paidAt ?? null,
     })),
     items,
-    purchasedProducts: value.purchasedProducts ?? [],
+    purchasedProducts: (value.purchasedProducts ?? []).map((product) =>
+      parseProductSnapshot(product),
+    ),
   };
 }
