@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { mergeGalleryMediaByOption } from "@/lib/package-gallery-persist";
+import type { PackageGalleryMedia } from "@/lib/package-seed-data";
 import { packageCategorySchema } from "@/lib/validations";
 import { slugify } from "@/lib/constants";
 
@@ -55,6 +57,31 @@ export async function PATCH(
 
     const data = parsed.data;
 
+    const existing = await prisma.packageCategory.findUnique({
+      where: { id },
+      select: { content: true },
+    });
+    const existingContent = (existing?.content ?? {}) as {
+      galleryMediaByOption?: Record<string, unknown[]>;
+    };
+    const incomingContent = data.content as
+      | { galleryMediaByOption?: Record<string, unknown[]> }
+      | undefined;
+
+    const mergedContent = incomingContent
+      ? {
+          ...incomingContent,
+          galleryMediaByOption: mergeGalleryMediaByOption(
+            existingContent.galleryMediaByOption as
+              | Record<string, PackageGalleryMedia[]>
+              | undefined,
+            incomingContent.galleryMediaByOption as
+              | Record<string, PackageGalleryMedia[]>
+              | undefined,
+          ),
+        }
+      : data.content;
+
     const category = await prisma.packageCategory.update({
       where: { id },
       data: {
@@ -67,7 +94,7 @@ export async function PATCH(
         heroImageUrl: data.heroImageUrl,
         sortOrder: data.sortOrder,
         isActive: data.isActive,
-        content: data.content as Prisma.InputJsonValue | undefined,
+        content: mergedContent as Prisma.InputJsonValue | undefined,
       },
     });
 

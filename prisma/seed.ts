@@ -3,6 +3,7 @@ import {
   defaultRequestFieldLabels,
   enrichSeedCategoryContent,
   seedPackageCategories,
+  type PackageCategoryContent,
 } from "../src/lib/package-seed-data";
 
 const prisma = new PrismaClient();
@@ -42,7 +43,30 @@ async function main() {
   console.log("Seeding package categories...");
 
   for (const category of seedPackageCategories) {
-    const content = enrichContent(category);
+    const existing = await prisma.packageCategory.findUnique({
+      where: { slug: category.slug },
+      include: { options: true },
+    });
+
+    const seedContent = enrichContent(category) as PackageCategoryContent;
+    const preservedGallery =
+      existing?.content &&
+      typeof existing.content === "object" &&
+      !Array.isArray(existing.content)
+        ? (existing.content as PackageCategoryContent).galleryMediaByOption
+        : undefined;
+
+    const content: Prisma.InputJsonValue =
+      preservedGallery &&
+      Object.values(preservedGallery).some(
+        (media) => Array.isArray(media) && media.length > 0,
+      )
+        ? {
+            ...seedContent,
+            galleryMediaByOption: preservedGallery,
+          }
+        : seedContent;
+
     await prisma.packageCategory.upsert({
       where: { slug: category.slug },
       update: {
@@ -77,11 +101,6 @@ async function main() {
           })),
         },
       },
-    });
-
-    const existing = await prisma.packageCategory.findUnique({
-      where: { slug: category.slug },
-      include: { options: true },
     });
 
     if (existing && existing.options.length === 0) {

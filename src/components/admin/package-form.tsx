@@ -19,6 +19,7 @@ import {
 } from "@/lib/default-inspect-sections";
 import { normalizeHexColor } from "@/lib/color-utils";
 import { applyPackageServiceTheme, PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
+import { mergeGalleryMediaByOption } from "@/lib/package-gallery-persist";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
 import { HexColorInput } from "@/components/admin/hex-color-input";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
@@ -128,19 +129,29 @@ function buildGalleryMediaByOption(
   const source = content.galleryMediaByOption ?? {};
   const result: Record<string, PackageGalleryMedia[]> = {};
 
+  for (const [key, media] of Object.entries(source)) {
+    if (Array.isArray(media) && media.length > 0) {
+      result[key] = media;
+    }
+  }
+
   optionList.forEach((option, index) => {
     const primaryKey = getOptionDetailKey(option, index);
     const labelKey = option.label.trim();
+    const saveKey = option.id ?? primaryKey;
     const media =
+      source[saveKey] ??
       source[primaryKey] ??
       (option.id ? source[option.id] : undefined) ??
       (labelKey ? source[labelKey] : undefined) ??
       [];
 
-    if (media.length === 0) return;
+    if (!Array.isArray(media) || media.length === 0) return;
 
-    const saveKey = option.id ?? primaryKey;
     result[saveKey] = media;
+    if (labelKey && labelKey !== saveKey) {
+      result[labelKey] = media;
+    }
   });
 
   return result;

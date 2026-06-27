@@ -3,6 +3,10 @@ import type {
   PackageCategoryContent,
   PackageGalleryMedia,
 } from "@/lib/package-seed-data";
+import {
+  mergeGalleryMediaByOption,
+  resolveGalleryMediaForOption,
+} from "@/lib/package-gallery-persist";
 
 const blobBaseUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.replace(/\/+$/, "");
 
@@ -22,12 +26,11 @@ function resolveOptionMediaList(
   optionId: string,
   optionLabel?: string,
 ): PackageGalleryMedia[] {
-  const byOption = content.galleryMediaByOption;
-  if (byOption?.[optionId]?.length) return byOption[optionId];
-  if (optionLabel && byOption?.[optionLabel]?.length) {
-    return byOption[optionLabel];
-  }
-  return [];
+  return resolveGalleryMediaForOption(
+    content.galleryMediaByOption,
+    optionId,
+    optionLabel,
+  );
 }
 
 export function getOptionGalleryMedia(
