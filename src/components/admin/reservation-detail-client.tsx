@@ -133,6 +133,8 @@ export function ReservationDetailClient({
       return;
     }
 
+    if (result.kind !== "updated") return;
+
     setReservation((prev) =>
       prev
         ? {
