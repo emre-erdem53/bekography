@@ -11,8 +11,9 @@ import { isOutdoorCategory, itemHasPrintingStage, parsePostShootSnapshot, getIte
 import {
   buildProductSnapshotFromOption,
   getShootTypeLabel,
-  isProductSnapshotComplete,
   parseProductSnapshot,
+  resolveProductSnapshot,
+  snapshotNeedsDetailEnrichment,
 } from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
 import {
@@ -38,6 +39,39 @@ const reservationInclude = {
 type ReservationWithTracking = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
 }>;
+
+function resolveItemProductSnapshot(
+  item: {
+    productSnapshot: unknown;
+    packageOption: Parameters<typeof buildProductSnapshotFromOption>[0];
+  },
+) {
+  return resolveProductSnapshot(
+    parseProductSnapshot(item.productSnapshot),
+    item.packageOption,
+    item.productSnapshot,
+  );
+}
+
+async function persistLegacyProductSnapshots(
+  items: {
+    id: string;
+    productSnapshot: unknown;
+    packageOption: Parameters<typeof buildProductSnapshotFromOption>[0];
+  }[],
+) {
+  await Promise.all(
+    items.map(async (item) => {
+      if (!snapshotNeedsDetailEnrichment(item.productSnapshot)) return;
+
+      const snapshot = resolveItemProductSnapshot(item);
+      await prisma.reservationItem.update({
+        where: { id: item.id },
+        data: { productSnapshot: snapshot },
+      });
+    }),
+  );
+}
 
 function buildPayloadFromReservation(
   reservation: ReservationWithTracking,
@@ -112,10 +146,7 @@ function buildPayloadFromReservation(
           ? (category.content as Record<string, unknown>)
           : {};
       const outdoor = isOutdoorCategory(category.slug, content);
-      const storedSnapshot = parseProductSnapshot(item.productSnapshot);
-      const snapshot = isProductSnapshotComplete(storedSnapshot)
-        ? storedSnapshot
-        : buildProductSnapshotFromOption(item.packageOption);
+      const snapshot = resolveItemProductSnapshot(item);
       const hasPrinting = itemHasPrintingStage(category.slug);
       const itemWorkflowFlags = getItemWorkflowFlags(postShoot, item.id);
       const itemWorkflow = buildTrackingWorkflowView({
@@ -150,12 +181,9 @@ function buildPayloadFromReservation(
         workflowFlags: itemWorkflowFlags,
       };
     }),
-    purchasedProducts: reservation.items.map((item) => {
-      const storedSnapshot = parseProductSnapshot(item.productSnapshot);
-      return isProductSnapshotComplete(storedSnapshot)
-        ? storedSnapshot
-        : buildProductSnapshotFromOption(item.packageOption);
-    }),
+    purchasedProducts: reservation.items.map((item) =>
+      resolveItemProductSnapshot(item),
+    ),
   };
 }
 
@@ -177,6 +205,8 @@ export async function buildTrackingPayloadBySlug(
   if (!isReservationTrackingAccessible(reservation)) {
     return null;
   }
+
+  await persistLegacyProductSnapshots(reservation.items);
 
   return buildPayloadFromReservation(
     reservation,
@@ -202,6 +232,8 @@ export async function buildTrackingPayloadById(
   if (!isReservationTrackingAccessible(reservation)) {
     return null;
   }
+
+  await persistLegacyProductSnapshots(reservation.items);
 
   return buildPayloadFromReservation(
     reservation,

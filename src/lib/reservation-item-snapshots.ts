@@ -2,6 +2,8 @@ import { parseDateOnlyInput } from "@/lib/date-only";
 import { prisma } from "@/lib/prisma";
 import {
   buildProductSnapshotFromOption,
+  emptyProductSnapshot,
+  mergeProductSnapshot,
   parseProductSnapshot,
   type ReservationProductSnapshot,
 } from "@/lib/reservation-product-snapshot";
@@ -59,10 +61,13 @@ export async function buildReservationItemCreates(
     const option = optionMap.get(item.packageOptionId);
     const preserved = preservedSnapshots?.get(item.packageOptionId);
     const productSnapshot = preserved
-      ? parseProductSnapshot(preserved)
+      ? mergeProductSnapshot(
+          parseProductSnapshot(preserved),
+          option ? buildProductSnapshotFromOption(option) : emptyProductSnapshot(),
+        )
       : option
         ? buildProductSnapshotFromOption(option)
-        : ({} as ReservationProductSnapshot);
+        : emptyProductSnapshot();
 
     return mapItemBase(reservationId, item, productSnapshot);
   });

@@ -2,10 +2,11 @@ import type { PackageCategoryData } from "@/lib/package-types";
 import type {
   PackageCategoryContent,
   PackageDetailSection,
+  PackageGalleryMedia,
   PackageServiceItem,
 } from "@/lib/package-seed-data";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
-import { getOptionGalleryPreviewMedia } from "@/lib/package-media";
+import { getOptionGalleryMedia, getOptionGalleryPreviewMedia } from "@/lib/package-media";
 
 export type ReservationProductSnapshot = {
   packageOptionId: string;
@@ -23,6 +24,7 @@ export type ReservationProductSnapshot = {
   detailSections: PackageDetailSection[];
   services: PackageServiceItem[];
   shootDescription: string;
+  galleryMedia: PackageGalleryMedia[];
 };
 
 export function emptyProductSnapshot(): ReservationProductSnapshot {
@@ -42,6 +44,7 @@ export function emptyProductSnapshot(): ReservationProductSnapshot {
     detailSections: [],
     services: [],
     shootDescription: "",
+    galleryMedia: [],
   };
 }
 
@@ -121,6 +124,7 @@ export function buildProductSnapshotFromOption(
     option.id,
     option.label,
   );
+  const galleryMedia = getOptionGalleryMedia(categoryData, option.id, option.label);
   const highlightTags =
     content.highlightTagsByOption?.[option.id] ??
     content.highlightTagsByOption?.[option.label] ??
@@ -143,7 +147,100 @@ export function buildProductSnapshotFromOption(
     detailSections: getSnapshotDetailSections(content, option.id, option.label),
     services: content.services ?? [],
     shootDescription: content.shootDescription ?? "",
+    galleryMedia,
   };
+}
+
+function hasSnapshotDetailContent(snapshot: ReservationProductSnapshot): boolean {
+  return (
+    snapshot.detailSections.length > 0 ||
+    snapshot.services.length > 0 ||
+    Boolean(snapshot.shootDescription.trim()) ||
+    snapshot.galleryMedia.length > 0
+  );
+}
+
+export function snapshotNeedsDetailEnrichment(value: unknown): boolean {
+  if (!value || typeof value !== "object") return true;
+  const data = value as Record<string, unknown>;
+  return !("detailSections" in data) || !("galleryMedia" in data);
+}
+
+/** Satın alma anındaki alanları korur; eksik detay alanlarını kayıt anındaki tam snapshot ile tamamlar. */
+export function mergeProductSnapshot(
+  stored: ReservationProductSnapshot,
+  fresh: ReservationProductSnapshot,
+): ReservationProductSnapshot {
+  if (!stored.packageOptionId) return fresh;
+
+  const galleryMedia =
+    stored.galleryMedia.length > 0
+      ? stored.galleryMedia
+      : fresh.galleryMedia.length > 0
+        ? fresh.galleryMedia
+        : buildGalleryFromPreview(stored);
+
+  return {
+    ...stored,
+    cashPrice: stored.cashPrice || fresh.cashPrice,
+    installmentPrice: stored.installmentPrice || fresh.installmentPrice,
+    accentColor: stored.accentColor || fresh.accentColor,
+    categoryTitle: stored.categoryTitle || fresh.categoryTitle,
+    optionLabel: stored.optionLabel || fresh.optionLabel,
+    previewImageUrl: stored.previewImageUrl ?? fresh.previewImageUrl,
+    previewVideoUrl: stored.previewVideoUrl ?? fresh.previewVideoUrl,
+    shootTypeLabel: stored.shootTypeLabel || fresh.shootTypeLabel,
+    highlightTags:
+      stored.highlightTags.length > 0 ? stored.highlightTags : fresh.highlightTags,
+    detailSections:
+      stored.detailSections.length > 0
+        ? stored.detailSections
+        : fresh.detailSections,
+    services: stored.services.length > 0 ? stored.services : fresh.services,
+    shootDescription: stored.shootDescription.trim()
+      ? stored.shootDescription
+      : fresh.shootDescription,
+    galleryMedia,
+  };
+}
+
+function buildGalleryFromPreview(
+  snapshot: ReservationProductSnapshot,
+): PackageGalleryMedia[] {
+  const media: PackageGalleryMedia[] = [];
+  if (snapshot.previewVideoUrl) {
+    media.push({ url: snapshot.previewVideoUrl, type: "video" });
+  }
+  if (snapshot.previewImageUrl) {
+    media.push({ url: snapshot.previewImageUrl, type: "image" });
+  }
+  return media;
+}
+
+export function resolveProductSnapshot(
+  stored: ReservationProductSnapshot,
+  option?: PackageOptionWithCategory | null,
+  rawStored?: unknown,
+): ReservationProductSnapshot {
+  const withGallery =
+    stored.galleryMedia.length > 0
+      ? stored
+      : { ...stored, galleryMedia: buildGalleryFromPreview(stored) };
+
+  if (!option) return withGallery;
+
+  const fresh = buildProductSnapshotFromOption(option);
+  if (!stored.packageOptionId) return fresh;
+
+  if (rawStored !== undefined && !snapshotNeedsDetailEnrichment(rawStored)) {
+    return withGallery;
+  }
+
+  if (rawStored === undefined && hasSnapshotDetailContent(withGallery)) {
+    return withGallery;
+  }
+
+  return mergeProductSnapshot(withGallery, fresh);
 }
 
 export function parseProductSnapshot(value: unknown): ReservationProductSnapshot {
@@ -192,6 +289,14 @@ export function parseProductSnapshot(value: unknown): ReservationProductSnapshot
       : [],
     shootDescription:
       typeof data.shootDescription === "string" ? data.shootDescription : "",
+    galleryMedia: Array.isArray(data.galleryMedia)
+      ? data.galleryMedia.filter(
+          (item): item is PackageGalleryMedia =>
+            !!item &&
+            typeof item === "object" &&
+            typeof (item as PackageGalleryMedia).url === "string",
+        )
+      : [],
   };
 }
 
@@ -199,4 +304,12 @@ export function isProductSnapshotComplete(
   snapshot: ReservationProductSnapshot,
 ): boolean {
   return Boolean(snapshot.packageOptionId && snapshot.categoryTitle);
+}
+
+export function isProductSnapshotDetailed(
+  snapshot: ReservationProductSnapshot,
+): boolean {
+  return (
+    isProductSnapshotComplete(snapshot) && hasSnapshotDetailContent(snapshot)
+  );
 }
