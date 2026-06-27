@@ -1,5 +1,5 @@
-import { ReservationsAdminClient } from "@/components/admin/reservations-admin-client";
+import { redirect } from "next/navigation";
 
-export default function PastReservationsPage() {
-  return <ReservationsAdminClient view="past" />;
+export default function AdminPastReservationsPage() {
+  redirect("/admin/rezervasyonlar");
 }

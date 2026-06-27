@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { parseDateOnlyInput } from "@/lib/date-only";
+import { calculateCancellationFeeMax, getEarliestShootDateInput } from "@/lib/cancellation-fee";
+import { parseDateOnlyInput, toDateInputValue } from "@/lib/date-only";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -145,6 +146,21 @@ export async function PATCH(
       }
     }
 
+    const resolvedTotalPrice = data.totalPrice ?? existing.totalPrice;
+    const shootDateInputs = data.items
+      ? data.items.map((item) => item.shootDate)
+      : (
+          await prisma.reservationItem.findMany({
+            where: { reservationId: id },
+            select: { shootDate: true },
+            orderBy: { shootDate: "asc" },
+          })
+        ).map((item) => toDateInputValue(item.shootDate));
+    const cancellationFeeMax = calculateCancellationFeeMax(
+      resolvedTotalPrice,
+      getEarliestShootDateInput(shootDateInputs),
+    );
+
     await prisma.reservation.update({
       where: { id },
       data: {
@@ -164,7 +180,7 @@ export async function PATCH(
         groomTc: data.groomTc,
         groomPhone: data.groomPhone,
         totalPrice: data.totalPrice,
-        cancellationFeeMax: data.cancellationFeeMax,
+        cancellationFeeMax,
         discountAmount: data.discountAmount,
         discountEnabled: data.discountEnabled ?? false,
         postShoot: data.postShoot,

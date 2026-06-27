@@ -10,9 +10,11 @@ import { BekographyBrand } from "@/components/bekography-brand";
 export function PurchasedProductInspectSheet({
   product,
   onClose,
+  sectionsTagsOnly = false,
 }: {
   product: ReservationProductSnapshot | null;
   onClose: () => void;
+  sectionsTagsOnly?: boolean;
 }) {
   useEffect(() => {
     if (!product) return;
@@ -62,6 +64,8 @@ export function PurchasedProductInspectSheet({
                 detailSections={sections}
                 showGallery={false}
                 sectionsEmptyMessage="Bu ürün için kayıtlı inceleme metni bulunmuyor."
+                sectionsTagsOnly={sectionsTagsOnly}
+                scrollHint={sectionsTagsOnly ? "" : undefined}
               />
             </div>
           </div>

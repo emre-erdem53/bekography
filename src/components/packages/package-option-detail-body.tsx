@@ -19,6 +19,7 @@ type PackageOptionDetailBodyProps = {
   actions?: ReactNode;
   sectionsEmptyMessage?: string;
   scrollHint?: string;
+  sectionsTagsOnly?: boolean;
 };
 
 export function PackageOptionDetailBody({
@@ -33,6 +34,7 @@ export function PackageOptionDetailBody({
   actions,
   sectionsEmptyMessage,
   scrollHint = "Detaylar için aşağı kaydırın",
+  sectionsTagsOnly = false,
 }: PackageOptionDetailBodyProps) {
   return (
     <>
@@ -77,6 +79,7 @@ export function PackageOptionDetailBody({
       <PackageDetailSectionsList
         sections={detailSections}
         emptyMessage={sectionsEmptyMessage}
+        tagsOnly={sectionsTagsOnly}
       />
     </>
   );

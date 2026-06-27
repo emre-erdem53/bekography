@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ReservationStatus } from "@prisma/client";
 import { nanoid } from "nanoid";
+import { calculateCancellationFeeMax, getEarliestShootDateInput } from "@/lib/cancellation-fee";
 import { parseDateOnlyInput } from "@/lib/date-only";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
@@ -46,7 +47,6 @@ async function loadReservationYearRows(): Promise<ReservationYearRow[]> {
       r.status
     FROM "Reservation" r
     INNER JOIN "ReservationItem" ri ON ri."reservationId" = r.id
-    WHERE r."deletedAt" IS NULL
     GROUP BY r.id, r.status
   `;
 }
@@ -56,7 +56,6 @@ async function loadReservationIdsForYear(year: number): Promise<string[]> {
     SELECT r.id
     FROM "Reservation" r
     INNER JOIN "ReservationItem" ri ON ri."reservationId" = r.id
-    WHERE r."deletedAt" IS NULL
     GROUP BY r.id
     HAVING EXTRACT(YEAR FROM MIN(ri."shootDate")) = ${year}
   `;
@@ -69,59 +68,29 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const view = searchParams.get("view") ?? "active";
     const currentYear = getCurrentReservationYear();
     const selectedYear =
       parseReservationYearParam(searchParams.get("year")) ?? currentYear;
 
-    const inactiveStatuses: ReservationStatus[] = ["iptal", "teslim_edildi"];
+    const yearRows = await loadReservationYearRows();
+    const yearOptions = buildYearOptions(yearRows, currentYear);
+    const reservationIds = await loadReservationIdsForYear(selectedYear);
 
-    if (view === "active") {
-      const yearRows = await loadReservationYearRows();
-      const yearOptions = buildYearOptions(yearRows, currentYear);
-      const reservationIds = await loadReservationIdsForYear(selectedYear);
+    const reservations = reservationIds.length
+      ? await prisma.reservation.findMany({
+          where: {
+            id: { in: reservationIds },
+          },
+          orderBy: { createdAt: "desc" },
+          include: reservationListInclude,
+        })
+      : [];
 
-      const reservations = reservationIds.length
-        ? await prisma.reservation.findMany({
-            where: {
-              id: { in: reservationIds },
-              deletedAt: null,
-              ...(selectedYear >= currentYear
-                ? { status: { notIn: inactiveStatuses } }
-                : {}),
-            },
-            orderBy: { createdAt: "desc" },
-            include: reservationListInclude,
-          })
-        : [];
-
-      return NextResponse.json({
-        reservations,
-        yearOptions,
-        selectedYear,
-      });
-    }
-
-    const where =
-      view === "deleted"
-        ? { deletedAt: { not: null } }
-        : view === "past"
-          ? { status: "teslim_edildi" as ReservationStatus, deletedAt: null }
-          : {
-              status: { notIn: inactiveStatuses },
-              deletedAt: null,
-            };
-
-    const reservations = await prisma.reservation.findMany({
-      where,
-      orderBy:
-        view === "deleted"
-          ? { deletedAt: "desc" }
-          : { createdAt: "desc" },
-      include: reservationListInclude,
+    return NextResponse.json({
+      reservations,
+      yearOptions,
+      selectedYear,
     });
-
-    return NextResponse.json({ reservations });
   } catch (error) {
     console.error("GET /api/admin/reservations", error);
     return NextResponse.json(
@@ -164,6 +133,10 @@ export async function POST(request: Request) {
 
     const productSnapshots = await loadProductSnapshotsForItems(data.items);
     const nameFields = reservationNameFieldsFromInput(data);
+    const cancellationFeeMax = calculateCancellationFeeMax(
+      data.totalPrice,
+      getEarliestShootDateInput(data.items.map((item) => item.shootDate)),
+    );
 
     const reservation = await prisma.reservation.create({
       data: {
@@ -175,7 +148,7 @@ export async function POST(request: Request) {
         groomTc: data.groomTc ?? "",
         groomPhone: data.groomPhone,
         totalPrice: data.totalPrice,
-        cancellationFeeMax: data.cancellationFeeMax,
+        cancellationFeeMax,
         discountAmount: data.discountAmount,
         discountEnabled: data.discountEnabled ?? false,
         postShoot: data.postShoot,

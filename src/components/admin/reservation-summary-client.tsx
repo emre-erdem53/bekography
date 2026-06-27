@@ -83,7 +83,7 @@ export function ReservationSummaryClient({
         </p>
       ) : null}
 
-      <TrackingOrderView data={trackingData} exportRef={exportRef} />
+      <TrackingOrderView data={trackingData} exportRef={exportRef} sectionsTagsOnly />
     </div>
   );
 }

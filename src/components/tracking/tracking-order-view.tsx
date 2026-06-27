@@ -19,8 +19,7 @@ import {
 import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
 import { TrackingPurchasedProducts } from "@/components/tracking/tracking-purchased-products";
 
-const CANCELLATION_POLICY =
-  "30 günden fazla süre kalan bir çekimi iptal eden taraf karşı tarafa toplam ücretin %50'sini cayma bedeli olarak öder. 30 günden daha az bir süre varsa bu oran %75'tir. Sözleşmedeki mücbir sebeplerle iptal olursa oran %25'tir.";
+import { CANCELLATION_POLICY } from "@/lib/cancellation-fee";
 
 export const TRACKING_PAGE_TOP = "pt-28 md:pt-32";
 
@@ -42,8 +41,11 @@ export function TrackingPageShell({
 
 export const ReservationOrderDocument = forwardRef<
   HTMLDivElement,
-  { data: TrackingData; showCoupleHeader?: boolean }
->(function ReservationOrderDocument({ data, showCoupleHeader = true }, ref) {
+  { data: TrackingData; showCoupleHeader?: boolean; sectionsTagsOnly?: boolean }
+>(function ReservationOrderDocument(
+  { data, showCoupleHeader = true, sectionsTagsOnly = false },
+  ref,
+) {
   return (
     <div ref={ref} className="mx-auto max-w-5xl">
       {showCoupleHeader ? (
@@ -122,7 +124,10 @@ export const ReservationOrderDocument = forwardRef<
         </div>
       </section>
 
-      <TrackingPurchasedProducts products={data.purchasedProducts} />
+      <TrackingPurchasedProducts
+        products={data.purchasedProducts}
+        sectionsTagsOnly={sectionsTagsOnly}
+      />
 
       <div className="mt-8 flex gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm leading-relaxed text-amber-100/90">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
@@ -208,13 +213,19 @@ export function CustomerTrackingView({ data }: { data: TrackingData }) {
 export function TrackingOrderView({
   data,
   exportRef,
+  sectionsTagsOnly = false,
 }: {
   data: TrackingData;
   exportRef?: Ref<HTMLDivElement>;
+  sectionsTagsOnly?: boolean;
 }) {
   return (
     <TrackingPageShell>
-      <TrackingOrderBody data={data} exportRef={exportRef} />
+      <TrackingOrderBody
+        data={data}
+        exportRef={exportRef}
+        sectionsTagsOnly={sectionsTagsOnly}
+      />
     </TrackingPageShell>
   );
 }
@@ -222,16 +233,22 @@ export function TrackingOrderView({
 function TrackingOrderBody({
   data,
   exportRef,
+  sectionsTagsOnly = false,
 }: {
   data: TrackingData;
   exportRef?: Ref<HTMLDivElement>;
+  sectionsTagsOnly?: boolean;
 }) {
   const trackingData = normalizeTrackingData(data);
 
   return (
     <div ref={exportRef} className="mx-auto max-w-5xl">
       <CoupleOrderHeader data={trackingData} />
-      <ReservationOrderDocument data={trackingData} showCoupleHeader={false} />
+      <ReservationOrderDocument
+        data={trackingData}
+        showCoupleHeader={false}
+        sectionsTagsOnly={sectionsTagsOnly}
+      />
     </div>
   );
 }

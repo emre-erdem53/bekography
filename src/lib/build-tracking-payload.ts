@@ -4,6 +4,8 @@ import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ORDER,
 } from "@/lib/constants";
+import { calculateCancellationFeeMax } from "@/lib/cancellation-fee";
+import { toDateInputValue } from "@/lib/date-only";
 import { getPaymentTypeLabels } from "@/lib/site-settings";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import { formatCoupleName } from "@/lib/reservation-utils";
@@ -130,7 +132,12 @@ function buildPayloadFromReservation(
     statusLabel: RESERVATION_STATUS_LABELS[reservation.status],
     timeline,
     totalPrice: reservation.totalPrice,
-    cancellationFeeMax: reservation.cancellationFeeMax,
+    cancellationFeeMax: calculateCancellationFeeMax(
+      reservation.totalPrice,
+      reservation.items[0]?.shootDate
+        ? toDateInputValue(reservation.items[0].shootDate)
+        : null,
+    ),
     discountAmount: reservation.discountAmount,
     discountEnabled: reservation.discountEnabled,
     postShoot,

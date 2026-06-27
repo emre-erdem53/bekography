@@ -7,8 +7,10 @@ import { PurchasedProductInspectSheet } from "@/components/tracking/purchased-pr
 
 export function TrackingPurchasedProducts({
   products,
+  sectionsTagsOnly = false,
 }: {
   products: ReservationProductSnapshot[];
+  sectionsTagsOnly?: boolean;
 }) {
   const [selectedProduct, setSelectedProduct] =
     useState<ReservationProductSnapshot | null>(null);
@@ -66,6 +68,7 @@ export function TrackingPurchasedProducts({
       <PurchasedProductInspectSheet
         product={selectedProduct}
         onClose={() => setSelectedProduct(null)}
+        sectionsTagsOnly={sectionsTagsOnly}
       />
     </>
   );

@@ -4,7 +4,7 @@ export const RESERVATION_DELIVERED_CONFIRM =
   "Bu rezervasyonu teslim edildi olarak işaretlediğinizde tamamlandı olarak müşteri bilgilendirilecektir. Onaylıyor musunuz?";
 
 export const RESERVATION_DELETE_CONFIRM =
-  "Bu rezervasyonu silmek istediğinize emin misiniz? Silinen rezervasyonlar 30 gün boyunca geri getirilebilir.";
+  "Bu rezervasyonu silmek istediğinize emin misiniz? Silinen rezervasyon listede kalır ve istediğiniz zaman geri getirilebilir.";
 
 export const RESERVATION_RESTORE_CONFIRM =
   "Bu rezervasyonu geri getirmek istediğinize emin misiniz?";

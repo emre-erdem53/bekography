@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import type { ReservationStatus } from "@prisma/client";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { ReservationStatusFilters } from "@/components/admin/reservation-status-filters";
 import {
@@ -41,6 +42,7 @@ type Reservation = {
   brideFirstName?: string;
   groomName: string;
   groomFirstName?: string;
+  status: ReservationStatus;
   postShoot: unknown;
   deletedAt: string | null;
   items: ReservationItem[];
@@ -51,21 +53,25 @@ type YearOption = {
   count: number;
 };
 
-type ReservationsAdminClientProps = {
-  view?: "active" | "past" | "deleted";
-};
+function getReservationListSurfaceClass(reservation: Reservation): string {
+  if (reservation.deletedAt) {
+    return "border-red-500/25 bg-red-500/10 hover:border-red-500/35";
+  }
+  if (reservation.status === "teslim_edildi") {
+    return "border-emerald-500/25 bg-emerald-500/10 hover:border-emerald-500/35";
+  }
+  return "border-white/10 bg-[#0f0f0f] hover:border-white/20";
+}
 
-export function ReservationsAdminClient({
-  view = "active",
-}: ReservationsAdminClientProps) {
+function isReservationManageable(reservation: Reservation): boolean {
+  return !reservation.deletedAt && reservation.status !== "teslim_edildi";
+}
+
+export function ReservationsAdminClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isPast = view === "past";
-  const isDeleted = view === "deleted";
   const currentYear = getCurrentReservationYear();
-  const selectedYear = isPast || isDeleted
-    ? currentYear
-    : Number(searchParams.get("year")) || currentYear;
+  const selectedYear = Number(searchParams.get("year")) || currentYear;
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [yearOptions, setYearOptions] = useState<YearOption[]>([
     { year: currentYear, count: 0 },
@@ -100,10 +106,7 @@ export function ReservationsAdminClient({
     setLoading(true);
     setStageFilter(null);
     setNameQuery("");
-    const params = new URLSearchParams({ view });
-    if (!isPast && !isDeleted) {
-      params.set("year", String(selectedYear));
-    }
+    const params = new URLSearchParams({ year: String(selectedYear) });
     fetch(`/api/admin/reservations?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -115,17 +118,19 @@ export function ReservationsAdminClient({
         if (Array.isArray(data.yearOptions)) {
           const options = data.yearOptions as YearOption[];
           if (!options.some((option) => option.year === selectedYear)) {
-            setYearOptions([
-              ...options,
-              { year: selectedYear, count: data.reservations?.length ?? 0 },
-            ].sort((a, b) => b.year - a.year));
+            setYearOptions(
+              [
+                ...options,
+                { year: selectedYear, count: data.reservations?.length ?? 0 },
+              ].sort((a, b) => b.year - a.year),
+            );
           } else {
             setYearOptions(options);
           }
         }
       })
       .finally(() => setLoading(false));
-  }, [view, selectedYear, isPast, isDeleted]);
+  }, [selectedYear]);
 
   function handleYearChange(year: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -145,102 +150,76 @@ export function ReservationsAdminClient({
   async function handleDelete(id: string) {
     const deleted = await deleteReservation(id);
     if (!deleted) return;
-    setReservations((prev) => prev.filter((item) => item.id !== id));
+    setReservations((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, deletedAt: new Date().toISOString() }
+          : item,
+      ),
+    );
   }
 
   async function handleRestore(id: string) {
     const restored = await restoreReservation(id);
     if (!restored) return;
-    setReservations((prev) => prev.filter((item) => item.id !== id));
+    setReservations((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, deletedAt: null } : item,
+      ),
+    );
   }
 
   const detailHref = (id: string) => `/admin/rezervasyonlar/${id}`;
-
-  const pageTitle = isDeleted
-    ? "Silinen Rezervasyonlar"
-    : isPast
-      ? "Geçmiş Rezervasyonlar"
-      : "Rezervasyonlar";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          {isPast || isDeleted ? (
-            <Link
-              href="/admin/rezervasyonlar"
-              className="text-sm text-zinc-400 hover:text-white"
-            >
-              ← Rezervasyonlar
-            </Link>
-          ) : null}
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="text-xl font-semibold text-white sm:text-2xl">
-              {pageTitle}
+              Rezervasyonlar
             </h1>
-            {!isPast && !isDeleted ? (
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <select
-                    value={selectedYear}
-                    onChange={(event) =>
-                      handleYearChange(Number(event.target.value))
-                    }
-                    aria-label="Rezervasyon yılı"
-                    className="appearance-none rounded-xl border border-white/10 bg-[#141414] py-1.5 pl-3 pr-8 text-sm font-medium text-white outline-none focus:border-white/30"
-                  >
-                    {yearOptions.map((option) => (
-                      <option key={option.year} value={option.year}>
-                        {option.year} ({option.count})
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                    aria-hidden
-                  />
-                </div>
-                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-300">
-                  {selectedYearCount} rezervasyon
-                </span>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <select
+                  value={selectedYear}
+                  onChange={(event) =>
+                    handleYearChange(Number(event.target.value))
+                  }
+                  aria-label="Rezervasyon yılı"
+                  className="appearance-none rounded-xl border border-white/10 bg-[#141414] py-1.5 pl-3 pr-8 text-sm font-medium text-white outline-none focus:border-white/30"
+                >
+                  {yearOptions.map((option) => (
+                    <option key={option.year} value={option.year}>
+                      {option.year} ({option.count})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                  aria-hidden
+                />
               </div>
-            ) : null}
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-300">
+                {selectedYearCount} rezervasyon
+              </span>
+            </div>
           </div>
           <p className="mt-1 text-sm text-zinc-400">
-            {isDeleted
-              ? "Silinen rezervasyonları 30 gün içinde geri getirebilirsiniz"
-              : isPast
-                ? "Teslim edilmiş rezervasyonları görüntüleyin"
-                : selectedYear < currentYear
-                  ? `${selectedYear} yılına ait tüm rezervasyonlar`
-                  : "Aktif rezervasyonları yönetin"}
+            {selectedYear < currentYear
+              ? `${selectedYear} yılına ait tüm rezervasyonlar`
+              : "Aktif, tamamlanan ve silinen rezervasyonları yönetin"}
           </p>
         </div>
-        {!isPast && !isDeleted ? (
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Link
-              href="/admin/rezervasyonlar/silinenler"
-              className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/5 sm:w-auto"
-            >
-              Silinenler
-            </Link>
-            <Link
-              href="/admin/rezervasyonlar/gecmis"
-              className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/5 sm:w-auto"
-            >
-              Geçmiş
-            </Link>
-            <Link
-              href="/admin/rezervasyonlar/yeni"
-              className="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
-            >
-              Yeni Rezervasyon
-            </Link>
-          </div>
-        ) : null}
+        <Link
+          href="/admin/rezervasyonlar/yeni"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
+        >
+          Yeni Rezervasyon
+        </Link>
       </div>
 
-      {!isPast && !isDeleted && !loading && reservations.length > 0 ? (
+      {!loading && reservations.length > 0 ? (
         <ReservationStatusFilters
           reservations={reservations}
           stageFilter={stageFilter}
@@ -254,34 +233,13 @@ export function ReservationsAdminClient({
         />
       ) : null}
 
-      {(isPast || isDeleted) && !loading && reservations.length > 0 ? (
-        <section className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 sm:p-5">
-          <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-zinc-400">
-              Gelin veya damat adı
-            </span>
-            <input
-              type="search"
-              value={nameQuery}
-              onChange={(event) => setNameQuery(event.target.value)}
-              placeholder="Ad veya soyad yazın..."
-              className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-white/30"
-            />
-          </label>
-        </section>
-      ) : null}
-
       {loading ? (
         <p className="text-zinc-400">Yükleniyor...</p>
       ) : reservations.length === 0 ? (
         <p className="text-zinc-400">
-          {isDeleted
-            ? "Silinen rezervasyon yok."
-            : isPast
-              ? "Henüz teslim edilmiş rezervasyon yok."
-              : selectedYear < currentYear
-                ? `${selectedYear} yılı için rezervasyon bulunmuyor.`
-                : "Aktif rezervasyon bulunmuyor."}
+          {selectedYear < currentYear
+            ? `${selectedYear} yılı için rezervasyon bulunmuyor.`
+            : "Rezervasyon bulunmuyor."}
         </p>
       ) : filteredReservations.length === 0 ? (
         <p className="text-zinc-400">
@@ -302,7 +260,7 @@ export function ReservationsAdminClient({
                     router.push(detailHref(reservation.id));
                   }
                 }}
-                className="cursor-pointer rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 transition-colors hover:border-white/20"
+                className={`cursor-pointer rounded-2xl border p-4 transition-colors ${getReservationListSurfaceClass(reservation)}`}
               >
                 <CoupleNames
                   brideFirstName={reservation.brideFirstName}
@@ -339,7 +297,7 @@ export function ReservationsAdminClient({
                       />
                     }
                   />
-                  {isDeleted && reservation.deletedAt ? (
+                  {reservation.deletedAt ? (
                     <Row
                       label="Silinme"
                       value={format(
@@ -350,50 +308,43 @@ export function ReservationsAdminClient({
                     />
                   ) : null}
                 </dl>
-                {!isDeleted ? (
-                  <div
-                    className="mt-4 flex gap-4 border-t border-white/5 pt-4 text-sm"
-                    onClick={(event) => event.stopPropagation()}
+                <div
+                  className="mt-4 flex gap-4 border-t border-white/5 pt-4 text-sm"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Link
+                    href={detailHref(reservation.id)}
+                    className="font-medium text-white hover:text-zinc-200"
                   >
-                    {!isPast ? (
-                      <>
-                        <Link
-                          href={detailHref(reservation.id)}
-                          className="font-medium text-white hover:text-zinc-200"
-                        >
-                          Özet
-                        </Link>
-                        <Link
-                          href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
-                          className="text-zinc-400 hover:text-white"
-                        >
-                          Düzenle
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(reservation.id)}
-                          className="inline-flex items-center gap-1 text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Sil
-                        </button>
-                      </>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div
-                    className="mt-4 border-t border-white/5 pt-4"
-                    onClick={(event) => event.stopPropagation()}
-                  >
+                    Özet
+                  </Link>
+                  {reservation.deletedAt ? (
                     <button
                       type="button"
                       onClick={() => handleRestore(reservation.id)}
-                      className="text-sm font-medium text-emerald-300 hover:text-emerald-200"
+                      className="text-emerald-300 hover:text-emerald-200"
                     >
                       Geri Getir
                     </button>
-                  </div>
-                )}
+                  ) : isReservationManageable(reservation) ? (
+                    <>
+                      <Link
+                        href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
+                        className="text-zinc-400 hover:text-white"
+                      >
+                        Düzenle
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(reservation.id)}
+                        className="inline-flex items-center gap-1 text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Sil
+                      </button>
+                    </>
+                  ) : null}
+                </div>
               </article>
             ))}
           </div>
@@ -407,9 +358,6 @@ export function ReservationsAdminClient({
                   <th className="px-4 py-3 font-medium">Paket · Tür</th>
                   <th className="px-4 py-3 font-medium">Çekim Yeri</th>
                   <th className="px-4 py-3 font-medium">Aşama</th>
-                  {isDeleted ? (
-                    <th className="px-4 py-3 font-medium">Silinme</th>
-                  ) : null}
                   <th className="px-4 py-3 font-medium" />
                 </tr>
               </thead>
@@ -417,7 +365,7 @@ export function ReservationsAdminClient({
                 {filteredReservations.map((reservation) => (
                   <tr
                     key={reservation.id}
-                    className="cursor-pointer border-t border-white/5 transition-colors hover:bg-white/[0.03]"
+                    className={`cursor-pointer border-t border-white/5 transition-colors hover:brightness-110 ${getReservationListSurfaceClass(reservation)}`}
                     onClick={() => router.push(detailHref(reservation.id))}
                   >
                     <td className="px-4 py-3">
@@ -448,53 +396,44 @@ export function ReservationsAdminClient({
                         separator=" · "
                       />
                     </td>
-                    {isDeleted ? (
-                      <td className="px-4 py-3 text-zinc-400">
-                        {reservation.deletedAt
-                          ? format(
-                              new Date(reservation.deletedAt),
-                              "d MMM yyyy",
-                              { locale: tr },
-                            )
-                          : "—"}
-                      </td>
-                    ) : null}
                     <td
                       className="px-4 py-3"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      {isDeleted ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRestore(reservation.id)}
-                          className="text-emerald-300 hover:text-emerald-200"
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={detailHref(reservation.id)}
+                          className="font-medium text-white hover:text-zinc-200"
                         >
-                          Geri Getir
-                        </button>
-                      ) : !isPast ? (
-                        <div className="flex items-center gap-3">
-                          <Link
-                            href={detailHref(reservation.id)}
-                            className="font-medium text-white hover:text-zinc-200"
-                          >
-                            Özet
-                          </Link>
-                          <Link
-                            href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
-                            className="text-zinc-400 hover:text-white"
-                          >
-                            Düzenle
-                          </Link>
+                          Özet
+                        </Link>
+                        {reservation.deletedAt ? (
                           <button
                             type="button"
-                            onClick={() => handleDelete(reservation.id)}
-                            className="text-red-400 hover:text-red-300"
-                            aria-label="Sil"
+                            onClick={() => handleRestore(reservation.id)}
+                            className="text-emerald-300 hover:text-emerald-200"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            Geri Getir
                           </button>
-                        </div>
-                      ) : null}
+                        ) : isReservationManageable(reservation) ? (
+                          <>
+                            <Link
+                              href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
+                              className="text-zinc-400 hover:text-white"
+                            >
+                              Düzenle
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(reservation.id)}
+                              className="text-red-400 hover:text-red-300"
+                              aria-label="Sil"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

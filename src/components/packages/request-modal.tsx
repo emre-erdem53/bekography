@@ -25,6 +25,8 @@ import {
   canCreateRequestForItems,
   getCompanionRequirementMessage,
 } from "@/lib/cart-companion-rules";
+import { PhoneInput } from "@/components/forms/phone-input";
+import { isValidTurkishMobilePhone } from "@/lib/phone-utils";
 
 type RequestModalProps = {
   open: boolean;
@@ -37,6 +39,7 @@ type CategoryFields = Record<string, { shootDate: string; city: string }>;
 const emptyForm = {
   contactFirstName: "",
   contactLastName: "",
+  contactPhone: "",
   contactRole: null as "gelin" | "damat" | null,
 };
 
@@ -154,6 +157,7 @@ export function RequestModal({
 
   const [contactFirstName, setContactFirstName] = useState("");
   const [contactLastName, setContactLastName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [contactRole, setContactRole] = useState<"gelin" | "damat" | null>(
     null,
   );
@@ -191,6 +195,7 @@ export function RequestModal({
   function resetForm() {
     setContactFirstName(emptyForm.contactFirstName);
     setContactLastName(emptyForm.contactLastName);
+    setContactPhone(emptyForm.contactPhone);
     setContactRole(emptyForm.contactRole);
     setCategoryFields({});
     setSameDay(false);
@@ -259,6 +264,12 @@ export function RequestModal({
       return;
     }
 
+    if (!isValidTurkishMobilePhone(contactPhone)) {
+      setLoading(false);
+      setError("Telefon numarası 10 haneli olmalı ve 5 ile başlamalıdır.");
+      return;
+    }
+
     const payloadItems = items.map((item) => {
       const category = resolvedFields[item.categoryId]!;
       return {
@@ -275,6 +286,7 @@ export function RequestModal({
       body: JSON.stringify({
         contactFirstName: contactFirstName.trim(),
         contactLastName: contactLastName.trim(),
+        contactPhone,
         contactRole,
         items: payloadItems,
       }),
@@ -381,6 +393,14 @@ export function RequestModal({
                         />
                       </Field>
                     </div>
+                    <Field label="Telefon" required>
+                      <PhoneInput
+                        value={contactPhone}
+                        onChange={setContactPhone}
+                        required
+                        className={inputClass}
+                      />
+                    </Field>
                     <div className="flex flex-wrap gap-4">
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-white">
                         <input

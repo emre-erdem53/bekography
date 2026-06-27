@@ -33,14 +33,8 @@ export function getReservationYearFromShootDates(
 export function reservationCountsForYear(
   rows: Array<{ year: number; status: ReservationStatus }>,
   year: number,
-  currentYear = getCurrentReservationYear(),
 ): number {
-  const inactive = new Set(INACTIVE_RESERVATION_STATUSES);
-  return rows.filter((row) => {
-    if (row.year !== year) return false;
-    if (year === currentYear && inactive.has(row.status)) return false;
-    return true;
-  }).length;
+  return rows.filter((row) => row.year === year).length;
 }
 
 export function buildYearOptions(
@@ -54,6 +48,6 @@ export function buildYearOptions(
     .sort((a, b) => b - a)
     .map((year) => ({
       year,
-      count: reservationCountsForYear(rows, year, currentYear),
+      count: reservationCountsForYear(rows, year),
     }));
 }

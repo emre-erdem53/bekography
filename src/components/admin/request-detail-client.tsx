@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { RequestStatus } from "@prisma/client";
@@ -36,7 +35,6 @@ type RequestDetail = {
 };
 
 export function RequestDetailClient({ requestId }: { requestId: string }) {
-  const router = useRouter();
   const { labels: paymentLabels } = usePaymentTypeCopy();
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,10 +54,6 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
     });
 
     if (response.ok) {
-      if (status === "iptal") {
-        router.push("/admin/talepler");
-        return;
-      }
       setRequest((prev) => (prev ? { ...prev, status } : prev));
     }
   }

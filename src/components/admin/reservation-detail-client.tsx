@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import type { ReservationStatus } from "@prisma/client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Check } from "lucide-react";
-import { completeReservation } from "@/components/admin/reservation-status-actions";
-import { formatPrice } from "@/lib/constants";
+import { changeReservationStatus } from "@/components/admin/reservation-status-actions";
+import { StatusSelect } from "@/components/admin/status-select";
+import { formatPrice, RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
-import { formatCoupleName } from "@/lib/reservation-utils";
+import { formatCoupleName, formatTurkishPhone } from "@/lib/reservation-utils";
 import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import type { TrackingData } from "@/lib/tracking-types";
@@ -66,13 +66,12 @@ export function ReservationDetailClient({
 }: {
   reservationId: string;
 }) {
-  const router = useRouter();
   const { labels: paymentLabels } = usePaymentTypeCopy();
   const [reservation, setReservation] = useState<ReservationDetail | null>(null);
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [completing, setCompleting] = useState(false);
+  const [statusChanging, setStatusChanging] = useState(false);
   const [togglingInstallmentId, setTogglingInstallmentId] = useState<
     string | null
   >(null);
@@ -102,18 +101,50 @@ export function ReservationDetailClient({
     );
   }
 
-  async function handleCompleteReservation() {
-    if (!reservation || reservation.status === "teslim_edildi") return;
+  async function handleStatusChange(nextStatus: ReservationStatus) {
+    if (!reservation || nextStatus === reservation.status) return;
 
-    setCompleting(true);
-    const result = await completeReservation(reservationId);
-    setCompleting(false);
+    setStatusChanging(true);
+    const result = await changeReservationStatus(
+      reservationId,
+      nextStatus,
+      reservation.status as ReservationStatus,
+    );
+    setStatusChanging(false);
 
     if (!result) return;
 
+    const changedAt = new Date().toISOString();
+
     if (result.kind === "delivered") {
-      router.push("/admin/rezervasyonlar/gecmis");
+      setReservation((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "teslim_edildi",
+              completedAt: changedAt,
+              statusHistory: [
+                ...prev.statusHistory,
+                { status: "teslim_edildi", changedAt },
+              ],
+            }
+          : prev,
+      );
+      return;
     }
+
+    setReservation((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: result.status,
+            statusHistory: [
+              ...prev.statusHistory,
+              { status: result.status, changedAt },
+            ],
+          }
+        : prev,
+    );
   }
 
   async function copyLink() {
@@ -188,6 +219,12 @@ export function ReservationDetailClient({
   });
   const linkExpiresAt = getTrackingLinkExpiresAt(completedAt);
   const linkExpired = isTrackingLinkExpired(completedAt);
+  const statusOptions = Object.entries(RESERVATION_STATUS_LABELS).map(
+    ([value, label]) => ({
+      value: value as ReservationStatus,
+      label,
+    }),
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -210,28 +247,27 @@ export function ReservationDetailClient({
           ) : null}
         </div>
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="space-y-1">
+            <span className="block text-xs font-medium text-zinc-500">Durum</span>
+            <StatusSelect
+              value={reservation.status as ReservationStatus}
+              options={statusOptions}
+              disabled={statusChanging}
+              onChange={handleStatusChange}
+            />
+          </div>
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/ozet`}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5 sm:mt-5"
           >
             Müşteri Önizlemesi
           </Link>
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
-            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
+            className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5 sm:mt-5"
           >
             Düzenle
           </Link>
-          {!isCompleted ? (
-            <button
-              type="button"
-              onClick={handleCompleteReservation}
-              disabled={completing}
-              className="inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-50"
-            >
-              {completing ? "Kaydediliyor..." : "Rezervasyonu Tamamla"}
-            </button>
-          ) : null}
         </div>
       </div>
 
@@ -300,11 +336,11 @@ export function ReservationDetailClient({
         <div className="grid-safe grid gap-4 md:grid-cols-2">
           <Info label="Damat" value={reservation.groomName} />
           <Info label="Damat TC" value={reservation.groomTc || "—"} />
-          <Info label="Damat Tel" value={reservation.groomPhone} />
+          <Info label="Damat Tel" value={formatTurkishPhone(reservation.groomPhone)} />
           <div />
           <Info label="Gelin" value={reservation.brideName} />
           <Info label="Gelin TC" value={reservation.brideTc || "—"} />
-          <Info label="Gelin Tel" value={reservation.bridePhone} />
+          <Info label="Gelin Tel" value={formatTurkishPhone(reservation.bridePhone)} />
           {reservation.notes ? <Info label="Notlar" value={reservation.notes} /> : null}
         </div>
       </Section>
@@ -369,14 +405,14 @@ export function ReservationDetailClient({
         </div>
       </Section>
 
-      <Section title="Çekim Sonrası">
-        <PostShootSectionReadOnly title="Dijital" section={postShoot.digital} />
-        <PostShootSectionReadOnly title="Düzenleme" section={postShoot.editing} />
+      <Section title="Süreç Etiketleri">
+        <PostShootTagsReadOnly title="Dijital" tags={postShoot.digital.pills} />
+        <PostShootTagsReadOnly title="Düzenleme" tags={postShoot.editing.pills} />
         {showPrinting ? (
-          <PostShootSectionReadOnly title="Baskı" section={postShoot.printing} />
+          <PostShootTagsReadOnly title="Baskı" tags={postShoot.printing.pills} />
         ) : null}
         <p className="mt-2 text-xs text-zinc-500">
-          Metinleri düzenlemek için{" "}
+          Etiketleri düzenlemek için{" "}
           <Link
             href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
             className="text-zinc-300 underline hover:text-white"
@@ -462,35 +498,28 @@ function Section({
   );
 }
 
-function PostShootSectionReadOnly({
+function PostShootTagsReadOnly({
   title,
-  section,
+  tags,
 }: {
   title: string;
-  section: { pills: string[]; description: string };
+  tags: string[];
 }) {
-  if (!section.description.trim() && section.pills.length === 0) {
-    return null;
-  }
+  if (tags.length === 0) return null;
 
   return (
     <div className="mb-4 rounded-xl bg-white/5 p-4">
       <h3 className="text-sm font-medium text-white">{title}</h3>
-      {section.pills.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {section.pills.map((pill) => (
-            <span
-              key={pill}
-              className="rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-300"
-            >
-              {pill}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {section.description ? (
-        <p className="mt-2 text-sm text-zinc-400">{section.description}</p>
-      ) : null}
+      <div className="mt-2 flex flex-wrap gap-2">
+        {tags.map((pill) => (
+          <span
+            key={pill}
+            className="rounded-full bg-white/10 px-3 py-1 text-xs text-zinc-300"
+          >
+            {pill}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

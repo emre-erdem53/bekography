@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { isValidHexColor, normalizeHexColor } from "@/lib/color-utils";
+import {
+  isValidTurkishMobilePhone,
+  normalizeTurkishMobileForStorage,
+} from "@/lib/phone-utils";
 
 const hexColorSchema = z
   .string()
@@ -22,10 +26,17 @@ const tcSchema = z
 const personFirstNameSchema = z.string().min(1, "Ad girin").max(80);
 const personLastNameSchema = z.string().min(1, "Soyad girin").max(80);
 
+const turkishMobilePhoneSchema = z
+  .string()
+  .transform((value) => normalizeTurkishMobileForStorage(value))
+  .refine((value) => isValidTurkishMobilePhone(value), {
+    message: "Geçerli bir cep telefonu girin (10 haneli, 5 ile başlamalı)",
+  });
+
 export const createRequestSchema = z.object({
   contactFirstName: personFirstNameSchema,
   contactLastName: personLastNameSchema,
-  contactPhone: z.string().optional().default(""),
+  contactPhone: turkishMobilePhoneSchema,
   contactRole: z.enum(["gelin", "damat"], {
     message: "Gelin veya damat seçin",
   }),
@@ -157,11 +168,11 @@ export const createReservationSchema = z.object({
   brideFirstName: personFirstNameSchema,
   brideLastName: personLastNameSchema,
   brideTc: tcSchema.optional(),
-  bridePhone: z.string().min(10, "Gelin telefonu girin"),
+  bridePhone: turkishMobilePhoneSchema,
   groomFirstName: personFirstNameSchema,
   groomLastName: personLastNameSchema,
   groomTc: tcSchema.optional(),
-  groomPhone: z.string().min(10, "Damat telefonu girin"),
+  groomPhone: turkishMobilePhoneSchema,
   totalPrice: z.number().int().positive(),
   cancellationFeeMax: z.number().int().min(0),
   discountAmount: z.number().int().min(0),

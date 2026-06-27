@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     const roleLabel = contactRole === "gelin" ? "Gelin" : "Damat";
     const contactFullName = joinPersonName(contactFirstName, contactLastName);
     const customerName = `${contactFullName} (${roleLabel})`;
-    const customerPhone = contactPhone?.trim() || "—";
+    const customerPhone = contactPhone;
 
     const options = await prisma.packageOption.findMany({
       where: {

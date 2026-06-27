@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { differenceInCalendarDays } from "date-fns";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { RESERVATION_RESTORE_DAYS } from "@/lib/constants";
 
 export async function POST(
   _request: Request,
@@ -19,20 +17,6 @@ export async function POST(
       return NextResponse.json(
         { error: "Silinen rezervasyon bulunamadı" },
         { status: 404 },
-      );
-    }
-
-    const daysSinceDelete = differenceInCalendarDays(
-      new Date(),
-      existing.deletedAt,
-    );
-
-    if (daysSinceDelete > RESERVATION_RESTORE_DAYS) {
-      return NextResponse.json(
-        {
-          error: `Bu rezervasyon ${RESERVATION_RESTORE_DAYS} günden fazla süre önce silindiği için geri getirilemez.`,
-        },
-        { status: 400 },
       );
     }
 

@@ -1,3 +1,5 @@
+import { sanitizeTurkishMobileInput } from "@/lib/phone-utils";
+
 export function getTrackingUrl(slug: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   return `${base}/takip/${slug}`;
@@ -89,10 +91,7 @@ export function normalizeTcKimlik(value: string) {
 
 /** Türkiye cep telefonu: 0530 171 42 22 */
 export function formatTurkishPhone(value: string): string {
-  const digits = normalizeTcKimlik(value);
-  if (digits.length === 11 && digits.startsWith("0")) {
-    return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 9)} ${digits.slice(9)}`;
-  }
+  const digits = sanitizeTurkishMobileInput(value);
   if (digits.length === 10) {
     return `0${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6, 8)} ${digits.slice(8)}`;
   }

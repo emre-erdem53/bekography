@@ -1,5 +1,5 @@
-import { ReservationsAdminClient } from "@/components/admin/reservations-admin-client";
+import { redirect } from "next/navigation";
 
-export default function SilinenRezervasyonlarPage() {
-  return <ReservationsAdminClient view="deleted" />;
+export default function AdminDeletedReservationsPage() {
+  redirect("/admin/rezervasyonlar");
 }

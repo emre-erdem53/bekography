@@ -16,10 +16,18 @@ import {
   isOutdoorCategory,
   parsePostShootSnapshot,
   syncPostShootWithItems,
-  type PostShootSection,
   type PostShootSnapshot,
 } from "@/lib/post-shoot";
-import { PostShootSectionEditor } from "@/components/admin/post-shoot-section-editor";
+import { PostShootTagsEditor } from "@/components/admin/post-shoot-section-editor";
+import { PhoneInput } from "@/components/forms/phone-input";
+import {
+  calculateCancellationFeeMax,
+  CANCELLATION_POLICY,
+  describeCancellationFeeRate,
+  getEarliestShootDateInput,
+  resolveCancellationFeeRate,
+} from "@/lib/cancellation-fee";
+import { isValidTurkishMobilePhone, normalizeTurkishMobileForStorage } from "@/lib/phone-utils";
 import {
   formatCoupleName,
   joinPersonName,
@@ -112,9 +120,6 @@ type ReservationFormProps = {
   reservationId?: string;
 };
 
-const CANCELLATION_POLICY =
-  "30 günden fazla süre kalan bir çekimi iptal eden taraf karşı tarafa toplam ücretin %50'sini cayma bedeli olarak öder. 30 günden daha az bir süre varsa bu oran %75'tir. Sözleşmedeki mücbir sebeplerle iptal olursa oran %25'tir.";
-
 export function ReservationForm({ reservationId }: ReservationFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -132,7 +137,6 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [groomTc, setGroomTc] = useState("");
   const [groomPhone, setGroomPhone] = useState("");
   const [totalPrice, setTotalPrice] = useState(0);
-  const [cancellationFeeMax, setCancellationFeeMax] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [notes, setNotes] = useState("");
@@ -163,6 +167,21 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
   const effectiveDiscount = discountEnabled ? discountAmount : 0;
   const expectedPayable = totalPrice - effectiveDiscount;
+
+  const earliestShootDate = useMemo(
+    () => getEarliestShootDateInput(items.map((item) => item.shootDate)),
+    [items],
+  );
+
+  const cancellationFeeRate = useMemo(
+    () => resolveCancellationFeeRate(earliestShootDate),
+    [earliestShootDate],
+  );
+
+  const cancellationFeeMax = useMemo(
+    () => calculateCancellationFeeMax(totalPrice, earliestShootDate),
+    [totalPrice, earliestShootDate],
+  );
 
   const hasTaksitliPayment = useMemo(
     () => hasPartialPayment(items),
@@ -206,7 +225,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       forceReset &&
       postShoot.source === "manual" &&
       !window.confirm(
-        "Manuel düzenlenmiş çekim sonrası metinleri paket incele içeriklerinden yeniden oluşturulacak. Devam edilsin mi?",
+        "Bu rezervasyon için özelleştirilmiş etiketler paket incele etiketleriyle yeniden doldurulacak. Devam edilsin mi?",
       )
     ) {
       return;
@@ -232,14 +251,13 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         setBrideFirstName(reservation.brideFirstName || brideParts.firstName);
         setBrideLastName(reservation.brideLastName || brideParts.lastName);
         setBrideTc(reservation.brideTc ?? "");
-        setBridePhone(reservation.bridePhone);
+        setBridePhone(normalizeTurkishMobileForStorage(reservation.bridePhone));
         setGroomFirstName(reservation.groomFirstName || groomParts.firstName);
         setGroomLastName(reservation.groomLastName || groomParts.lastName);
         setGroomTc(reservation.groomTc ?? "");
-        setGroomPhone(reservation.groomPhone);
+        setGroomPhone(normalizeTurkishMobileForStorage(reservation.groomPhone));
         setTotalPrice(reservation.totalPrice);
         setTotalPriceManual(true);
-        setCancellationFeeMax(reservation.cancellationFeeMax);
         setDiscountAmount(reservation.discountAmount);
         setDiscountEnabled(
           reservation.discountEnabled ?? reservation.discountAmount > 0,
@@ -325,13 +343,13 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           setBrideFirstName(contactFirstName);
           setBrideLastName(contactLastName);
           if (request.customerPhone && request.customerPhone !== "—") {
-            setBridePhone(request.customerPhone);
+            setBridePhone(normalizeTurkishMobileForStorage(request.customerPhone));
           }
         } else if (contactRole === "damat") {
           setGroomFirstName(contactFirstName);
           setGroomLastName(contactLastName);
           if (request.customerPhone && request.customerPhone !== "—") {
-            setGroomPhone(request.customerPhone);
+            setGroomPhone(normalizeTurkishMobileForStorage(request.customerPhone));
           }
         }
         const defaultDate = toDateInputValue(request.shootDate);
@@ -522,13 +540,13 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     });
   }
 
-  function updatePostShootSection(
+  function updatePostShootTags(
     key: "digital" | "editing" | "printing",
-    section: PostShootSection,
+    pills: string[],
   ) {
     setPostShoot((prev) => ({
       ...prev,
-      [key]: section,
+      [key]: { ...prev[key], pills },
       source: "manual",
     }));
   }
@@ -536,6 +554,16 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (dateConflicts.length > 0) return;
+
+    if (!isValidTurkishMobilePhone(groomPhone)) {
+      setError("Damat telefonu 10 haneli olmalı ve 5 ile başlamalıdır.");
+      return;
+    }
+
+    if (!isValidTurkishMobilePhone(bridePhone)) {
+      setError("Gelin telefonu 10 haneli olmalı ve 5 ile başlamalıdır.");
+      return;
+    }
 
     if (installmentTotal !== expectedPayable) {
       const confirmed = window.confirm(
@@ -670,73 +698,79 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       ) : null}
 
       <Section title="1. Müşteri Bilgileri">
-      <div className="grid-safe grid gap-4 md:grid-cols-2">
-          <Field label="Damat Ad">
-            <input
-              value={groomFirstName}
-              onChange={(e) => setGroomFirstName(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Damat Soyad">
-            <input
-              value={groomLastName}
-              onChange={(e) => setGroomLastName(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Damat TC">
-            <input
-              value={groomTc}
-              onChange={(e) => setGroomTc(e.target.value.replace(/\D/g, "").slice(0, 11))}
-              pattern="\d{11}"
-              placeholder="11 haneli"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Damat Tel">
-            <input
-              value={groomPhone}
-              onChange={(e) => setGroomPhone(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Gelin Ad">
-            <input
-              value={brideFirstName}
-              onChange={(e) => setBrideFirstName(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Gelin Soyad">
-            <input
-              value={brideLastName}
-              onChange={(e) => setBrideLastName(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Gelin TC">
-            <input
-              value={brideTc}
-              onChange={(e) => setBrideTc(e.target.value.replace(/\D/g, "").slice(0, 11))}
-              pattern="\d{11}"
-              placeholder="11 haneli"
-              className={inputClass}
-            />
-          </Field>
-          <Field label="Gelin Tel">
-            <input
-              value={bridePhone}
-              onChange={(e) => setBridePhone(e.target.value)}
-              required
-              className={inputClass}
-            />
-          </Field>
+        <div className="space-y-4">
+          <div className="grid-safe grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Field label="Damat Ad">
+              <input
+                value={groomFirstName}
+                onChange={(e) => setGroomFirstName(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Damat Soyad">
+              <input
+                value={groomLastName}
+                onChange={(e) => setGroomLastName(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Damat TC">
+              <input
+                value={groomTc}
+                onChange={(e) => setGroomTc(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                pattern="\d{11}"
+                placeholder="11 haneli"
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Damat Tel">
+              <PhoneInput
+                value={groomPhone}
+                onChange={setGroomPhone}
+                required
+                className={inputClass}
+              />
+            </Field>
+          </div>
+
+          <div className="grid-safe grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <Field label="Gelin Ad">
+              <input
+                value={brideFirstName}
+                onChange={(e) => setBrideFirstName(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Gelin Soyad">
+              <input
+                value={brideLastName}
+                onChange={(e) => setBrideLastName(e.target.value)}
+                required
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Gelin TC">
+              <input
+                value={brideTc}
+                onChange={(e) => setBrideTc(e.target.value.replace(/\D/g, "").slice(0, 11))}
+                pattern="\d{11}"
+                placeholder="11 haneli"
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Gelin Tel">
+              <PhoneInput
+                value={bridePhone}
+                onChange={setBridePhone}
+                required
+                className={inputClass}
+              />
+            </Field>
+          </div>
+
           <Field label="Notlar">
             <input
               value={notes}
@@ -948,31 +982,32 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         )}
       </Section>
 
-      <Section title="3. Çekim Sonrası">
+      <Section title="3. Süreç Etiketleri">
         <p className="text-sm text-zinc-400">
-          Seçilen paketlerin İncele bölümlerinden otomatik oluşturulur; tüm
-          paketler tek metinde birleştirilir. Düzenlerseniz manuel kayda geçer.
+          Sipariş takibindeki süreç adımlarında gösterilecek etiketler. Paket
+          incele bölümlerinden otomatik doldurulur; bu rezervasyon için
+          özelleştirebilirsiniz.
           {postShoot.source === "manual" ? (
             <span className="mt-1 block text-amber-300/90">
-              Bu rezervasyon için metinler manuel düzenlendi.
+              Etiketler bu rezervasyon için özelleştirildi.
             </span>
           ) : null}
         </p>
-        <PostShootSectionEditor
+        <PostShootTagsEditor
           title="Dijital"
-          section={postShoot.digital}
-          onChange={(section) => updatePostShootSection("digital", section)}
+          tags={postShoot.digital.pills}
+          onChange={(pills) => updatePostShootTags("digital", pills)}
         />
-        <PostShootSectionEditor
+        <PostShootTagsEditor
           title="Düzenleme"
-          section={postShoot.editing}
-          onChange={(section) => updatePostShootSection("editing", section)}
+          tags={postShoot.editing.pills}
+          onChange={(pills) => updatePostShootTags("editing", pills)}
         />
         {showPrintingSection ? (
-          <PostShootSectionEditor
+          <PostShootTagsEditor
             title="Baskı"
-            section={postShoot.printing}
-            onChange={(section) => updatePostShootSection("printing", section)}
+            tags={postShoot.printing.pills}
+            onChange={(pills) => updatePostShootTags("printing", pills)}
           />
         ) : null}
         <button
@@ -980,7 +1015,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           onClick={() => applyPostShootSync(items, true)}
           className="text-sm text-zinc-400 hover:text-white"
         >
-          Paket incele metinlerinden yeniden doldur
+          Paket incele etiketlerinden yeniden doldur
         </button>
       </Section>
 
@@ -1004,11 +1039,15 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           </Field>
           <Field label="Cayma Bedeli Maksimum (₺)">
             <input
-              type="number"
-              value={cancellationFeeMax}
-              onChange={(e) => setCancellationFeeMax(Number(e.target.value))}
-              className={inputClass}
+              type="text"
+              readOnly
+              value={formatPrice(cancellationFeeMax)}
+              className={`${inputClass} cursor-default bg-white/5 text-zinc-300`}
+              aria-describedby="cancellation-fee-hint"
             />
+            <p id="cancellation-fee-hint" className="mt-1.5 text-xs text-zinc-500">
+              Otomatik hesaplanır: {describeCancellationFeeRate(cancellationFeeRate)}
+            </p>
           </Field>
           {discountEnabled ? (
             <Field label="İndirim (₺)">
