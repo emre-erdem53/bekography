@@ -1,25 +1,26 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Trash2 } from "lucide-react";
+import { ChevronDown, Trash2 } from "lucide-react";
 import { ReservationStatusFilters } from "@/components/admin/reservation-status-filters";
 import {
   deleteReservation,
   restoreReservation,
 } from "@/components/admin/reservation-status-actions";
-import { RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import { matchesReservationNameQuery } from "@/lib/reservation-admin-filters";
 import {
   formatReservationListLocation,
-  formatReservationListPackages,
   formatReservationListShootDate,
-  getReservationWorkflowStageLabel,
+  getReservationListPackageSegments,
+  getReservationListStageSegments,
   reservationMatchesWorkflowStage,
+  type ReservationListColoredSegment,
 } from "@/lib/reservation-list";
+import { getCurrentReservationYear } from "@/lib/reservation-year";
 import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
 
 type ReservationItem = {
@@ -29,7 +30,7 @@ type ReservationItem = {
   productSnapshot: unknown;
   packageOption: {
     label: string;
-    category: { title: string };
+    category: { title: string; accentColor?: string };
   };
 };
 
@@ -42,6 +43,11 @@ type Reservation = {
   items: ReservationItem[];
 };
 
+type YearOption = {
+  year: number;
+  count: number;
+};
+
 type ReservationsAdminClientProps = {
   view?: "active" | "past" | "deleted";
 };
@@ -50,9 +56,17 @@ export function ReservationsAdminClient({
   view = "active",
 }: ReservationsAdminClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isPast = view === "past";
   const isDeleted = view === "deleted";
+  const currentYear = getCurrentReservationYear();
+  const selectedYear = isPast || isDeleted
+    ? currentYear
+    : Number(searchParams.get("year")) || currentYear;
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [yearOptions, setYearOptions] = useState<YearOption[]>([
+    { year: currentYear, count: 0 },
+  ]);
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState<TrackingWorkflowStageId | null>(
     null,
@@ -79,11 +93,47 @@ export function ReservationsAdminClient({
     setLoading(true);
     setStageFilter(null);
     setNameQuery("");
-    fetch(`/api/admin/reservations?view=${view}`)
+    const params = new URLSearchParams({ view });
+    if (!isPast && !isDeleted) {
+      params.set("year", String(selectedYear));
+    }
+    fetch(`/api/admin/reservations?${params.toString()}`)
       .then((res) => res.json())
-      .then(setReservations)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setReservations(data);
+          return;
+        }
+        setReservations(data.reservations ?? []);
+        if (Array.isArray(data.yearOptions)) {
+          const options = data.yearOptions as YearOption[];
+          if (!options.some((option) => option.year === selectedYear)) {
+            setYearOptions([
+              ...options,
+              { year: selectedYear, count: data.reservations?.length ?? 0 },
+            ].sort((a, b) => b.year - a.year));
+          } else {
+            setYearOptions(options);
+          }
+        }
+      })
       .finally(() => setLoading(false));
-  }, [view]);
+  }, [view, selectedYear, isPast, isDeleted]);
+
+  function handleYearChange(year: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (year === currentYear) {
+      params.delete("year");
+    } else {
+      params.set("year", String(year));
+    }
+    const query = params.toString();
+    router.push(query ? `/admin/rezervasyonlar?${query}` : "/admin/rezervasyonlar");
+  }
+
+  const selectedYearCount =
+    yearOptions.find((option) => option.year === selectedYear)?.count ??
+    reservations.length;
 
   async function handleDelete(id: string) {
     const deleted = await deleteReservation(id);
@@ -117,15 +167,46 @@ export function ReservationsAdminClient({
               ← Rezervasyonlar
             </Link>
           ) : null}
-          <h1 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
-            {pageTitle}
-          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="text-xl font-semibold text-white sm:text-2xl">
+              {pageTitle}
+            </h1>
+            {!isPast && !isDeleted ? (
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <select
+                    value={selectedYear}
+                    onChange={(event) =>
+                      handleYearChange(Number(event.target.value))
+                    }
+                    aria-label="Rezervasyon yılı"
+                    className="appearance-none rounded-xl border border-white/10 bg-[#141414] py-1.5 pl-3 pr-8 text-sm font-medium text-white outline-none focus:border-white/30"
+                  >
+                    {yearOptions.map((option) => (
+                      <option key={option.year} value={option.year}>
+                        {option.year} ({option.count})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown
+                    className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+                    aria-hidden
+                  />
+                </div>
+                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-300">
+                  {selectedYearCount} rezervasyon
+                </span>
+              </div>
+            ) : null}
+          </div>
           <p className="mt-1 text-sm text-zinc-400">
             {isDeleted
               ? "Silinen rezervasyonları 30 gün içinde geri getirebilirsiniz"
               : isPast
                 ? "Teslim edilmiş rezervasyonları görüntüleyin"
-                : "Aktif rezervasyonları yönetin"}
+                : selectedYear < currentYear
+                  ? `${selectedYear} yılına ait tüm rezervasyonlar`
+                  : "Aktif rezervasyonları yönetin"}
           </p>
         </div>
         {!isPast && !isDeleted ? (
@@ -191,7 +272,9 @@ export function ReservationsAdminClient({
             ? "Silinen rezervasyon yok."
             : isPast
               ? "Henüz teslim edilmiş rezervasyon yok."
-              : "Aktif rezervasyon bulunmuyor."}
+              : selectedYear < currentYear
+                ? `${selectedYear} yılı için rezervasyon bulunmuyor.`
+                : "Aktif rezervasyon bulunmuyor."}
         </p>
       ) : filteredReservations.length === 0 ? (
         <p className="text-zinc-400">
@@ -225,7 +308,14 @@ export function ReservationsAdminClient({
                   />
                   <Row
                     label="Paket"
-                    value={formatReservationListPackages(reservation.items)}
+                    value={
+                      <ColoredSegments
+                        segments={getReservationListPackageSegments(
+                          reservation.items,
+                        )}
+                        separator=", "
+                      />
+                    }
                   />
                   <Row
                     label="Çekim Yeri"
@@ -233,7 +323,12 @@ export function ReservationsAdminClient({
                   />
                   <Row
                     label="Aşama"
-                    value={getReservationWorkflowStageLabel(reservation)}
+                    value={
+                      <ColoredSegments
+                        segments={getReservationListStageSegments(reservation)}
+                        separator=" · "
+                      />
+                    }
                   />
                   {isDeleted && reservation.deletedAt ? (
                     <Row
@@ -325,14 +420,22 @@ export function ReservationsAdminClient({
                     <td className="px-4 py-3 text-zinc-300">
                       {formatReservationListShootDate(reservation.items)}
                     </td>
-                    <td className="max-w-xs px-4 py-3 text-zinc-300">
-                      {formatReservationListPackages(reservation.items)}
+                    <td className="max-w-xs px-4 py-3">
+                      <ColoredSegments
+                        segments={getReservationListPackageSegments(
+                          reservation.items,
+                        )}
+                        separator=", "
+                      />
                     </td>
                     <td className="px-4 py-3 text-zinc-300">
                       {formatReservationListLocation(reservation.items)}
                     </td>
-                    <td className="max-w-xs px-4 py-3 text-zinc-300">
-                      {getReservationWorkflowStageLabel(reservation)}
+                    <td className="max-w-xs px-4 py-3">
+                      <ColoredSegments
+                        segments={getReservationListStageSegments(reservation)}
+                        separator=" · "
+                      />
                     </td>
                     {isDeleted ? (
                       <td className="px-4 py-3 text-zinc-400">
@@ -408,7 +511,38 @@ function CoupleNames({
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function ColoredSegments({
+  segments,
+  separator,
+}: {
+  segments: ReservationListColoredSegment[];
+  separator: string;
+}) {
+  if (segments.length === 0) {
+    return <span className="text-zinc-300">—</span>;
+  }
+
+  return (
+    <>
+      {segments.map((segment, index) => (
+        <span key={`${segment.text}-${index}`}>
+          {index > 0 ? (
+            <span className="text-zinc-500">{separator}</span>
+          ) : null}
+          <span style={{ color: segment.color }}>{segment.text}</span>
+        </span>
+      ))}
+    </>
+  );
+}
+
+function Row({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
   return (
     <div className="flex justify-between gap-3">
       <dt className="text-zinc-500">{label}</dt>

@@ -14,6 +14,53 @@ import {
   loadProductSnapshotsForItems,
   mapReservationItemCreatesForNewReservation,
 } from "@/lib/reservation-item-snapshots";
+import {
+  buildYearOptions,
+  getCurrentReservationYear,
+  parseReservationYearParam,
+} from "@/lib/reservation-year";
+
+const reservationListInclude = {
+  items: {
+    include: {
+      packageOption: { include: { category: true } },
+    },
+    orderBy: { shootDate: "asc" as const },
+  },
+  installments: { orderBy: { sortOrder: "asc" as const } },
+  request: true,
+};
+
+type ReservationYearRow = {
+  id: string;
+  year: number;
+  status: ReservationStatus;
+};
+
+async function loadReservationYearRows(): Promise<ReservationYearRow[]> {
+  return prisma.$queryRaw<ReservationYearRow[]>`
+    SELECT
+      r.id,
+      EXTRACT(YEAR FROM MIN(ri."shootDate"))::int AS year,
+      r.status
+    FROM "Reservation" r
+    INNER JOIN "ReservationItem" ri ON ri."reservationId" = r.id
+    WHERE r."deletedAt" IS NULL
+    GROUP BY r.id, r.status
+  `;
+}
+
+async function loadReservationIdsForYear(year: number): Promise<string[]> {
+  const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT r.id
+    FROM "Reservation" r
+    INNER JOIN "ReservationItem" ri ON ri."reservationId" = r.id
+    WHERE r."deletedAt" IS NULL
+    GROUP BY r.id
+    HAVING EXTRACT(YEAR FROM MIN(ri."shootDate")) = ${year}
+  `;
+  return rows.map((row) => row.id);
+}
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -22,8 +69,37 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view") ?? "active";
+    const currentYear = getCurrentReservationYear();
+    const selectedYear =
+      parseReservationYearParam(searchParams.get("year")) ?? currentYear;
 
     const inactiveStatuses: ReservationStatus[] = ["iptal", "teslim_edildi"];
+
+    if (view === "active") {
+      const yearRows = await loadReservationYearRows();
+      const yearOptions = buildYearOptions(yearRows, currentYear);
+      const reservationIds = await loadReservationIdsForYear(selectedYear);
+
+      const reservations = reservationIds.length
+        ? await prisma.reservation.findMany({
+            where: {
+              id: { in: reservationIds },
+              deletedAt: null,
+              ...(selectedYear >= currentYear
+                ? { status: { notIn: inactiveStatuses } }
+                : {}),
+            },
+            orderBy: { createdAt: "desc" },
+            include: reservationListInclude,
+          })
+        : [];
+
+      return NextResponse.json({
+        reservations,
+        yearOptions,
+        selectedYear,
+      });
+    }
 
     const where =
       view === "deleted"
@@ -41,19 +117,10 @@ export async function GET(request: Request) {
         view === "deleted"
           ? { deletedAt: "desc" }
           : { createdAt: "desc" },
-      include: {
-        items: {
-          include: {
-            packageOption: { include: { category: true } },
-          },
-          orderBy: { shootDate: "asc" },
-        },
-        installments: { orderBy: { sortOrder: "asc" } },
-        request: true,
-      },
+      include: reservationListInclude,
     });
 
-    return NextResponse.json(reservations);
+    return NextResponse.json({ reservations });
   } catch (error) {
     console.error("GET /api/admin/reservations", error);
     return NextResponse.json(

@@ -72,36 +72,6 @@ export function PackageCategoryPanel({
         </div>
       ) : null}
 
-      <div className="space-y-2 rounded-2xl bg-black/80 p-2.5 md:space-y-3 md:p-4">
-        <div>
-          <h5
-            className="text-center text-2xl font-bold"
-            style={{ color: category.accentColor }}
-          >
-            {content.shootTitle ?? "Çekim"}
-          </h5>
-          <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
-            {content.shootDescription}
-          </p>
-        </div>
-        <div>
-          <h5
-            className="text-center text-2xl font-bold"
-            style={{ color: category.accentColor }}
-          >
-            {content.afterShootTitle ?? "Çekim Sonrası"}
-          </h5>
-          <p className="mt-2 text-center text-[10px] leading-relaxed text-zinc-300 md:text-base">
-            {content.afterShootDescription}
-          </p>
-          {content.afterShootExtra ? (
-            <p className="mt-2 text-center text-[10px] text-zinc-300 md:text-base">
-              {content.afterShootExtra}
-            </p>
-          ) : null}
-        </div>
-      </div>
-
       <PackagePricingTable category={category} />
     </div>
   );

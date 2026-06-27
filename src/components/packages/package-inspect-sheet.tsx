@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, X } from "lucide-react";
 import type { PackageCategoryData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
-import { normalizeDetailSections } from "@/lib/package-detail-section";
+import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
 
 type PackageInspectSheetProps = {
   open: boolean;
@@ -26,14 +26,10 @@ export function PackageInspectSheet({
   const selectedOption =
     category.options.find((option) => option.id === selectedOptionId) ??
     category.options[0];
-  const optionKey = selectedOption?.id ?? "";
-  const optionLabelKey = selectedOption?.label ?? "";
-  const scopedSections =
-    content.detailSectionsByOption?.[optionKey] ??
-    content.detailSectionsByOption?.[optionLabelKey] ??
-    content.detailSections;
-  const sections = normalizeDetailSections(scopedSections).sort(
-    (a, b) => a.sortOrder - b.sortOrder,
+  const sections = resolveDetailSectionsForOption(
+    content,
+    selectedOption?.id ?? "",
+    selectedOption?.label,
   );
 
   useEffect(() => {

@@ -64,6 +64,30 @@ export function buildDefaultInspectSections(
   return sections;
 }
 
+export function mergeDefaultPostShootSections(
+  existing: PackageDetailSection[],
+  slug: string,
+  scheduleType: PackageCategoryContent["scheduleType"] = "indoor",
+): PackageDetailSection[] {
+  const defaults = buildDefaultInspectSections(slug, scheduleType);
+  const result = [...existing];
+
+  for (const def of defaults) {
+    const defKey = def.title.trim().toLocaleLowerCase("tr");
+    const alreadyHas = result.some(
+      (section) => section.title.trim().toLocaleLowerCase("tr") === defKey,
+    );
+    if (alreadyHas) continue;
+
+    result.push({
+      ...def,
+      sortOrder: result.length,
+    });
+  }
+
+  return result;
+}
+
 export function ensureDefaultInspectSectionsForOption(
   content: Partial<PackageCategoryContent>,
   optionKey: string,

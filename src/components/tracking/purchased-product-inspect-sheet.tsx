@@ -9,7 +9,6 @@ import { PackageGalleryCarousel } from "@/components/packages/package-gallery-ca
 import {
   PackageInspectSections,
   PackageSnapshotServicesGrid,
-  PackageSnapshotShootBlocks,
 } from "@/components/packages/package-snapshot-content-blocks";
 import { BekographyBrand } from "@/components/bekography-brand";
 
@@ -95,7 +94,6 @@ export function PurchasedProductInspectSheet({
               ) : null}
 
               <PackageSnapshotServicesGrid product={product} />
-              <PackageSnapshotShootBlocks product={product} />
 
               <div className="mt-4 flex items-start gap-6 sm:mt-5 sm:gap-8">
                 <PaymentTypePrice type="pesin" price={product.cashPrice} />

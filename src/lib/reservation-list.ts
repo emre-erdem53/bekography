@@ -21,8 +21,13 @@ type ReservationListItem = {
   productSnapshot: unknown;
   packageOption: {
     label: string;
-    category: { title: string };
+    category: { title: string; accentColor?: string };
   };
+};
+
+export type ReservationListColoredSegment = {
+  text: string;
+  color: string;
 };
 
 type ReservationListRow = {
@@ -31,6 +36,15 @@ type ReservationListRow = {
   postShoot: unknown;
   items: ReservationListItem[];
 };
+
+function getItemAccentColor(item: ReservationListItem): string {
+  const snapshot = parseProductSnapshot(item.productSnapshot);
+  return (
+    snapshot.accentColor ||
+    item.packageOption.category.accentColor ||
+    "#ffffff"
+  );
+}
 
 function buildItemWorkflowView(
   reservation: ReservationListRow,
@@ -66,20 +80,45 @@ export function formatReservationListShootDate(items: ReservationListItem[]) {
   return `${first} — ${last}`;
 }
 
-export function formatReservationListPackages(items: ReservationListItem[]) {
-  if (items.length === 0) return "—";
+export function getReservationListPackageSegments(
+  items: ReservationListItem[],
+): ReservationListColoredSegment[] {
+  if (items.length === 0) return [];
 
-  return items
-    .map((item) => {
-      const snapshot = parseProductSnapshot(item.productSnapshot);
-      const title =
-        snapshot.categoryTitle || item.packageOption.category.title;
-      const type =
-        snapshot.shootTypeLabel ||
-        getShootTypeLabel(item.packageOption.label);
-      return `${title} · ${type}`;
-    })
-    .join(", ");
+  return items.map((item) => {
+    const snapshot = parseProductSnapshot(item.productSnapshot);
+    const title =
+      snapshot.categoryTitle || item.packageOption.category.title;
+    const type =
+      snapshot.shootTypeLabel || getShootTypeLabel(item.packageOption.label);
+    return {
+      text: `${title} · ${type}`,
+      color: getItemAccentColor(item),
+    };
+  });
+}
+
+export function getReservationListStageSegments(
+  reservation: ReservationListRow,
+): ReservationListColoredSegment[] {
+  if (reservation.items.length === 0) return [];
+
+  return reservation.items.map((item) => {
+    const snapshot = parseProductSnapshot(item.productSnapshot);
+    const title =
+      snapshot.categoryTitle || item.packageOption.category.title;
+    const workflow = buildItemWorkflowView(reservation, item);
+    return {
+      text: `${title}: ${workflow.primaryTitle}`,
+      color: getItemAccentColor(item),
+    };
+  });
+}
+
+export function formatReservationListPackages(items: ReservationListItem[]) {
+  const segments = getReservationListPackageSegments(items);
+  if (segments.length === 0) return "—";
+  return segments.map((segment) => segment.text).join(", ");
 }
 
 export function formatReservationListLocation(items: ReservationListItem[]) {
@@ -93,17 +132,9 @@ export function formatReservationListLocation(items: ReservationListItem[]) {
 export function getReservationWorkflowStageLabel(
   reservation: ReservationListRow,
 ): string {
-  if (reservation.items.length === 0) return "—";
-
-  return reservation.items
-    .map((item) => {
-      const snapshot = parseProductSnapshot(item.productSnapshot);
-      const title =
-        snapshot.categoryTitle || item.packageOption.category.title;
-      const workflow = buildItemWorkflowView(reservation, item);
-      return `${title}: ${workflow.primaryTitle}`;
-    })
-    .join(" · ");
+  const segments = getReservationListStageSegments(reservation);
+  if (segments.length === 0) return "—";
+  return segments.map((segment) => segment.text).join(" · ");
 }
 
 export function getReservationItemWorkflowStage(

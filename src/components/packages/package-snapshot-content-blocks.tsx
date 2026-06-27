@@ -45,57 +45,6 @@ export function PackageSnapshotServicesGrid({
   );
 }
 
-export function PackageSnapshotShootBlocks({
-  product,
-}: {
-  product: ReservationProductSnapshot;
-}) {
-  const hasShoot = Boolean(product.shootDescription.trim());
-  const hasAfterShoot =
-    Boolean(product.afterShootDescription.trim()) ||
-    Boolean(product.afterShootExtra?.trim());
-
-  if (!hasShoot && !hasAfterShoot) return null;
-
-  return (
-    <div className="mt-5 space-y-2 rounded-2xl bg-black/80 p-3 md:space-y-3 md:p-4">
-      {hasShoot ? (
-        <div>
-          <h5
-            className="text-center text-xl font-bold md:text-2xl"
-            style={{ color: product.accentColor }}
-          >
-            {product.shootTitle || "Çekim"}
-          </h5>
-          <p className="mt-2 text-center text-sm leading-relaxed text-zinc-300">
-            {product.shootDescription}
-          </p>
-        </div>
-      ) : null}
-      {hasAfterShoot ? (
-        <div>
-          <h5
-            className="text-center text-xl font-bold md:text-2xl"
-            style={{ color: product.accentColor }}
-          >
-            {product.afterShootTitle || "Çekim Sonrası"}
-          </h5>
-          {product.afterShootDescription.trim() ? (
-            <p className="mt-2 text-center text-sm leading-relaxed text-zinc-300">
-              {product.afterShootDescription}
-            </p>
-          ) : null}
-          {product.afterShootExtra?.trim() ? (
-            <p className="mt-2 text-center text-sm text-zinc-300">
-              {product.afterShootExtra}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export function PackageInspectSections({
   sections,
   emptyMessage = "Bu paket için detay bilgisi yakında eklenecek.",

@@ -14,12 +14,12 @@ import {
   defaultRequestFieldLabels,
 } from "@/lib/package-seed-data";
 import {
-  buildDefaultInspectSections,
+  mergeDefaultPostShootSections,
   STANDARD_INSPECT_SECTION_TITLES,
 } from "@/lib/default-inspect-sections";
 import { normalizeHexColor } from "@/lib/color-utils";
 import { applyPackageServiceTheme, PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
-import { normalizeDetailSections } from "@/lib/package-detail-section";
+import { normalizeDetailSections, resolveDetailSectionsForOption } from "@/lib/package-detail-section";
 import { HexColorInput } from "@/components/admin/hex-color-input";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
 import { BlobMediaPickerModal } from "@/components/admin/blob-media-picker-modal";
@@ -34,10 +34,6 @@ import {
 const defaultContent: PackageCategoryContent = {
   ...PACKAGE_SERVICE_THEME,
   services: [],
-  shootTitle: "Çekim",
-  shootDescription: "",
-  afterShootTitle: "Çekim Sonrası",
-  afterShootDescription: "",
   scheduleType: "indoor",
   highlightTags: [],
   highlightTagsByOption: {},
@@ -138,6 +134,53 @@ function setOptionGalleryMedia(
     ...content,
     galleryMediaByOption: nextGalleryMedia,
   };
+}
+
+function setOptionDetailSections(
+  content: PackageCategoryContent,
+  optionKey: string,
+  optionLabel: string,
+  sections: PackageDetailSection[],
+): PackageCategoryContent {
+  const labelKey = optionLabel.trim();
+  const nextSections = { ...(content.detailSectionsByOption ?? {}) };
+  nextSections[optionKey] = sections;
+  if (labelKey && labelKey !== optionKey) {
+    nextSections[labelKey] = sections;
+  }
+  return {
+    ...content,
+    detailSectionsByOption: nextSections,
+  };
+}
+
+function buildDetailSectionsByOption(
+  content: PackageCategoryContent,
+  optionList: OptionForm[],
+): Record<string, PackageDetailSection[]> {
+  const source = content.detailSectionsByOption ?? {};
+  const result: Record<string, PackageDetailSection[]> = {};
+
+  optionList.forEach((option, index) => {
+    const primaryKey = getOptionDetailKey(option, index);
+    const labelKey = option.label.trim();
+    const saveKey = option.id ?? primaryKey;
+    const sections = resolveDetailSectionsForOption(
+      { detailSectionsByOption: source },
+      saveKey,
+      labelKey,
+    );
+
+    if (!Array.isArray(sections) || sections.length === 0) return;
+
+    const normalized = normalizeDetailSections(sections);
+    result[saveKey] = normalized;
+    if (labelKey && labelKey !== saveKey) {
+      result[labelKey] = normalized;
+    }
+  });
+
+  return result;
 }
 
 function buildGalleryMediaByOption(
@@ -345,25 +388,13 @@ export function PackageForm({
       return;
     }
 
-    const detailSectionsByOption = {
-      ...(content.detailSectionsByOption ?? {}),
-    };
+    const detailSectionsByOption = buildDetailSectionsByOption(content, options);
     const optionLabelMap = Object.fromEntries(
-      options.map((option, index) => [option.label.trim(), getOptionDetailKey(option, index)]),
+      options.map((option, index) => [
+        option.label.trim(),
+        getOptionDetailKey(option, index),
+      ]),
     );
-    Object.entries(content.detailSectionsByOption ?? {}).forEach(
-      ([key, sections]) => {
-        const mappedKey = optionLabelMap[key];
-        if (mappedKey && !detailSectionsByOption[mappedKey]) {
-          detailSectionsByOption[mappedKey] = sections;
-        }
-      },
-    );
-    for (const key of Object.keys(detailSectionsByOption)) {
-      detailSectionsByOption[key] = normalizeDetailSections(
-        detailSectionsByOption[key],
-      );
-    }
     const inspectEnabledByOption = {
       ...(content.inspectEnabledByOption ?? {}),
     };
@@ -592,10 +623,11 @@ export function PackageForm({
               content.highlightTagsByOption?.[key] ??
               content.highlightTagsByOption?.[option.label.trim()] ??
               [];
-            const sections =
-              content.detailSectionsByOption?.[key] ??
-              content.detailSectionsByOption?.[option.label.trim()] ??
-              [];
+            const sections = resolveDetailSectionsForOption(
+              content,
+              key,
+              option.label.trim(),
+            );
             const optionGallery = getOptionGalleryList(content, key, option.label.trim());
             const selectedIconKey =
               content.optionIconKeys?.[key] ??
@@ -957,31 +989,34 @@ export function PackageForm({
                         İncele butonu aktif
                       </label>
                       <p className="mt-1 text-xs text-zinc-500">
-                        Rezervasyon çekim sonrası metinleri bu bölümlerden
-                        üretilir. Standart başlıklar:{" "}
-                        {STANDARD_INSPECT_SECTION_TITLES.join(", ")}.
+                        Sipariş takibindeki çekim sonrası metinleri yalnızca{" "}
+                        {STANDARD_INSPECT_SECTION_TITLES.join(", ")} başlıklı
+                        bölümlerden üretilir. Diğer bölümler paket detay
+                        sayfasında görünür.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
                         onClick={() => {
-                          setContent({
-                            ...content,
-                            detailSectionsByOption: {
-                              ...(content.detailSectionsByOption ?? {}),
-                              [key]: buildDefaultInspectSections(
+                          setContent(
+                            setOptionDetailSections(
+                              content,
+                              key,
+                              option.label.trim(),
+                              mergeDefaultPostShootSections(
+                                sections,
                                 content.scheduleType === "outdoor"
                                   ? "dis-cekim"
                                   : "dugun",
                                 content.scheduleType ?? "indoor",
                               ),
-                            },
-                          });
+                            ),
+                          );
                         }}
                         className="text-sm text-zinc-400 hover:text-white"
                       >
-                        Standart bölümleri doldur
+                        Çekim sonrası bölümlerini ekle
                       </button>
                       <button
                         type="button"
@@ -996,13 +1031,14 @@ export function PackageForm({
                               sortOrder: sections.length,
                             },
                           ];
-                          setContent({
-                            ...content,
-                            detailSectionsByOption: {
-                              ...(content.detailSectionsByOption ?? {}),
-                              [key]: nextSections,
-                            },
-                          });
+                          setContent(
+                            setOptionDetailSections(
+                              content,
+                              key,
+                              option.label.trim(),
+                              nextSections,
+                            ),
+                          );
                         }}
                         className="text-sm text-zinc-400 hover:text-white"
                       >
@@ -1019,7 +1055,7 @@ export function PackageForm({
 
                   {[...sections]
                     .sort((a, b) => a.sortOrder - b.sortOrder)
-                    .map((section, sectionIndex) => (
+                    .map((section) => (
                       <div
                         key={section.id}
                         className="space-y-2 rounded-xl border border-white/5 bg-black/20 p-4"
@@ -1027,18 +1063,19 @@ export function PackageForm({
                         <input
                           value={section.title}
                           onChange={(e) => {
-                            const next = [...sections];
-                            next[sectionIndex] = {
-                              ...next[sectionIndex],
-                              title: e.target.value,
-                            };
-                            setContent({
-                              ...content,
-                              detailSectionsByOption: {
-                                ...(content.detailSectionsByOption ?? {}),
-                                [key]: next,
-                              },
-                            });
+                            const next = sections.map((entry) =>
+                              entry.id === section.id
+                                ? { ...entry, title: e.target.value }
+                                : entry,
+                            );
+                            setContent(
+                              setOptionDetailSections(
+                                content,
+                                key,
+                                option.label.trim(),
+                                next,
+                              ),
+                            );
                           }}
                           placeholder="Başlık"
                           className={inputClass}
@@ -1047,35 +1084,37 @@ export function PackageForm({
                           title="Etiketler"
                           tags={section.tags ?? []}
                           onChange={(tags) => {
-                            const next = [...sections];
-                            next[sectionIndex] = {
-                              ...next[sectionIndex],
-                              tags,
-                            };
-                            setContent({
-                              ...content,
-                              detailSectionsByOption: {
-                                ...(content.detailSectionsByOption ?? {}),
-                                [key]: next,
-                              },
-                            });
+                            const next = sections.map((entry) =>
+                              entry.id === section.id
+                                ? { ...entry, tags }
+                                : entry,
+                            );
+                            setContent(
+                              setOptionDetailSections(
+                                content,
+                                key,
+                                option.label.trim(),
+                                next,
+                              ),
+                            );
                           }}
                         />
                         <textarea
                           value={section.body}
                           onChange={(e) => {
-                            const next = [...sections];
-                            next[sectionIndex] = {
-                              ...next[sectionIndex],
-                              body: e.target.value,
-                            };
-                            setContent({
-                              ...content,
-                              detailSectionsByOption: {
-                                ...(content.detailSectionsByOption ?? {}),
-                                [key]: next,
-                              },
-                            });
+                            const next = sections.map((entry) =>
+                              entry.id === section.id
+                                ? { ...entry, body: e.target.value }
+                                : entry,
+                            );
+                            setContent(
+                              setOptionDetailSections(
+                                content,
+                                key,
+                                option.label.trim(),
+                                next,
+                              ),
+                            );
                           }}
                           rows={4}
                           placeholder="Açıklama metni"
@@ -1085,15 +1124,16 @@ export function PackageForm({
                           type="button"
                           onClick={() => {
                             const next = sections.filter(
-                              (_, i) => i !== sectionIndex,
+                              (entry) => entry.id !== section.id,
                             );
-                            setContent({
-                              ...content,
-                              detailSectionsByOption: {
-                                ...(content.detailSectionsByOption ?? {}),
-                                [key]: next,
-                              },
-                            });
+                            setContent(
+                              setOptionDetailSections(
+                                content,
+                                key,
+                                option.label.trim(),
+                                next,
+                              ),
+                            );
                           }}
                           className="text-sm text-red-400"
                         >
@@ -1108,48 +1148,6 @@ export function PackageForm({
             );
           })}
         </div>
-      </div>
-
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-[#0f0f0f] p-5">
-        <div>
-          <h2 className="font-semibold text-white">İçerik</h2>
-          <p className="mt-1 text-sm text-zinc-400">
-            Rezervasyon oluşturma formunda kullanılacak metinler. Çekim sonrası
-            metinleri her çekim türünün İncele bölümlerinden üretilir.
-          </p>
-        </div>
-
-        <Field label="Çekim Açıklaması">
-          <textarea
-            value={content.shootDescription}
-            onChange={(e) =>
-              setContent({ ...content, shootDescription: e.target.value })
-            }
-            rows={4}
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Rezervasyon oluştururken «Çekim İçeriği» alanına varsayılan değer
-            olarak gelir.
-          </p>
-        </Field>
-
-        <Field label="Çekim Sonrası Açıklaması">
-          <textarea
-            value={content.afterShootDescription}
-            onChange={(e) =>
-              setContent({
-                ...content,
-                afterShootDescription: e.target.value,
-              })
-            }
-            rows={3}
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-zinc-500">
-            Rezervasyon detayında referans metin olarak saklanır.
-          </p>
-        </Field>
       </div>
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}

@@ -1,5 +1,5 @@
 import type { PackageCategoryContent, PackageDetailSection } from "@/lib/package-seed-data";
-import { normalizeDetailSections } from "@/lib/package-detail-section";
+import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
 import type { PostShootSection, PostShootSnapshot } from "@/lib/post-shoot";
 
 export type PostShootSectionKind = "digital" | "editing" | "printing";
@@ -47,38 +47,7 @@ export function getDetailSectionsForOption(
   packageOptionId: string,
   optionLabel?: string,
 ): PackageDetailSection[] {
-  const byOption = content.detailSectionsByOption ?? {};
-  const trimmedLabel = optionLabel?.trim() ?? "";
-  const candidates = [
-    packageOptionId,
-    trimmedLabel,
-    optionLabel ?? "",
-  ].filter(Boolean);
-
-  for (const key of candidates) {
-    if (byOption[key]?.length) {
-      return normalizeDetailSections(byOption[key]).sort(
-        (a, b) => a.sortOrder - b.sortOrder,
-      );
-    }
-  }
-
-  const lowerLabel = trimmedLabel.toLocaleLowerCase("tr");
-  for (const [key, sections] of Object.entries(byOption)) {
-    if (!sections.length) continue;
-    if (
-      key === packageOptionId ||
-      key.trim().toLocaleLowerCase("tr") === lowerLabel
-    ) {
-      return normalizeDetailSections(sections).sort(
-        (a, b) => a.sortOrder - b.sortOrder,
-      );
-    }
-  }
-
-  return normalizeDetailSections(content.detailSections).sort(
-    (a, b) => a.sortOrder - b.sortOrder,
-  );
+  return resolveDetailSectionsForOption(content, packageOptionId, optionLabel);
 }
 
 function detailSectionToPostShoot(section: PackageDetailSection): PostShootSection {

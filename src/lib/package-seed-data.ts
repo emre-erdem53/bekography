@@ -35,11 +35,6 @@ export type PackageCategoryContent = {
   serviceTextColor: string;
   serviceSubTextColor: string;
   services: PackageServiceItem[];
-  shootTitle: string;
-  shootDescription: string;
-  afterShootTitle: string;
-  afterShootDescription: string;
-  afterShootExtra?: string;
   scheduleType?: "outdoor" | "indoor";
   highlightTags?: string[];
   highlightTagsByOption?: Record<string, string[]>;
@@ -155,12 +150,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
           iconKey: "Download",
         },
       ],
-      shootTitle: "Çekim",
-      shootDescription:
-        "Çekimi 10.00-14.00 veya 13.00-17.00 saatleri arasında gerçekleştiriyoruz. Belirlenen sürede, bir rota üzerindeki farklı mekanlarda çekim yapabiliyoruz. Otel çekimi istenirse, otel ile anlaşma sağlayabiliyor ve çekim esnasında rahat hissetmenizi desteklemek adına yönlendirme sağlıyoruz.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Çekimden kalan tüm görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçilen fotoğraflar düzenlenir, özel albüm ve çerçeve tasarımları hazırlanır. İstediğiniz seçimleriniz tamamlandıktan sonra baskılarınız adresinize kargo ile gönderilir.",
       scheduleType: "outdoor",
     },
     options: [
@@ -181,12 +170,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       serviceTextColor: "#0d2d17",
       serviceSubTextColor: "#234c30",
       services: defaultServices(),
-      shootTitle: "Çekim",
-      shootDescription:
-        "Organizasyonunuzun tüm detaylarında size rehberlik ederek çekim sürecini yönetiyoruz. Düğün başlamadan önce salonda buluşup tüm akışı planlıyoruz. Törenin giriş, ilk dans ve eğlence bölümleri en az 2 kamera ile kayıt altına alınıyor.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Çekilen tüm görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğiniz müzikle düğün salon filminizi düzenliyor, fotoğrafları baskı ve dijital teslim için hazır hale getiriyoruz.",
       scheduleType: "indoor",
     },
     options: [
@@ -207,14 +190,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       serviceTextColor: "#2e2510",
       serviceSubTextColor: "#574829",
       services: defaultServices(),
-      shootTitle: "Çekim",
-      shootDescription:
-        "Gelin çıkışının tüm detaylarında size rehberlik ederek süreci yönetiyoruz. Damat gelmeden önce gelinin ailesiyle vedalaşma, kurdele bağlama ve aile detaylarını çekiyoruz. Ardından damadın geliş karşılama anı ve çıkış anını da kayıt altına alarak organizasyonu sonlandırıyoruz.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Çekilen tüm görüntüleri yüksek çözünürlükte teslim ediyoruz. Seçtiğiniz müzikle çıkış filminizi düzenliyor, fotoğrafları dijital ve baskı sürecine hazırlıyoruz.",
-      afterShootExtra:
-        "Bu hizmet dış çekim veya düğün filmine ek olarak satın alınabilir.",
       scheduleType: "indoor",
     },
     options: [
@@ -255,14 +230,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
           iconKey: "Download",
         },
       ],
-      shootTitle: "Çekim",
-      shootDescription:
-        "Gelinin kuaförde çiftin hazırlığının son aşamasını, video çekimiyle ve anlaşmaya dahilinde fotoğraf çekimiyle yapıyoruz.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Çekilen tüm orijinal görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Çektiğimiz video görüntülerini dış çekim veya düğün filminde kullanıyor; fotoğraf çekimi varsa düzenleyip dijital olarak teslim ediyoruz.",
-      afterShootExtra:
-        "Bu hizmet dış çekim veya düğün filmine ek olarak satın alınabilir.",
       scheduleType: "indoor",
     },
     options: [
@@ -305,12 +272,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
           iconKey: "Download",
         },
       ],
-      shootTitle: "Çekim",
-      shootDescription:
-        "Hazırlık, dış çekim, gelin çıkışı ve düğün gününüzün tamamını tek pakette, kesintisiz bir hikaye olarak kayıt altına alıyoruz. Her aşamada size rehberlik ederek tüm süreci planlıyor ve yönetiyoruz.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Tüm çekimlerden elde edilen görüntüleri yüksek çözünürlükte teslim ediyoruz. Karma film ve uzun metraj düğün filminizi hazırlıyor, albüm ve çerçeve tasarımlarınızı tamamlayıp adresinize gönderiyoruz.",
       scheduleType: "indoor",
     },
     options: [{ label: "Full Hikaye", cash: 95000, installment: 135000 }],
@@ -328,12 +289,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       serviceTextColor: "#2b1f44",
       serviceSubTextColor: "#4b3f66",
       services: defaultServices(),
-      shootTitle: "Çekim",
-      shootDescription:
-        "Sözünüzün tüm detaylarında size rehberlik ederek uçtan uca organizasyonu yönetiyoruz. Söz başlamadan önce evde buluşarak tüm akışı birlikte prova ediyoruz. Damat tarafını karşılama, kahve hazırlığı ve ikramı, isteme anı, yüzük merasimi ve detayları en az 2 kamera ile film (video) olarak; anlaşmamız dahilindeyse ek bir kamera ile fotoğraf olarak kayıt altına alıyoruz. Özel bir talep belirtilmediği sürece, takı töreni ve konuk masası çekimleri hizmet kapsamımız dışındadır.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Çekilen tüm orijinal görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğimiz bir müzikle söz/isteme filminizi düzenliyoruz. Anlaşmada fotoğraf çekimi varsa fotoğraflar üzerinde baskı ve düzenleme yapılmadan doğal halleriyle dijital olarak teslim ediyoruz.",
       scheduleType: "indoor",
     },
     options: [
@@ -354,12 +309,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       serviceTextColor: "#24070b",
       serviceSubTextColor: "#4c151d",
       services: defaultServices(["Ağıt", "Eğlence"]),
-      shootTitle: "Çekim",
-      shootDescription:
-        "Organizasyonunuzun tüm detaylarında size rehberlik ederek çekim sürecini uçtan uca yönetiyoruz. Kına başlamadan önce salonda buluşarak tüm akışı birlikte prova ediyoruz. Giriş, ağıt ve eğlence bölümlerinin en az 2 kamera ile film (video) olarak; anlaşmamız dahilindeyse ek bir kamera ile fotoğraf olarak kayıt altına alınıyor. Özel bir talep belirtilmediği sürece, takı töreni ve konuk masası çekimleri hizmet kapsamımız dışındadır.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Çekilen tüm orijinal görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğimiz bir müzikle kına salon filminizi düzenliyoruz. Anlaşmada fotoğraf çekimi varsa fotoğraflar üzerinde baskı ve düzenleme yapılmadan doğal halleriyle dijital olarak teslim ediliyor.",
       scheduleType: "indoor",
     },
     options: [
@@ -380,12 +329,6 @@ export const seedPackageCategories: SeedPackageCategory[] = [
       serviceTextColor: "#0b2630",
       serviceSubTextColor: "#2d5060",
       services: defaultServices(),
-      shootTitle: "Çekim",
-      shootDescription:
-        "Organizasyonunuzun tüm detaylarında size rehberlik ederek çekim sürecini uçtan uca yönetiyoruz. Nişan başlamadan önce salonda buluşarak tüm akışı birlikte prova ediyoruz. Törenin giriş, ilk dans, yüzük merasimi ve eğlence bölümlerinin en az 2 kamera ile film (video) olarak; anlaşmamız dahilindeyse ek bir kamera ile fotoğraf olarak kayıt altına alınıyor. Özel bir talep belirtilmediği sürece, takı töreni ve konuk masası çekimleri hizmet kapsamımız dışındadır.",
-      afterShootTitle: "Çekim Sonrası",
-      afterShootDescription:
-        "Çekilen tüm orijinal görüntüleri yüksek çözünürlükte, 1 hafta içinde teslim ediyoruz. Seçtiğimiz bir müzikle nişan salon filminizi düzenliyoruz. Anlaşmada fotoğraf çekimi varsa fotoğraflar üzerinde baskı ve düzenleme yapılmadan doğal halleriyle dijital olarak teslim ediliyor.",
       scheduleType: "indoor",
     },
     options: [

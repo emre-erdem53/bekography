@@ -6,7 +6,7 @@ import { ChevronLeft } from "lucide-react";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { getOptionGalleryMedia } from "@/lib/package-media";
-import { normalizeDetailSections } from "@/lib/package-detail-section";
+import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
 import { PackageGalleryCarousel } from "@/components/packages/package-gallery-carousel";
 import { PackageDetailSectionsList } from "@/components/packages/package-detail-sections-list";
 import { BekographyBrand } from "@/components/bekography-brand";
@@ -39,14 +39,10 @@ function PackageOptionDetails({
   option: PackageOptionData;
 }) {
   const content = category.content as PackageCategoryContent;
-  const optionKey = option.id;
-  const optionLabelKey = option.label;
-  const scopedSections =
-    content.detailSectionsByOption?.[optionKey] ??
-    content.detailSectionsByOption?.[optionLabelKey] ??
-    content.detailSections;
-  const sections = normalizeDetailSections(scopedSections).sort(
-    (a, b) => a.sortOrder - b.sortOrder,
+  const sections = resolveDetailSectionsForOption(
+    content,
+    option.id,
+    option.label,
   );
 
   return <PackageDetailSectionsList sections={sections} />;
