@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { createRequestSchema } from "@/lib/validations";
+import { joinPersonName } from "@/lib/reservation-utils";
 import {
   cartRequiresAdditionalPackage,
   getCompanionRequirementMessage,
@@ -20,9 +21,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const { contactName, contactPhone, contactRole, items } = parsed.data;
+    const { contactFirstName, contactLastName, contactPhone, contactRole, items } =
+      parsed.data;
     const roleLabel = contactRole === "gelin" ? "Gelin" : "Damat";
-    const customerName = `${contactName} (${roleLabel})`;
+    const contactFullName = joinPersonName(contactFirstName, contactLastName);
+    const customerName = `${contactFullName} (${roleLabel})`;
     const customerPhone = contactPhone?.trim() || "—";
 
     const options = await prisma.packageOption.findMany({
@@ -61,6 +64,9 @@ export async function POST(request: Request) {
       data: {
         publicId: nanoid(8).toUpperCase(),
         customerName,
+        contactFirstName: contactFirstName.trim(),
+        contactLastName: contactLastName.trim(),
+        contactRole,
         customerPhone,
         city: citySummary,
         shootDate: earliestDate,

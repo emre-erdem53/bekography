@@ -35,7 +35,8 @@ type RequestModalProps = {
 type CategoryFields = Record<string, { shootDate: string; city: string }>;
 
 const emptyForm = {
-  contactName: "",
+  contactFirstName: "",
+  contactLastName: "",
   contactRole: null as "gelin" | "damat" | null,
 };
 
@@ -151,7 +152,8 @@ export function RequestModal({
   const requestAllowed = canCreateRequestForItems(items);
   const hasMultipleItems = items.length > 1;
 
-  const [contactName, setContactName] = useState("");
+  const [contactFirstName, setContactFirstName] = useState("");
+  const [contactLastName, setContactLastName] = useState("");
   const [contactRole, setContactRole] = useState<"gelin" | "damat" | null>(
     null,
   );
@@ -187,7 +189,8 @@ export function RequestModal({
   }, [open, itemIdsKey, categories]);
 
   function resetForm() {
-    setContactName(emptyForm.contactName);
+    setContactFirstName(emptyForm.contactFirstName);
+    setContactLastName(emptyForm.contactLastName);
     setContactRole(emptyForm.contactRole);
     setCategoryFields({});
     setSameDay(false);
@@ -270,7 +273,8 @@ export function RequestModal({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contactName: contactName.trim(),
+        contactFirstName: contactFirstName.trim(),
+        contactLastName: contactLastName.trim(),
         contactRole,
         items: payloadItems,
       }),
@@ -295,7 +299,8 @@ export function RequestModal({
     });
 
     const message = buildRequestWhatsAppMessage(
-      contactName.trim(),
+      contactFirstName.trim(),
+      contactLastName.trim(),
       contactRole,
       whatsAppItems,
     );
@@ -356,15 +361,26 @@ export function RequestModal({
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">
                 <FormSection title="İletişim Bilgileri">
                   <div className="space-y-4">
-                    <Field label="Ad Soyad" required>
-                      <input
-                        value={contactName}
-                        onChange={(e) => setContactName(e.target.value)}
-                        required
-                        minLength={2}
-                        className={inputClass}
-                      />
-                    </Field>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <Field label="Ad" required>
+                        <input
+                          value={contactFirstName}
+                          onChange={(e) => setContactFirstName(e.target.value)}
+                          required
+                          minLength={1}
+                          className={inputClass}
+                        />
+                      </Field>
+                      <Field label="Soyad" required>
+                        <input
+                          value={contactLastName}
+                          onChange={(e) => setContactLastName(e.target.value)}
+                          required
+                          minLength={1}
+                          className={inputClass}
+                        />
+                      </Field>
+                    </div>
                     <div className="flex flex-wrap gap-4">
                       <label className="flex cursor-pointer items-center gap-2 text-sm text-white">
                         <input

@@ -335,6 +335,8 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
   const shootContentLabel =
     item.shootContent.trim() || item.shootTypeLabel || "—";
   const locationLabel = item.location.trim() || "Belirlenecek";
+  const readyTimeLabel = item.readyTime.trim() || "Belirlenecek";
+  const shootDaySub = `Hazır Olma Saati: ${readyTimeLabel}`;
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
@@ -351,11 +353,7 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
             <ShootMetaBlock
               label="Çekim Günü"
               value={shootDayLabel}
-              sub={
-                item.readyTime
-                  ? `Hazır Olma Saati: ${item.readyTime}`
-                  : undefined
-              }
+              sub={shootDaySub}
             />
             <ShootMetaBlock
               label="Çekim İçeriği"
@@ -377,11 +375,7 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
             <ShootMetaBlock
               label="Çekim Günü"
               value={shootDayLabel}
-              sub={
-                item.readyTime
-                  ? `Hazır Olma Saati: ${item.readyTime}`
-                  : undefined
-              }
+              sub={shootDaySub}
             />
             <ShootMetaBlock
               label="Çekim İçeriği"

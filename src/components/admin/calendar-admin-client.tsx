@@ -8,18 +8,28 @@ import {
   endOfMonth,
   endOfWeek,
   format,
+  isSameDay,
   isSameMonth,
   isToday,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
 import { tr } from "date-fns/locale";
-import { ChevronLeft, Plus } from "lucide-react";
-import { formatCoupleName } from "@/lib/reservation-utils";
+import { ChevronLeft, Clock, Plus } from "lucide-react";
+import {
+  OUTDOOR_DEFAULT_ARRIVAL_TIME,
+  OUTDOOR_DEFAULT_DEPARTURE_TIME,
+} from "@/lib/constants";
+import { formatCoupleFirstNames } from "@/lib/reservation-utils";
 
 const WEEKDAYS_TR = ["P", "S", "Ç", "P", "C", "C", "P"] as const;
 const MONTHS_BACK = 6;
 const MONTHS_FORWARD = 18;
+const TIMELINE_START_HOUR = 12;
+const TIMELINE_END_HOUR = 22;
+const TIMELINE_HOUR_HEIGHT_PX = 56;
+const INDOOR_DEFAULT_START = "10:00";
+const INDOOR_DEFAULT_END = "14:00";
 
 type CalendarReservationEvent = {
   id: string;
@@ -27,8 +37,12 @@ type CalendarReservationEvent = {
   start: Date;
   reservationId: string;
   categoryTitle: string;
-  coupleName: string;
+  optionLabel: string;
+  coupleLabel: string;
   accentColor: string;
+  startTime: string;
+  endTime: string;
+  isOutdoor: boolean;
 };
 
 type ApiCalendarEvent = {
@@ -39,10 +53,22 @@ type ApiCalendarEvent = {
   resource: {
     reservationId: string;
     item: {
+      shootContent: string;
+      departureTime: string | null;
+      arrivalTime: string | null;
+      startTime: string | null;
+      endTime: string | null;
+      isOutdoor: boolean;
       packageOption: {
-        category: { title: string; accentColor: string };
+        label: string;
+        category: { title: string; slug: string; accentColor: string };
       };
-      reservation: { brideName: string; groomName: string };
+      reservation: {
+        brideName: string;
+        brideFirstName: string;
+        groomName: string;
+        groomFirstName: string;
+      };
     };
   };
 };
@@ -73,19 +99,263 @@ function buildMonthDays(monthDate: Date) {
 function parseCalendarEvents(data: ApiCalendarEvent[]): CalendarReservationEvent[] {
   return data.map((event) => {
     const item = event.resource.item;
+    const reservation = item.reservation;
+    const category = item.packageOption.category;
+    const coupleLabel = formatCoupleFirstNames(
+      reservation.brideFirstName,
+      reservation.brideName,
+      reservation.groomFirstName,
+      reservation.groomName,
+    );
+
     return {
       id: event.id,
       title: event.title,
       start: new Date(event.start),
       reservationId: event.resource.reservationId,
-      categoryTitle: item.packageOption.category.title,
-      coupleName: formatCoupleName(
-        item.reservation.brideName,
-        item.reservation.groomName,
-      ),
-      accentColor: item.packageOption.category.accentColor || "#93f8b6",
+      categoryTitle: category.title,
+      optionLabel: item.shootContent.trim() || item.packageOption.label,
+      coupleLabel,
+      accentColor: category.accentColor || "#93f8b6",
+      startTime: item.isOutdoor
+        ? item.departureTime?.trim() || OUTDOOR_DEFAULT_DEPARTURE_TIME
+        : item.startTime?.trim() || INDOOR_DEFAULT_START,
+      endTime: item.isOutdoor
+        ? item.arrivalTime?.trim() || OUTDOOR_DEFAULT_ARRIVAL_TIME
+        : item.endTime?.trim() || INDOOR_DEFAULT_END,
+      isOutdoor: item.isOutdoor,
     };
   });
+}
+
+function timeToMinutes(time: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function resolveEventWindow(event: CalendarReservationEvent): {
+  startMin: number;
+  endMin: number;
+} {
+  let startMin = timeToMinutes(event.startTime);
+  let endMin = timeToMinutes(event.endTime);
+
+  if (startMin === null) {
+    startMin = timeToMinutes(
+      event.isOutdoor ? OUTDOOR_DEFAULT_DEPARTURE_TIME : INDOOR_DEFAULT_START,
+    )!;
+  }
+  if (endMin === null) {
+    endMin = timeToMinutes(
+      event.isOutdoor ? OUTDOOR_DEFAULT_ARRIVAL_TIME : INDOOR_DEFAULT_END,
+    )!;
+  }
+  if (endMin <= startMin) {
+    endMin = startMin + 60;
+  }
+
+  return { startMin, endMin };
+}
+
+function buildTimelineHours() {
+  const hours: number[] = [];
+  for (let hour = TIMELINE_START_HOUR; hour <= TIMELINE_END_HOUR; hour += 1) {
+    hours.push(hour);
+  }
+  return hours;
+}
+
+function WeekDayStrip({
+  selectedDate,
+  onSelectDate,
+}: {
+  selectedDate: Date;
+  onSelectDate: (date: Date) => void;
+}) {
+  const weekStart = startOfWeek(selectedDate, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({
+    start: weekStart,
+    end: endOfWeek(selectedDate, { weekStartsOn: 1 }),
+  });
+
+  return (
+    <div className="grid grid-cols-7 px-2 pb-3 pt-2">
+      {weekDays.map((day, index) => {
+        const selected = isSameDay(day, selectedDate);
+        const today = isToday(day);
+
+        return (
+          <button
+            key={day.toISOString()}
+            type="button"
+            onClick={() => onSelectDate(day)}
+            className="flex flex-col items-center gap-1 py-1"
+          >
+            <span className="text-[11px] font-medium text-zinc-500">
+              {WEEKDAYS_TR[index]}
+            </span>
+            <span
+              className={`flex h-9 w-9 items-center justify-center rounded-lg text-[15px] leading-none ${
+                selected
+                  ? "bg-red-500 font-semibold text-white"
+                  : today
+                    ? "font-semibold text-red-400"
+                    : "text-white"
+              }`}
+            >
+              {format(day, "d")}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function DayTimeline({
+  date,
+  events,
+  onOpenReservation,
+}: {
+  date: Date;
+  events: CalendarReservationEvent[];
+  onOpenReservation: (reservationId: string) => void;
+}) {
+  const [now, setNow] = useState(() => new Date());
+  const timelineHours = buildTimelineHours();
+  const timelineStartMin = TIMELINE_START_HOUR * 60;
+  const timelineEndMin = TIMELINE_END_HOUR * 60;
+  const timelineSpanMin = timelineEndMin - timelineStartMin;
+  const timelineHeightPx =
+    (TIMELINE_END_HOUR - TIMELINE_START_HOUR) * TIMELINE_HOUR_HEIGHT_PX;
+  const showNowIndicator = isToday(date);
+
+  useEffect(() => {
+    if (!showNowIndicator) return;
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, [showNowIndicator]);
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowTopPx =
+    ((nowMinutes - timelineStartMin) / timelineSpanMin) * timelineHeightPx;
+  const showNowLine =
+    showNowIndicator &&
+    nowMinutes >= timelineStartMin &&
+    nowMinutes <= timelineEndMin;
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      <div className="border-b border-zinc-800 px-4 py-3">
+        <p className="text-sm font-medium capitalize text-zinc-300">
+          {format(date, "d MMM yyyy", { locale: tr })} –{" "}
+          {format(date, "EEEE", { locale: tr })}
+        </p>
+      </div>
+
+      {events.length === 0 ? (
+        <p className="px-4 py-8 text-sm text-zinc-500">
+          Bu gün için rezervasyon yok.
+        </p>
+      ) : (
+        <div className="relative px-3 py-4 sm:px-4">
+          <div className="flex gap-3">
+            <div
+              className="relative shrink-0 text-right text-[11px] text-zinc-500"
+              style={{ width: "2.75rem", height: timelineHeightPx }}
+            >
+              {timelineHours.map((hour) => {
+                const top =
+                  ((hour * 60 - timelineStartMin) / timelineSpanMin) *
+                  timelineHeightPx;
+
+                return (
+                  <span
+                    key={hour}
+                    className="absolute right-0 -translate-y-1/2 leading-none"
+                    style={{ top }}
+                  >
+                    {String(hour).padStart(2, "0")}:00
+                  </span>
+                );
+              })}
+            </div>
+
+            <div
+              className="relative min-w-0 flex-1"
+              style={{ height: timelineHeightPx }}
+            >
+              {timelineHours.map((hour) => {
+                const top =
+                  ((hour * 60 - timelineStartMin) / timelineSpanMin) *
+                  timelineHeightPx;
+
+                return (
+                  <span
+                    key={hour}
+                    className="pointer-events-none absolute left-0 right-0 border-t border-zinc-800"
+                    style={{ top }}
+                  />
+                );
+              })}
+
+              {showNowLine ? (
+                <div
+                  className="pointer-events-none absolute left-0 right-0 z-20 flex items-center"
+                  style={{ top: nowTopPx }}
+                >
+                  <span className="-ml-[3.25rem] rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                    {format(now, "HH:mm")}
+                  </span>
+                  <span className="h-0.5 flex-1 bg-red-500" />
+                </div>
+              ) : null}
+
+              {events.map((event) => {
+                const { startMin, endMin } = resolveEventWindow(event);
+                const topPx =
+                  ((startMin - timelineStartMin) / timelineSpanMin) *
+                  timelineHeightPx;
+                const heightPx = Math.max(
+                  44,
+                  ((endMin - startMin) / timelineSpanMin) * timelineHeightPx,
+                );
+                const timeLabel = `${event.startTime} – ${event.endTime}`;
+                const eventTitle = `${event.categoryTitle} (${event.coupleLabel})`;
+
+                return (
+                  <button
+                    key={event.id}
+                    type="button"
+                    onClick={() => onOpenReservation(event.reservationId)}
+                    className="absolute left-0 right-0 z-10 overflow-hidden rounded-md border-l-4 px-3 py-2 text-left transition-opacity hover:opacity-95"
+                    style={{
+                      top: topPx,
+                      height: heightPx,
+                      borderLeftColor: event.accentColor,
+                      backgroundColor: `${event.accentColor}22`,
+                    }}
+                  >
+                    <p
+                      className="truncate text-sm font-semibold leading-snug"
+                      style={{ color: event.accentColor }}
+                    >
+                      {eventTitle}
+                    </p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
+                      <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      <span>{timeLabel}</span>
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function DayIndicators({ events }: { events: CalendarReservationEvent[] }) {
@@ -170,6 +440,7 @@ function DayView({
   date,
   events,
   onBack,
+  onSelectDate,
   onNewReservation,
   onOpenReservation,
   onToday,
@@ -177,6 +448,7 @@ function DayView({
   date: Date;
   events: CalendarReservationEvent[];
   onBack: () => void;
+  onSelectDate: (date: Date) => void;
   onNewReservation: () => void;
   onOpenReservation: (reservationId: string) => void;
   onToday: () => void;
@@ -202,47 +474,13 @@ function DayView({
         </button>
       </div>
 
-      <div className="border-b border-zinc-800 px-4 py-4">
-        <p className="text-3xl font-bold text-white">
-          {format(date, "d MMMM yyyy", { locale: tr })}
-        </p>
-        <p className="mt-1 text-sm capitalize text-zinc-400">
-          {format(date, "EEEE", { locale: tr })}
-        </p>
-      </div>
+      <WeekDayStrip selectedDate={date} onSelectDate={onSelectDate} />
 
-      <div className="flex-1 overflow-y-auto">
-        {events.length === 0 ? (
-          <p className="px-4 py-8 text-sm text-zinc-500">
-            Bu gün için rezervasyon yok.
-          </p>
-        ) : (
-          <ul className="divide-y divide-zinc-800">
-            {events.map((event) => (
-              <li key={event.id}>
-                <button
-                  type="button"
-                  onClick={() => onOpenReservation(event.reservationId)}
-                  className="flex w-full items-start gap-3 px-4 py-4 text-left transition-colors hover:bg-white/[0.03]"
-                >
-                  <span
-                    className="mt-1 h-10 w-1 shrink-0 rounded-full"
-                    style={{ backgroundColor: event.accentColor }}
-                  />
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-white">
-                      {event.coupleName}
-                    </span>
-                    <span className="mt-0.5 block text-sm text-zinc-400">
-                      {event.categoryTitle}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <DayTimeline
+        date={date}
+        events={events}
+        onOpenReservation={onOpenReservation}
+      />
 
       <div className="border-t border-zinc-800 px-4 py-3">
         <button
@@ -435,6 +673,7 @@ export function CalendarAdminClient() {
               date={selectedDate}
               events={selectedDayEvents}
               onBack={() => setView("months")}
+              onSelectDate={setSelectedDate}
               onNewReservation={() => openNewReservation(selectedDate)}
               onOpenReservation={(reservationId) =>
                 router.push(`/admin/rezervasyonlar/${reservationId}`)

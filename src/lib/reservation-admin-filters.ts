@@ -26,14 +26,28 @@ export const RESERVATION_ADMIN_STAGE_LABELS: Record<
   ADMIN_WORKFLOW_STAGE_OPTIONS.map((option) => [option.id, option.label]),
 ) as Record<TrackingWorkflowStageId, string>;
 
+type ReservationNameFields = {
+  brideName: string;
+  brideFirstName?: string;
+  groomName: string;
+  groomFirstName?: string;
+};
+
 export function matchesReservationNameQuery(
-  brideName: string,
-  groomName: string,
+  reservation: ReservationNameFields,
   query: string,
 ): boolean {
   const normalized = query.trim().toLocaleLowerCase("tr");
   if (!normalized) return true;
-  const haystack = `${brideName} ${groomName}`.toLocaleLowerCase("tr");
+  const haystack = [
+    reservation.brideName,
+    reservation.brideFirstName,
+    reservation.groomName,
+    reservation.groomFirstName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLocaleLowerCase("tr");
   return haystack.includes(normalized);
 }
 

@@ -20,6 +20,7 @@ import {
   reservationMatchesWorkflowStage,
   type ReservationListColoredSegment,
 } from "@/lib/reservation-list";
+import { resolvePersonFirstName } from "@/lib/reservation-utils";
 import { getCurrentReservationYear } from "@/lib/reservation-year";
 import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
 
@@ -37,7 +38,9 @@ type ReservationItem = {
 type Reservation = {
   id: string;
   brideName: string;
+  brideFirstName?: string;
   groomName: string;
+  groomFirstName?: string;
   postShoot: unknown;
   deletedAt: string | null;
   items: ReservationItem[];
@@ -82,8 +85,12 @@ export function ReservationsAdminClient({
         return false;
       }
       return matchesReservationNameQuery(
-        reservation.brideName,
-        reservation.groomName,
+        {
+          brideName: reservation.brideName,
+          brideFirstName: reservation.brideFirstName,
+          groomName: reservation.groomName,
+          groomFirstName: reservation.groomFirstName,
+        },
         nameQuery,
       );
     });
@@ -298,7 +305,9 @@ export function ReservationsAdminClient({
                 className="cursor-pointer rounded-2xl border border-white/10 bg-[#0f0f0f] p-4 transition-colors hover:border-white/20"
               >
                 <CoupleNames
+                  brideFirstName={reservation.brideFirstName}
                   brideName={reservation.brideName}
+                  groomFirstName={reservation.groomFirstName}
                   groomName={reservation.groomName}
                 />
                 <dl className="mt-4 space-y-2 text-sm">
@@ -413,7 +422,9 @@ export function ReservationsAdminClient({
                   >
                     <td className="px-4 py-3">
                       <CoupleNames
+                        brideFirstName={reservation.brideFirstName}
                         brideName={reservation.brideName}
+                        groomFirstName={reservation.groomFirstName}
                         groomName={reservation.groomName}
                       />
                     </td>
@@ -497,16 +508,23 @@ export function ReservationsAdminClient({
 }
 
 function CoupleNames({
+  brideFirstName,
   brideName,
+  groomFirstName,
   groomName,
 }: {
+  brideFirstName?: string;
   brideName: string;
+  groomFirstName?: string;
   groomName: string;
 }) {
+  const bride = resolvePersonFirstName(brideFirstName, brideName);
+  const groom = resolvePersonFirstName(groomFirstName, groomName);
+
   return (
     <div className="text-white">
-      <p>{brideName}</p>
-      <p className="text-zinc-400">{groomName}</p>
+      <p>{bride}</p>
+      <p className="text-zinc-400">{groom}</p>
     </div>
   );
 }

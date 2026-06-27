@@ -66,10 +66,13 @@ model PackageOption {
 }
 
 model Request {
-  id             String        @id @default(cuid())
-  publicId       String        @unique
-  customerName   String
-  customerPhone  String
+  id               String        @id @default(cuid())
+  publicId         String        @unique
+  customerName     String
+  contactFirstName String        @default("")
+  contactLastName  String        @default("")
+  contactRole      String?
+  customerPhone    String
   city           String
   shootDate      DateTime      @db.Date
   status         RequestStatus @default(yeni)
@@ -98,9 +101,13 @@ model Reservation {
   trackingSlug        String                       @unique
   requestId           String?                      @unique
   brideName           String
+  brideFirstName      String                       @default("")
+  brideLastName       String                       @default("")
   brideTc             String                       @default("")
   bridePhone          String
   groomName           String
+  groomFirstName      String                       @default("")
+  groomLastName       String                       @default("")
   groomTc             String                       @default("")
   groomPhone          String
   totalPrice          Int

@@ -19,8 +19,12 @@ const tcSchema = z
   .regex(/^\d{11}$/, "TC kimlik numarası 11 haneli olmalıdır")
   .or(z.literal(""));
 
+const personFirstNameSchema = z.string().min(1, "Ad girin").max(80);
+const personLastNameSchema = z.string().min(1, "Soyad girin").max(80);
+
 export const createRequestSchema = z.object({
-  contactName: z.string().min(2, "Ad soyad en az 2 karakter olmalı"),
+  contactFirstName: personFirstNameSchema,
+  contactLastName: personLastNameSchema,
   contactPhone: z.string().optional().default(""),
   contactRole: z.enum(["gelin", "damat"], {
     message: "Gelin veya damat seçin",
@@ -150,10 +154,12 @@ const postShootSnapshotSchema = z.object({
 
 export const createReservationSchema = z.object({
   requestId: z.string().optional(),
-  brideName: z.string().min(2, "Gelin ad soyad girin"),
+  brideFirstName: personFirstNameSchema,
+  brideLastName: personLastNameSchema,
   brideTc: tcSchema.optional(),
   bridePhone: z.string().min(10, "Gelin telefonu girin"),
-  groomName: z.string().min(2, "Damat ad soyad girin"),
+  groomFirstName: personFirstNameSchema,
+  groomLastName: personLastNameSchema,
   groomTc: tcSchema.optional(),
   groomPhone: z.string().min(10, "Damat telefonu girin"),
   totalPrice: z.number().int().positive(),

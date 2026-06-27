@@ -12,6 +12,7 @@ import {
   updateReservationStatusSchema,
 } from "@/lib/validations";
 import { buildReservationItemCreates } from "@/lib/reservation-item-snapshots";
+import { reservationNameFieldsFromInput } from "@/lib/reservation-utils";
 
 export async function GET(
   _request: Request,
@@ -147,10 +148,19 @@ export async function PATCH(
     await prisma.reservation.update({
       where: { id },
       data: {
-        brideName: data.brideName,
+        ...(data.brideFirstName !== undefined ||
+        data.brideLastName !== undefined ||
+        data.groomFirstName !== undefined ||
+        data.groomLastName !== undefined
+          ? reservationNameFieldsFromInput({
+              brideFirstName: data.brideFirstName ?? existing.brideFirstName,
+              brideLastName: data.brideLastName ?? existing.brideLastName,
+              groomFirstName: data.groomFirstName ?? existing.groomFirstName,
+              groomLastName: data.groomLastName ?? existing.groomLastName,
+            })
+          : {}),
         brideTc: data.brideTc,
         bridePhone: data.bridePhone,
-        groomName: data.groomName,
         groomTc: data.groomTc,
         groomPhone: data.groomPhone,
         totalPrice: data.totalPrice,

@@ -9,6 +9,7 @@ import {
   findShootDateConflicts,
   getTrackingUrl,
 } from "@/lib/reservations";
+import { reservationNameFieldsFromInput } from "@/lib/reservation-utils";
 import { createReservationSchema } from "@/lib/validations";
 import {
   loadProductSnapshotsForItems,
@@ -162,15 +163,15 @@ export async function POST(request: Request) {
     }
 
     const productSnapshots = await loadProductSnapshotsForItems(data.items);
+    const nameFields = reservationNameFieldsFromInput(data);
 
     const reservation = await prisma.reservation.create({
       data: {
         trackingSlug: nanoid(12),
         requestId: data.requestId ?? null,
-        brideName: data.brideName,
+        ...nameFields,
         brideTc: data.brideTc ?? "",
         bridePhone: data.bridePhone,
-        groomName: data.groomName,
         groomTc: data.groomTc ?? "",
         groomPhone: data.groomPhone,
         totalPrice: data.totalPrice,

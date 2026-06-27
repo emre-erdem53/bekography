@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { parseDateOnlyInput } from "@/lib/date-only";
-import { formatCoupleName } from "@/lib/reservations";
+import { isOutdoorCategory } from "@/lib/post-shoot";
+import {
+  formatCoupleFirstNames,
+} from "@/lib/reservation-utils";
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -32,16 +35,52 @@ export async function GET(request: Request) {
       },
     });
 
-    const events = items.map((item) => ({
-      id: item.id,
-      title: `${formatCoupleName(item.reservation.brideName, item.reservation.groomName)} — ${item.packageOption.category.title}`,
-      start: item.shootDate,
-      end: item.shootDate,
-      resource: {
-        reservationId: item.reservationId,
-        item,
-      },
-    }));
+    const events = items.map((item) => {
+      const category = item.packageOption.category;
+      const content =
+        category.content && typeof category.content === "object"
+          ? (category.content as Record<string, unknown>)
+          : {};
+      const outdoor = isOutdoorCategory(category.slug, content);
+      const reservation = item.reservation;
+
+      return {
+        id: item.id,
+        title: `${category.title} (${formatCoupleFirstNames(
+          reservation.brideFirstName,
+          reservation.brideName,
+          reservation.groomFirstName,
+          reservation.groomName,
+        )})`,
+        start: item.shootDate,
+        end: item.shootDate,
+        resource: {
+          reservationId: item.reservationId,
+          item: {
+            shootContent: item.shootContent,
+            departureTime: item.departureTime,
+            arrivalTime: item.arrivalTime,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            isOutdoor: outdoor,
+            packageOption: {
+              label: item.packageOption.label,
+              category: {
+                title: category.title,
+                slug: category.slug,
+                accentColor: category.accentColor,
+              },
+            },
+            reservation: {
+              brideName: reservation.brideName,
+              brideFirstName: reservation.brideFirstName,
+              groomName: reservation.groomName,
+              groomFirstName: reservation.groomFirstName,
+            },
+          },
+        },
+      };
+    });
 
     return NextResponse.json(events);
   } catch (error) {

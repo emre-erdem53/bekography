@@ -20,10 +20,12 @@ function formatContactRole(contactRole: "gelin" | "damat") {
 }
 
 export function buildRequestWhatsAppMessage(
-  contactName: string,
+  contactFirstName: string,
+  contactLastName: string,
   contactRole: "gelin" | "damat",
   items: CartItemForMessage[],
 ) {
+  const contactName = `${contactFirstName.trim()} ${contactLastName.trim()}`.trim();
   const packageLines = items
     .map(
       (item) =>

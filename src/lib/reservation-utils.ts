@@ -10,6 +10,79 @@ export function formatCoupleName(brideName: string, groomName: string) {
   return bride || groom || "Rezervasyon";
 }
 
+export function formatCoupleFirstNames(
+  brideFirstName: string | null | undefined,
+  brideName: string,
+  groomFirstName: string | null | undefined,
+  groomName: string,
+): string {
+  return formatCoupleName(
+    resolvePersonFirstName(brideFirstName, brideName),
+    resolvePersonFirstName(groomFirstName, groomName),
+  );
+}
+
+export function joinPersonName(firstName: string, lastName: string): string {
+  return `${firstName.trim()} ${lastName.trim()}`.trim();
+}
+
+export function splitPersonName(fullName: string): {
+  firstName: string;
+  lastName: string;
+} {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
+
+export function resolvePersonFirstName(
+  firstName: string | null | undefined,
+  fullName: string,
+): string {
+  const trimmed = firstName?.trim();
+  if (trimmed) return trimmed;
+  return splitPersonName(fullName).firstName;
+}
+
+export function parseRequestCustomerName(customerName: string): {
+  firstName: string;
+  lastName: string;
+  role: "gelin" | "damat" | null;
+} {
+  const roleMatch = customerName.match(/\((Gelin|Damat)\)\s*$/);
+  const role =
+    roleMatch?.[1] === "Gelin"
+      ? "gelin"
+      : roleMatch?.[1] === "Damat"
+        ? "damat"
+        : null;
+  const namePart = customerName.replace(/\s*\((Gelin|Damat)\)\s*$/, "").trim();
+  const { firstName, lastName } = splitPersonName(namePart);
+  return { firstName, lastName, role };
+}
+
+export function reservationNameFieldsFromInput(input: {
+  brideFirstName: string;
+  brideLastName: string;
+  groomFirstName: string;
+  groomLastName: string;
+}) {
+  const brideFirstName = input.brideFirstName.trim();
+  const brideLastName = input.brideLastName.trim();
+  const groomFirstName = input.groomFirstName.trim();
+  const groomLastName = input.groomLastName.trim();
+
+  return {
+    brideFirstName,
+    brideLastName,
+    groomFirstName,
+    groomLastName,
+    brideName: joinPersonName(brideFirstName, brideLastName),
+    groomName: joinPersonName(groomFirstName, groomLastName),
+  };
+}
+
 export function normalizeTcKimlik(value: string) {
   return value.replace(/\D/g, "");
 }

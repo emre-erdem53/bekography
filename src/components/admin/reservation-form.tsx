@@ -20,7 +20,12 @@ import {
   type PostShootSnapshot,
 } from "@/lib/post-shoot";
 import { PostShootSectionEditor } from "@/components/admin/post-shoot-section-editor";
-import { formatCoupleName } from "@/lib/reservation-utils";
+import {
+  formatCoupleName,
+  joinPersonName,
+  parseRequestCustomerName,
+  splitPersonName,
+} from "@/lib/reservation-utils";
 
 const TIME_STEP_SECONDS = 900;
 
@@ -118,10 +123,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const isEditing = Boolean(reservationId);
   const { labels: paymentLabels } = usePaymentTypeCopy();
 
-  const [brideName, setBrideName] = useState("");
+  const [brideFirstName, setBrideFirstName] = useState("");
+  const [brideLastName, setBrideLastName] = useState("");
   const [brideTc, setBrideTc] = useState("");
   const [bridePhone, setBridePhone] = useState("");
-  const [groomName, setGroomName] = useState("");
+  const [groomFirstName, setGroomFirstName] = useState("");
+  const [groomLastName, setGroomLastName] = useState("");
   const [groomTc, setGroomTc] = useState("");
   const [groomPhone, setGroomPhone] = useState("");
   const [totalPrice, setTotalPrice] = useState(0);
@@ -220,10 +227,14 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           `/api/admin/reservations/${reservationId}`,
         );
         const reservation = await reservationRes.json();
-        setBrideName(reservation.brideName);
+        const brideParts = splitPersonName(reservation.brideName);
+        const groomParts = splitPersonName(reservation.groomName);
+        setBrideFirstName(reservation.brideFirstName || brideParts.firstName);
+        setBrideLastName(reservation.brideLastName || brideParts.lastName);
         setBrideTc(reservation.brideTc ?? "");
         setBridePhone(reservation.bridePhone);
-        setGroomName(reservation.groomName);
+        setGroomFirstName(reservation.groomFirstName || groomParts.firstName);
+        setGroomLastName(reservation.groomLastName || groomParts.lastName);
         setGroomTc(reservation.groomTc ?? "");
         setGroomPhone(reservation.groomPhone);
         setTotalPrice(reservation.totalPrice);
@@ -303,9 +314,25 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       } else if (requestId) {
         const requestRes = await fetch(`/api/admin/requests/${requestId}`);
         const request = await requestRes.json();
-        setGroomName(request.customerName);
-        if (request.customerPhone && request.customerPhone !== "—") {
-          setGroomPhone(request.customerPhone);
+        const parsedContact = parseRequestCustomerName(request.customerName);
+        const contactRole = request.contactRole ?? parsedContact.role;
+        const contactFirstName =
+          request.contactFirstName?.trim() || parsedContact.firstName;
+        const contactLastName =
+          request.contactLastName?.trim() || parsedContact.lastName;
+
+        if (contactRole === "gelin") {
+          setBrideFirstName(contactFirstName);
+          setBrideLastName(contactLastName);
+          if (request.customerPhone && request.customerPhone !== "—") {
+            setBridePhone(request.customerPhone);
+          }
+        } else if (contactRole === "damat") {
+          setGroomFirstName(contactFirstName);
+          setGroomLastName(contactLastName);
+          if (request.customerPhone && request.customerPhone !== "—") {
+            setGroomPhone(request.customerPhone);
+          }
         }
         const defaultDate = toDateInputValue(request.shootDate);
         const mapped: SelectedItem[] = request.items.map(
@@ -521,10 +548,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     setError("");
 
     const payload = {
-      brideName,
+      brideFirstName,
+      brideLastName,
       brideTc: brideTc || undefined,
       bridePhone,
-      groomName,
+      groomFirstName,
+      groomLastName,
       groomTc: groomTc || undefined,
       groomPhone,
       totalPrice,
@@ -597,7 +626,10 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     ? `/admin/rezervasyonlar/${reservationId}`
     : "/admin/rezervasyonlar";
 
-  const coupleTitle = formatCoupleName(brideName, groomName);
+  const coupleTitle = formatCoupleName(
+    joinPersonName(brideFirstName, brideLastName),
+    joinPersonName(groomFirstName, groomLastName),
+  );
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto min-w-0 max-w-4xl space-y-6">
@@ -639,10 +671,18 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
       <Section title="1. Müşteri Bilgileri">
       <div className="grid-safe grid gap-4 md:grid-cols-2">
-          <Field label="Damat Ad Soyad">
+          <Field label="Damat Ad">
             <input
-              value={groomName}
-              onChange={(e) => setGroomName(e.target.value)}
+              value={groomFirstName}
+              onChange={(e) => setGroomFirstName(e.target.value)}
+              required
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Damat Soyad">
+            <input
+              value={groomLastName}
+              onChange={(e) => setGroomLastName(e.target.value)}
               required
               className={inputClass}
             />
@@ -664,11 +704,18 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               className={inputClass}
             />
           </Field>
-          <div />
-          <Field label="Gelin Ad Soyad">
+          <Field label="Gelin Ad">
             <input
-              value={brideName}
-              onChange={(e) => setBrideName(e.target.value)}
+              value={brideFirstName}
+              onChange={(e) => setBrideFirstName(e.target.value)}
+              required
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Gelin Soyad">
+            <input
+              value={brideLastName}
+              onChange={(e) => setBrideLastName(e.target.value)}
               required
               className={inputClass}
             />
