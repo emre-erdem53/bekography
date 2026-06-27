@@ -19,7 +19,6 @@ import {
 } from "@/lib/default-inspect-sections";
 import { normalizeHexColor } from "@/lib/color-utils";
 import { applyPackageServiceTheme, PACKAGE_SERVICE_THEME } from "@/lib/package-service-theme";
-import { mergeGalleryMediaByOption } from "@/lib/package-gallery-persist";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
 import { HexColorInput } from "@/components/admin/hex-color-input";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
@@ -123,18 +122,30 @@ function getOptionGalleryList(
   return [];
 }
 
+function setOptionGalleryMedia(
+  content: PackageCategoryContent,
+  optionKey: string,
+  optionLabel: string,
+  media: PackageGalleryMedia[],
+): PackageCategoryContent {
+  const labelKey = optionLabel.trim();
+  const nextGalleryMedia = { ...(content.galleryMediaByOption ?? {}) };
+  nextGalleryMedia[optionKey] = media;
+  if (labelKey && labelKey !== optionKey) {
+    nextGalleryMedia[labelKey] = media;
+  }
+  return {
+    ...content,
+    galleryMediaByOption: nextGalleryMedia,
+  };
+}
+
 function buildGalleryMediaByOption(
   content: PackageCategoryContent,
   optionList: OptionForm[],
 ): Record<string, PackageGalleryMedia[]> {
   const source = content.galleryMediaByOption ?? {};
   const result: Record<string, PackageGalleryMedia[]> = {};
-
-  for (const [key, media] of Object.entries(source)) {
-    if (Array.isArray(media) && media.length > 0) {
-      result[key] = media;
-    }
-  }
 
   optionList.forEach((option, index) => {
     const primaryKey = getOptionDetailKey(option, index);
@@ -298,7 +309,11 @@ export function PackageForm({
   ) {
     if (items.length === 0) return;
 
-    const current = content.galleryMediaByOption?.[optionKey] ?? [];
+    const optionLabel =
+      options.find(
+        (option, index) => getOptionDetailKey(option, index) === optionKey,
+      )?.label.trim() ?? "";
+    const current = getOptionGalleryList(content, optionKey, optionLabel);
     const existingUrls = new Set(current.map((item) => item.url));
     const nextItems = items
       .filter((item) => !existingUrls.has(item.url))
@@ -310,13 +325,12 @@ export function PackageForm({
 
     if (nextItems.length === 0) return;
 
-    setContent({
-      ...content,
-      galleryMediaByOption: {
-        ...(content.galleryMediaByOption ?? {}),
-        [optionKey]: [...current, ...nextItems],
-      },
-    });
+    setContent(
+      setOptionGalleryMedia(content, optionKey, optionLabel, [
+        ...current,
+        ...nextItems,
+      ]),
+    );
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -809,13 +823,14 @@ export function PackageForm({
                                   ...next[mediaIndex],
                                   alt: e.target.value,
                                 };
-                                setContent({
-                                  ...content,
-                                  galleryMediaByOption: {
-                                    ...(content.galleryMediaByOption ?? {}),
-                                    [key]: next,
-                                  },
-                                });
+                                setContent(
+                                  setOptionGalleryMedia(
+                                    content,
+                                    key,
+                                    option.label.trim(),
+                                    next,
+                                  ),
+                                );
                               }}
                               placeholder="Alt metin (opsiyonel)"
                               className={inputClass}
@@ -825,17 +840,18 @@ export function PackageForm({
                                 type="button"
                                 disabled={mediaIndex === 0}
                                 onClick={() =>
-                                  setContent({
-                                    ...content,
-                                    galleryMediaByOption: {
-                                      ...(content.galleryMediaByOption ?? {}),
-                                      [key]: moveGalleryMedia(
+                                  setContent(
+                                    setOptionGalleryMedia(
+                                      content,
+                                      key,
+                                      option.label.trim(),
+                                      moveGalleryMedia(
                                         optionGallery,
                                         mediaIndex,
                                         -1,
                                       ),
-                                    },
-                                  })
+                                    ),
+                                  )
                                 }
                                 className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
                               >
@@ -846,17 +862,18 @@ export function PackageForm({
                                 type="button"
                                 disabled={mediaIndex === total - 1}
                                 onClick={() =>
-                                  setContent({
-                                    ...content,
-                                    galleryMediaByOption: {
-                                      ...(content.galleryMediaByOption ?? {}),
-                                      [key]: moveGalleryMedia(
+                                  setContent(
+                                    setOptionGalleryMedia(
+                                      content,
+                                      key,
+                                      option.label.trim(),
+                                      moveGalleryMedia(
                                         optionGallery,
                                         mediaIndex,
                                         1,
                                       ),
-                                    },
-                                  })
+                                    ),
+                                  )
                                 }
                                 className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
                               >
@@ -869,13 +886,14 @@ export function PackageForm({
                                   const next = optionGallery.filter(
                                     (_, i) => i !== mediaIndex,
                                   );
-                                  setContent({
-                                    ...content,
-                                    galleryMediaByOption: {
-                                      ...(content.galleryMediaByOption ?? {}),
-                                      [key]: next,
-                                    },
-                                  });
+                                  setContent(
+                                    setOptionGalleryMedia(
+                                      content,
+                                      key,
+                                      option.label.trim(),
+                                      next,
+                                    ),
+                                  );
                                 }}
                                 className="ml-auto text-sm text-red-400 hover:text-red-300"
                               >
