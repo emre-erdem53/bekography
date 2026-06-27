@@ -363,31 +363,46 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
         {item.categoryTitle}
       </h3>
 
-      <div className="mt-6 border-t border-white/10 pt-6">
-        <div className="grid gap-6 sm:grid-cols-2">
-          <ShootMetaBlock label="Hazır Olma Saati" value={readyTimeLabel} />
-          <ShootMetaBlock label="Çekim Yeri" value={locationLabel} />
+      <div className="mt-6 space-y-6 border-t border-white/10 pt-6">
+        <div className="grid grid-cols-2 gap-4 sm:gap-6">
+          <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} />
+          <ShootMetaBlock
+            label="Çekim İçeriği"
+            value={shootContentLabel}
+            nowrap
+            valueClassName="text-base sm:text-xl md:text-2xl"
+          />
         </div>
 
         {item.isOutdoor ? (
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} />
-            <ShootMetaBlock label="Çekim İçeriği" value={shootContentLabel} />
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-6">
             <ShootMetaBlock
               label="Rize'den Çıkış"
               value={item.departureTime || "—"}
+              compact
             />
             <ShootMetaBlock
               label="Rize'ye Varış"
               value={item.arrivalTime || "—"}
+              compact
             />
+            <ShootMetaBlock
+              label="Hazır Olma Saati"
+              value={readyTimeLabel}
+              compact
+            />
+            <ShootMetaBlock label="Çekim Yeri" value={locationLabel} compact />
           </div>
         ) : (
-          <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} />
-            <ShootMetaBlock label="Çekim İçeriği" value={shootContentLabel} />
-            <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} />
-            <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} />
+          <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-6">
+            <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} compact />
+            <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} compact />
+            <ShootMetaBlock
+              label="Hazır Olma Saati"
+              value={readyTimeLabel}
+              compact
+            />
+            <ShootMetaBlock label="Çekim Yeri" value={locationLabel} compact />
           </div>
         )}
       </div>
@@ -411,16 +426,30 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
 function ShootMetaBlock({
   label,
   value,
+  nowrap = false,
+  compact = false,
+  valueClassName,
 }: {
   label: string;
   value: string;
+  nowrap?: boolean;
+  compact?: boolean;
+  valueClassName?: string;
 }) {
+  const defaultValueSize = compact
+    ? "text-sm sm:text-lg md:text-xl"
+    : "text-xl sm:text-2xl md:text-3xl";
+
   return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 sm:text-sm">
+    <div className="min-w-0">
+      <p className="text-[10px] font-medium uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs md:text-sm">
         {label}
       </p>
-      <p className="mt-2 text-xl font-semibold leading-tight text-white sm:text-2xl md:text-3xl">
+      <p
+        className={`mt-2 font-semibold leading-tight text-white ${valueClassName ?? defaultValueSize} ${
+          nowrap ? "whitespace-nowrap" : ""
+        }`}
+      >
         {value}
       </p>
     </div>
