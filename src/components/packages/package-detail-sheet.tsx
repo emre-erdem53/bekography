@@ -8,10 +8,8 @@ import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { getOptionGalleryMedia } from "@/lib/package-media";
 import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
-import { PackageGalleryCarousel } from "@/components/packages/package-gallery-carousel";
-import { PackageDetailSectionsList } from "@/components/packages/package-detail-sections-list";
+import { PackageOptionDetailBody } from "@/components/packages/package-option-detail-body";
 import { BekographyBrand } from "@/components/bekography-brand";
-import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import {
   buildCartItemFromCategory,
@@ -31,23 +29,6 @@ type PackageDetailSheetProps = {
   onClose: () => void;
   presentation?: "overlay" | "inline";
 };
-
-function PackageOptionDetails({
-  category,
-  option,
-}: {
-  category: PackageCategoryData;
-  option: PackageOptionData;
-}) {
-  const content = category.content as PackageCategoryContent;
-  const sections = resolveDetailSectionsForOption(
-    content,
-    option.id,
-    option.label,
-  );
-
-  return <PackageDetailSectionsList sections={sections} />;
-}
 
 function PackageOptionDetailView({
   category,
@@ -71,6 +52,11 @@ function PackageOptionDetailView({
     content.highlightTagsByOption?.[option.id] ??
     content.highlightTagsByOption?.[option.label] ??
     [];
+  const sections = resolveDetailSectionsForOption(
+    content,
+    option.id,
+    option.label,
+  );
 
   return (
     <div
@@ -79,58 +65,36 @@ function PackageOptionDetailView({
         "pb-[max(env(safe-area-inset-bottom),1.5rem)] sm:pb-8"
       }`}
     >
-      <header className="mb-4 sm:mb-5">
-        <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          {category.title}
-        </h2>
-        <p className="mt-1 text-lg font-semibold text-white/90 sm:text-xl">
-          {option.label}
-        </p>
-        {tags.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border border-white/80 px-2.5 py-0.5 text-[11px] text-white sm:px-3 sm:py-1 sm:text-xs"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </header>
-
-      <PackageGalleryCarousel media={galleryMedia} variant="detail" />
-
-      <div className="mt-4 flex items-start gap-6 sm:mt-5 sm:gap-8">
-        <PaymentTypePrice type="pesin" price={option.cashPrice} />
-        <PaymentTypePrice type="taksitli" price={option.installmentPrice} />
-      </div>
-
-      <div className="mt-4 space-y-2 sm:mt-5">
-        <PackageCartToggleButton category={category} option={option} />
-        <button
-          type="button"
-          onClick={onQuickRequest}
-          disabled={quickRequestDisabled}
-          className={`${requestActionSurfaceClassFull} min-h-11 rounded-2xl border border-white/25 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-12 sm:py-3.5 sm:text-sm`}
-        >
-          <RequestActionLabel iconVariant="brand">
-            Hemen Talep Oluştur
-          </RequestActionLabel>
-        </button>
-        {quickRequestDisabled ? (
-          <p className="text-center text-[11px] leading-relaxed text-amber-200/80 sm:text-xs">
-            {getCompanionRequirementMessage()}
-          </p>
-        ) : null}
-      </div>
-
-      <p className="mt-3 text-center text-[11px] text-zinc-500 sm:text-xs">
-        Detaylar için aşağı kaydırın
-      </p>
-
-      <PackageOptionDetails category={category} option={option} />
+      <PackageOptionDetailBody
+        categoryTitle={category.title}
+        optionLabel={option.label}
+        highlightTags={tags}
+        cashPrice={option.cashPrice}
+        installmentPrice={option.installmentPrice}
+        detailSections={sections}
+        galleryMedia={galleryMedia}
+        showGallery
+        actions={
+          <>
+            <PackageCartToggleButton category={category} option={option} />
+            <button
+              type="button"
+              onClick={onQuickRequest}
+              disabled={quickRequestDisabled}
+              className={`${requestActionSurfaceClassFull} min-h-11 rounded-2xl border border-white/25 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-12 sm:py-3.5 sm:text-sm`}
+            >
+              <RequestActionLabel iconVariant="brand">
+                Hemen Talep Oluştur
+              </RequestActionLabel>
+            </button>
+            {quickRequestDisabled ? (
+              <p className="text-center text-[11px] leading-relaxed text-amber-200/80 sm:text-xs">
+                {getCompanionRequirementMessage()}
+              </p>
+            ) : null}
+          </>
+        }
+      />
     </div>
   );
 }
