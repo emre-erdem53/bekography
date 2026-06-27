@@ -23,6 +23,7 @@ import { mergeGalleryMediaByOption } from "@/lib/package-gallery-persist";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
 import { HexColorInput } from "@/components/admin/hex-color-input";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
+import { BlobMediaPickerModal } from "@/components/admin/blob-media-picker-modal";
 import { isCustomPackageIcon, PackageIconDisplay } from "@/components/packages/package-icon";
 import { packageMediaUrl } from "@/lib/package-media";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
@@ -178,6 +179,9 @@ export function PackageForm({
   const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>(
     {},
   );
+  const [blobPickerOptionKey, setBlobPickerOptionKey] = useState<string | null>(
+    null,
+  );
   const { descriptions: paymentDescriptions } = usePaymentTypeCopy();
 
   function toggleOptionExpanded(key: string) {
@@ -285,15 +289,32 @@ export function PackageForm({
     const url = await uploadFile(file);
     if (!url) return;
 
+    appendOptionGalleryMedia(optionKey, [{ url, type: mediaType }]);
+  }
+
+  function appendOptionGalleryMedia(
+    optionKey: string,
+    items: Pick<PackageGalleryMedia, "url" | "type">[],
+  ) {
+    if (items.length === 0) return;
+
     const current = content.galleryMediaByOption?.[optionKey] ?? [];
+    const existingUrls = new Set(current.map((item) => item.url));
+    const nextItems = items
+      .filter((item) => !existingUrls.has(item.url))
+      .map((item) => ({
+        url: item.url,
+        alt: title,
+        type: item.type ?? "image",
+      }));
+
+    if (nextItems.length === 0) return;
+
     setContent({
       ...content,
       galleryMediaByOption: {
         ...(content.galleryMediaByOption ?? {}),
-        [optionKey]: [
-          ...current,
-          { url, alt: title, type: mediaType },
-        ],
+        [optionKey]: [...current, ...nextItems],
       },
     });
   }
@@ -423,7 +444,20 @@ export function PackageForm({
     return <p className="text-zinc-400">Yükleniyor...</p>;
   }
 
+  const blobPickerGallery =
+    blobPickerOptionKey !== null
+      ? getOptionGalleryList(
+          content,
+          blobPickerOptionKey,
+          options.find(
+            (option, index) =>
+              getOptionDetailKey(option, index) === blobPickerOptionKey,
+          )?.label.trim() ?? "",
+        )
+      : [];
+
   return (
+    <>
     <form onSubmit={handleSubmit} className="mx-auto min-w-0 max-w-3xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -853,23 +887,32 @@ export function PackageForm({
                       </div>
                     );
                   })}
-                  <div className="grid-safe grid gap-3 sm:grid-cols-2">
-                    <AdminFileUpload
-                      accept="image/jpeg,image/webp,image/png"
-                      label="Görsel Ekle"
-                      hint="1:1 kare oran zorunludur. Önerilen 1080×1080 px, max 2 MB."
-                      onFileSelect={(file) =>
-                        handleOptionMediaUpload(key, file, "image")
-                      }
-                    />
-                    <AdminFileUpload
-                      accept="video/mp4,video/webm"
-                      label="Video Ekle"
-                      hint="1:1 kare oran zorunludur. MP4 veya WebM formatında video."
-                      onFileSelect={(file) =>
-                        handleOptionMediaUpload(key, file, "video")
-                      }
-                    />
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={() => setBlobPickerOptionKey(key)}
+                      className="w-full rounded-xl border border-[#93f8b6]/30 bg-[#93f8b6]/10 px-4 py-3 text-sm font-medium text-[#93f8b6] transition-colors hover:bg-[#93f8b6]/15"
+                    >
+                      Fotoğraf / Video Ekle (Blob Kütüphanesi)
+                    </button>
+                    <div className="grid-safe grid gap-3 sm:grid-cols-2">
+                      <AdminFileUpload
+                        accept="image/jpeg,image/webp,image/png"
+                        label="Yeni Görsel Yükle"
+                        hint="1:1 kare oran zorunludur. Önerilen 1080×1080 px, max 2 MB."
+                        onFileSelect={(file) =>
+                          handleOptionMediaUpload(key, file, "image")
+                        }
+                      />
+                      <AdminFileUpload
+                        accept="video/mp4,video/webm"
+                        label="Yeni Video Yükle"
+                        hint="1:1 kare oran zorunludur. MP4 veya WebM formatında video."
+                        onFileSelect={(file) =>
+                          handleOptionMediaUpload(key, file, "video")
+                        }
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1101,6 +1144,20 @@ export function PackageForm({
         {saving ? "Kaydediliyor..." : "Kaydet"}
       </button>
     </form>
+
+    <BlobMediaPickerModal
+      open={blobPickerOptionKey !== null}
+      onClose={() => setBlobPickerOptionKey(null)}
+      onSelect={(items) => {
+        if (blobPickerOptionKey) {
+          appendOptionGalleryMedia(blobPickerOptionKey, items);
+        }
+      }}
+      existingUrls={blobPickerGallery.map(
+        (media) => packageMediaUrl(media.url) ?? media.url,
+      )}
+    />
+    </>
   );
 }
 
