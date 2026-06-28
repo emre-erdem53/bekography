@@ -7,10 +7,13 @@ import {
   buildPackageInspectSections,
   hasRichInspectSections,
 } from "@/lib/package-inspect-templates";
+import {
+  hasAnyWorkflowStageTags,
+  resolvePackageWorkflowStageTags,
+} from "@/lib/package-workflow-stage-tags";
 import { normalizePostShootSectionTitle } from "@/lib/post-shoot-from-inspect";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
 import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
-import { TRACKING_WORKFLOW_STAGE_ORDER } from "@/lib/tracking-workflow";
 
 const EMPTY_STAGE_TAGS: Record<TrackingWorkflowStageId, string[]> = {
   rezervasyon: [],
@@ -46,7 +49,6 @@ function scheduleTypeForSlug(slug: string): PackageInspectContextScheduleType {
   return slug === "dis-cekim" ? "outdoor" : "indoor";
 }
 
-/** Snapshot'taki etiketleri aynı aşamaya denk gelen tam inceleme bölümüne yazar. */
 function mergeSnapshotSectionTags(
   base: PackageDetailSection[],
   snapshotSections: PackageDetailSection[],
@@ -88,7 +90,7 @@ function pickInspectSectionBase(
   return fromTemplate;
 }
 
-/** Takip ekranı için en eksiksiz inceleme bölüm listesini seçer. */
+/** Satın alınan ürün detayı için inceleme metinlerini tamamlar. */
 export function resolveDetailSectionsForStageTags(input: {
   detailSections: PackageDetailSection[];
   categorySlug: string;
@@ -129,24 +131,9 @@ export function resolveDetailSectionsForStageTags(input: {
   return mergeSnapshotSectionTags(base, input.detailSections);
 }
 
-function appendUniqueTags(
-  target: Record<TrackingWorkflowStageId, string[]>,
-  stageId: TrackingWorkflowStageId,
-  tags: string[],
-) {
-  if (tags.length === 0) return;
-  const existing = new Set(target[stageId]);
-  for (const tag of tags) {
-    const trimmed = tag.trim();
-    if (!trimmed || existing.has(trimmed)) continue;
-    existing.add(trimmed);
-    target[stageId].push(trimmed);
-  }
-}
-
-/** Paket incele bölümlerindeki etiketleri sipariş süreci aşamalarına eşler. */
+/** Rezervasyon / paket tanımından süreç etiketlerini çözümler. */
 export function buildWorkflowStageTags(
-  detailSections: PackageDetailSection[],
+  _detailSections: unknown,
   postShoot?: PostShootSnapshot,
   context?: {
     categorySlug: string;
@@ -160,47 +147,21 @@ export function buildWorkflowStageTags(
   if (itemId && postShoot?.itemStageTags?.[itemId]) {
     const overrides = postShoot.itemStageTags[itemId];
     const tags = emptyStageTagsFromOverrides(overrides);
-    const hasAny = TRACKING_WORKFLOW_STAGE_ORDER.some(
-      (stage) => tags[stage].length > 0,
+    if (hasAnyWorkflowStageTags(tags)) return tags;
+  }
+
+  if (context?.categoryContent && context.packageOptionId) {
+    const fromPackage = resolvePackageWorkflowStageTags(
+      context.categoryContent,
+      context.packageOptionId,
+      context.optionLabel,
     );
-    if (hasAny) return tags;
-  }
-
-  const sections = context
-    ? resolveDetailSectionsForStageTags({
-        detailSections,
-        ...context,
-      })
-    : detailSections;
-
-  const tags: Record<TrackingWorkflowStageId, string[]> = {
-    rezervasyon: [],
-    cekim: [],
-    dijital: [],
-    secim: [],
-    duzenleme: [],
-    baski: [],
-  };
-
-  for (const section of sections) {
-    const stageId = mapSectionTitleToWorkflowStage(section.title);
-    if (!stageId) continue;
-    appendUniqueTags(tags, stageId, section.tags ?? []);
-  }
-
-  if (postShoot) {
-    if (tags.dijital.length === 0) {
-      appendUniqueTags(tags, "dijital", postShoot.digital.pills);
-    }
-    if (tags.duzenleme.length === 0) {
-      appendUniqueTags(tags, "duzenleme", postShoot.editing.pills);
-    }
-    if (tags.baski.length === 0) {
-      appendUniqueTags(tags, "baski", postShoot.printing.pills);
+    if (hasAnyWorkflowStageTags(fromPackage)) {
+      return fromPackage;
     }
   }
 
-  return tags;
+  return { ...EMPTY_STAGE_TAGS };
 }
 
 function emptyStageTagsFromOverrides(

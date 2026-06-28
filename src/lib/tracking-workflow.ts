@@ -12,13 +12,16 @@ export type TrackingWorkflowAction =
   | "digital_delivered"
   | "selection_completed"
   | "editing_completed"
-  | "printing_completed";
+  | "printing_completed"
+  | "mark_delivered"
+  | "unmark_delivered";
 
 export type TrackingWorkflowFlags = {
   digitalDeliveredAt: string | null;
   selectionCompletedAt: string | null;
   editingCompletedAt: string | null;
   printingCompletedAt: string | null;
+  deliveredAt: string | null;
   /** Admin panelinden doğrudan seçilen güncel aşama. */
   adminStage?: TrackingWorkflowStageId | null;
 };
@@ -71,6 +74,7 @@ export function emptyTrackingWorkflowFlags(): TrackingWorkflowFlags {
     selectionCompletedAt: null,
     editingCompletedAt: null,
     printingCompletedAt: null,
+    deliveredAt: null,
     adminStage: null,
   };
 }
@@ -100,6 +104,8 @@ export function parseTrackingWorkflowFlags(
       typeof data.printingCompletedAt === "string"
         ? data.printingCompletedAt
         : null,
+    deliveredAt:
+      typeof data.deliveredAt === "string" ? data.deliveredAt : null,
     adminStage:
       typeof data.adminStage === "string" &&
       (TRACKING_WORKFLOW_STAGE_ORDER as string[]).includes(data.adminStage)
@@ -125,6 +131,10 @@ export function mergeWorkflowAction(
       return { ...flags, editingCompletedAt: flags.editingCompletedAt ?? now };
     case "printing_completed":
       return { ...flags, printingCompletedAt: flags.printingCompletedAt ?? now };
+    case "mark_delivered":
+      return { ...flags, deliveredAt: flags.deliveredAt ?? now };
+    case "unmark_delivered":
+      return { ...flags, deliveredAt: null };
     default:
       return flags;
   }
@@ -302,22 +312,49 @@ function isParallelDigitalSelectionStage(
   return stageId === "dijital" || stageId === "secim";
 }
 
+function isShootEffectivelyComplete(
+  workflow: TrackingWorkflowFlags,
+  shootPassed: boolean,
+  order: TrackingWorkflowStageId[],
+): boolean {
+  if (shootPassed) return true;
+
+  if (
+    workflow.digitalDeliveredAt ||
+    workflow.selectionCompletedAt ||
+    workflow.editingCompletedAt ||
+    workflow.printingCompletedAt
+  ) {
+    return true;
+  }
+
+  if (workflow.adminStage) {
+    const cekimIndex = order.indexOf("cekim");
+    const adminIndex = order.indexOf(workflow.adminStage);
+    if (cekimIndex >= 0 && adminIndex > cekimIndex) return true;
+  }
+
+  return false;
+}
+
 function computeStageState(
   id: TrackingWorkflowStageId,
   effectiveStageId: TrackingWorkflowStageId,
   order: TrackingWorkflowStageId[],
   shootPassed: boolean,
+  workflow: TrackingWorkflowFlags,
 ): TrackingWorkflowStageState {
   const effectiveIndex = order.indexOf(effectiveStageId);
   const idIndex = order.indexOf(id);
   const duzenlemeIndex = order.indexOf("duzenleme");
+  const shootComplete = isShootEffectivelyComplete(workflow, shootPassed, order);
 
   if (id === "dijital" || id === "secim") {
     if (duzenlemeIndex >= 0 && effectiveIndex >= duzenlemeIndex) {
       return "completed";
     }
     if (
-      shootPassed &&
+      shootComplete &&
       isParallelDigitalSelectionStage(effectiveStageId)
     ) {
       return "current";
@@ -327,7 +364,7 @@ function computeStageState(
   }
 
   if (id === "cekim") {
-    if (!shootPassed) {
+    if (!shootComplete) {
       return effectiveStageId === "rezervasyon" ? "upcoming" : "current";
     }
     return "completed";
@@ -381,6 +418,7 @@ function buildStagesFromEffectiveStage(
       effectiveStageId,
       order,
       shootPassed,
+      workflow,
     );
     return {
       id,
@@ -573,10 +611,16 @@ export function buildTrackingWorkflowView(input: {
     printingDone || (editingDone && !hasPrinting);
 
   const availableAdminActions: TrackingWorkflowAction[] = [];
-  if (shootPassed && !digitalDone) {
+  const shootComplete = isShootEffectivelyComplete(
+    workflow,
+    shootPassed,
+    workflowStageOrder(hasPrinting),
+  );
+
+  if (shootComplete && !digitalDone) {
     availableAdminActions.push("digital_delivered");
   }
-  if (shootPassed && !selectionDone) {
+  if (shootComplete && !selectionDone) {
     availableAdminActions.push("selection_completed");
   }
   if (
@@ -725,4 +769,6 @@ export const TRACKING_WORKFLOW_ACTION_LABELS: Record<
   selection_completed: "Seçim tamamlandı",
   editing_completed: "Düzenleme tamamlandı",
   printing_completed: "Baskı tamamlandı",
+  mark_delivered: "Teslim edildi",
+  unmark_delivered: "Teslim işaretini kaldır",
 };

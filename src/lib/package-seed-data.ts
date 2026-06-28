@@ -44,6 +44,21 @@ export type PackageCategoryContent = {
   detailSections?: PackageDetailSection[];
   detailSectionsByOption?: Record<string, PackageDetailSection[]>;
   inspectEnabledByOption?: Record<string, boolean>;
+  /** Takip ekranı süreç etiketleri — çekim türüne göre (option id veya label anahtarı). */
+  workflowStageTagsByOption?: Record<
+    string,
+    Partial<
+      Record<
+        | "rezervasyon"
+        | "cekim"
+        | "dijital"
+        | "secim"
+        | "duzenleme"
+        | "baski",
+        string[]
+      >
+    >
+  >;
   requestFieldLabels?: PackageRequestFieldLabels;
 };
 

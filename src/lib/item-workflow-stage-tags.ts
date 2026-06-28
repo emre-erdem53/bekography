@@ -1,5 +1,9 @@
-import type { PackageDetailSection } from "@/lib/package-seed-data";
-import { getDetailSectionsForOption, type InspectCategory } from "@/lib/post-shoot-from-inspect";
+import type { PackageCategoryContent, PackageDetailSection } from "@/lib/package-seed-data";
+import {
+  hasAnyWorkflowStageTags,
+  resolvePackageWorkflowStageTags,
+} from "@/lib/package-workflow-stage-tags";
+import type { InspectCategory } from "@/lib/post-shoot-from-inspect";
 import {
   TRACKING_WORKFLOW_STAGE_ORDER,
   type TrackingWorkflowStageId,
@@ -64,13 +68,26 @@ export function buildItemStageTagsFromPackage(
   if (!category) return emptyItemWorkflowStageTags();
 
   const option = category.options?.find((entry) => entry.id === packageOptionId);
-  const sections = getDetailSectionsForOption(
+  const fromPackage = resolvePackageWorkflowStageTags(
     category.content,
     packageOptionId,
     option?.label ?? categoryTitle,
   );
 
-  return extractStageTagsFromDetailSections(sections);
+  if (hasAnyWorkflowStageTags(fromPackage)) {
+    return fromPackage;
+  }
+
+  return emptyItemWorkflowStageTags();
+}
+
+export function getEditableStagesForScheduleType(
+  scheduleType?: PackageCategoryContent["scheduleType"],
+): TrackingWorkflowStageId[] {
+  if (scheduleType === "outdoor") {
+    return [...TRACKING_WORKFLOW_STAGE_ORDER];
+  }
+  return TRACKING_WORKFLOW_STAGE_ORDER.filter((stage) => stage !== "baski");
 }
 
 export function getEditableStagesForCategory(

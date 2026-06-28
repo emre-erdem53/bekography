@@ -70,9 +70,14 @@ function enrichPurchasedProductSnapshot(
     category.content && typeof category.content === "object"
       ? (category.content as PackageCategoryContent)
       : undefined;
+  const fresh = buildProductSnapshotFromOption(item.packageOption);
 
   return {
     ...snapshot,
+    highlightTags:
+      snapshot.highlightTags.length > 0
+        ? snapshot.highlightTags
+        : fresh.highlightTags,
     detailSections: resolveDetailSectionsForStageTags({
       detailSections: snapshot.detailSections,
       categorySlug: snapshot.categorySlug || category.slug,

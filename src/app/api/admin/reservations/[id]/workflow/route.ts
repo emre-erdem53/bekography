@@ -33,6 +33,8 @@ const workflowActionSchema = z.object({
     "selection_completed",
     "editing_completed",
     "printing_completed",
+    "mark_delivered",
+    "unmark_delivered",
   ]),
 });
 

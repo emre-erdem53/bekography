@@ -95,7 +95,7 @@ export const ReservationOrderDocument = forwardRef<
                     className="border-b border-white/10 px-5 py-4 last:border-b-0 sm:border-b-0"
                   >
                     <p className="text-xs text-zinc-500">
-                      Ödenecek{" "}
+                      {isPaid ? "Ödendi" : "Ödenecek"}{" "}
                       {format(new Date(row.dueDate), "d MMMM yyyy", {
                         locale: tr,
                       })}
@@ -107,11 +107,6 @@ export const ReservationOrderDocument = forwardRef<
                     >
                       {formatPrice(row.amount)}
                     </p>
-                    {isPaid ? (
-                      <p className="mt-2 text-xs text-zinc-500">
-                        (Bu vadeye ait ödeme tamamlandı)
-                      </p>
-                    ) : null}
                   </div>
                 );
               })}
@@ -356,55 +351,65 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
-      <h3
-        className="text-center text-2xl font-semibold leading-none sm:text-3xl md:text-4xl"
-        style={{ color: item.accentColor }}
-      >
-        {item.categoryTitle}
-      </h3>
+      <div className="relative flex items-center justify-center gap-3">
+        <h3
+          className="text-center text-2xl font-semibold leading-none sm:text-3xl md:text-4xl"
+          style={{ color: item.accentColor }}
+        >
+          {item.categoryTitle}
+        </h3>
+        {item.workflowFlags.deliveredAt ? (
+          <span className="absolute right-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 sm:static sm:px-3 sm:text-xs">
+            <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Teslim Edildi
+          </span>
+        ) : null}
+      </div>
 
-      <div className="mt-6 space-y-6 border-t border-white/10 pt-6">
-        <div className="grid grid-cols-2 gap-4 sm:gap-6">
-          <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} />
-          <ShootMetaBlock
-            label="Çekim İçeriği"
-            value={shootContentLabel}
-            nowrap
-            valueClassName="text-base sm:text-xl md:text-2xl"
-          />
-        </div>
-
+      <div className="mt-6 space-y-5 border-t border-white/10 pt-6">
         {item.isOutdoor ? (
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-6">
+          <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-6">
+            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
+            <ShootMetaBlock
+              label="Çekim İçeriği"
+              value={shootContentLabel}
+              size="lg"
+              nowrap
+            />
             <ShootMetaBlock
               label="Rize'den Çıkış"
               value={item.departureTime || "—"}
-              compact
+              size="lg"
             />
             <ShootMetaBlock
               label="Rize'ye Varış"
               value={item.arrivalTime || "—"}
-              compact
+              size="lg"
             />
-            <ShootMetaBlock
-              label="Hazır Olma Saati"
-              value={readyTimeLabel}
-              compact
-            />
-            <ShootMetaBlock label="Çekim Yeri" value={locationLabel} compact />
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-6">
-            <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} compact />
-            <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} compact />
+          <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-6">
+            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
             <ShootMetaBlock
-              label="Hazır Olma Saati"
-              value={readyTimeLabel}
-              compact
+              label="Çekim İçeriği"
+              value={shootContentLabel}
+              size="lg"
+              nowrap
             />
-            <ShootMetaBlock label="Çekim Yeri" value={locationLabel} compact />
+            <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} size="lg" />
+            <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} size="lg" />
           </div>
         )}
+
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
+          <ShootMetaBlock label="Hazır Olma Saati" value={readyTimeLabel} size="sm" />
+          <ShootMetaBlock label="Çekim Yeri" value={locationLabel} size="sm" />
+          <ShootMetaBlock
+            label="B. Fiyat"
+            value={formatPrice(item.agreedUnitPrice)}
+            size="sm"
+          />
+        </div>
       </div>
 
       {item.workflow ? (
@@ -427,26 +432,33 @@ function ShootMetaBlock({
   label,
   value,
   nowrap = false,
-  compact = false,
+  size = "lg",
   valueClassName,
 }: {
   label: string;
   value: string;
   nowrap?: boolean;
-  compact?: boolean;
+  size?: "lg" | "sm";
   valueClassName?: string;
 }) {
-  const defaultValueSize = compact
-    ? "text-sm sm:text-lg md:text-xl"
-    : "text-xl sm:text-2xl md:text-3xl";
+  const labelSize =
+    size === "sm"
+      ? "text-[9px] sm:text-[10px] md:text-xs"
+      : "text-[10px] sm:text-xs md:text-sm";
+  const defaultValueSize =
+    size === "sm"
+      ? "text-xs sm:text-sm md:text-base"
+      : "text-sm sm:text-xl md:text-2xl";
 
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase leading-tight tracking-wide text-zinc-500 sm:text-xs md:text-sm">
+      <p
+        className={`font-medium uppercase leading-tight tracking-wide text-zinc-500 ${labelSize}`}
+      >
         {label}
       </p>
       <p
-        className={`mt-2 font-semibold leading-tight text-white ${valueClassName ?? defaultValueSize} ${
+        className={`mt-1.5 font-semibold leading-tight text-white sm:mt-2 ${valueClassName ?? defaultValueSize} ${
           nowrap ? "whitespace-nowrap" : ""
         }`}
       >

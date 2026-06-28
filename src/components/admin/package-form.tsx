@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ReorderableTagsEditor } from "@/components/admin/reorderable-tags-editor";
+import { PostShootTagsEditor } from "@/components/admin/post-shoot-section-editor";
+import {
+  emptyItemWorkflowStageTags,
+  getEditableStagesForScheduleType,
+  WORKFLOW_STAGE_TAG_LABELS,
+} from "@/lib/item-workflow-stage-tags";
 import type {
   PackageCategoryContent,
   PackageDetailSection,
@@ -43,6 +49,7 @@ const defaultContent: PackageCategoryContent = {
   detailSections: [],
   detailSectionsByOption: {},
   inspectEnabledByOption: {},
+  workflowStageTagsByOption: {},
   requestFieldLabels: defaultRequestFieldLabels("Paket", "indoor"),
 };
 
@@ -71,18 +78,21 @@ function removeOptionContentKeys(
   const nextHighlightTags = { ...(content.highlightTagsByOption ?? {}) };
   const nextOptionIconKeys = { ...(content.optionIconKeys ?? {}) };
   const nextGalleryMedia = { ...(content.galleryMediaByOption ?? {}) };
+  const nextWorkflowStageTags = { ...(content.workflowStageTagsByOption ?? {}) };
 
   delete nextDetailSections[key];
   delete nextInspectEnabled[key];
   delete nextHighlightTags[key];
   delete nextOptionIconKeys[key];
   delete nextGalleryMedia[key];
+  delete nextWorkflowStageTags[key];
   if (labelKey) {
     delete nextDetailSections[labelKey];
     delete nextInspectEnabled[labelKey];
     delete nextHighlightTags[labelKey];
     delete nextOptionIconKeys[labelKey];
     delete nextGalleryMedia[labelKey];
+    delete nextWorkflowStageTags[labelKey];
   }
 
   return {
@@ -92,6 +102,7 @@ function removeOptionContentKeys(
     highlightTagsByOption: nextHighlightTags,
     optionIconKeys: nextOptionIconKeys,
     galleryMediaByOption: nextGalleryMedia,
+    workflowStageTagsByOption: nextWorkflowStageTags,
   };
 }
 
@@ -278,6 +289,7 @@ export function PackageForm({
           detailSections: loadedContent.detailSections ?? [],
           detailSectionsByOption: loadedContent.detailSectionsByOption ?? {},
           inspectEnabledByOption: loadedContent.inspectEnabledByOption ?? {},
+          workflowStageTagsByOption: loadedContent.workflowStageTagsByOption ?? {},
           requestFieldLabels:
             loadedContent.requestFieldLabels ??
             defaultRequestFieldLabels(
@@ -423,6 +435,17 @@ export function PackageForm({
       }
     });
     const galleryMediaByOption = buildGalleryMediaByOption(content, options);
+    const workflowStageTagsByOption = {
+      ...(content.workflowStageTagsByOption ?? {}),
+    };
+    Object.entries(content.workflowStageTagsByOption ?? {}).forEach(
+      ([key, tags]) => {
+        const mappedKey = optionLabelMap[key];
+        if (mappedKey && !workflowStageTagsByOption[mappedKey]) {
+          workflowStageTagsByOption[mappedKey] = tags;
+        }
+      },
+    );
 
     const {
       tagline: _legacyTagline,
@@ -440,6 +463,7 @@ export function PackageForm({
       highlightTagsByOption,
       optionIconKeys,
       galleryMediaByOption,
+      workflowStageTagsByOption,
       galleryImages: [],
       scheduleType: content.scheduleType ?? "indoor",
     });
@@ -623,6 +647,13 @@ export function PackageForm({
               content.highlightTagsByOption?.[key] ??
               content.highlightTagsByOption?.[option.label.trim()] ??
               [];
+            const optionWorkflowTags =
+              content.workflowStageTagsByOption?.[key] ??
+              content.workflowStageTagsByOption?.[option.label.trim()] ??
+              emptyItemWorkflowStageTags();
+            const workflowStages = getEditableStagesForScheduleType(
+              content.scheduleType,
+            );
             const sections = resolveDetailSectionsForOption(
               content,
               key,
@@ -797,6 +828,38 @@ export function PackageForm({
                     })
                   }
                 />
+
+                <div className="space-y-3 border-t border-white/10 pt-4">
+                  <div>
+                    <h4 className="text-sm font-medium text-white">
+                      Süreç Etiketleri
+                    </h4>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Müşteri takip sayfasındaki sipariş durumu timeline&apos;ında
+                      her aşamada gösterilecek etiketler. İnceleme metinlerinden
+                      bağımsızdır.
+                    </p>
+                  </div>
+                  {workflowStages.map((stage) => (
+                    <PostShootTagsEditor
+                      key={stage}
+                      title={WORKFLOW_STAGE_TAG_LABELS[stage]}
+                      tags={optionWorkflowTags[stage] ?? []}
+                      onChange={(tags) =>
+                        setContent({
+                          ...content,
+                          workflowStageTagsByOption: {
+                            ...(content.workflowStageTagsByOption ?? {}),
+                            [key]: {
+                              ...optionWorkflowTags,
+                              [stage]: tags,
+                            },
+                          },
+                        })
+                      }
+                    />
+                  ))}
+                </div>
 
                 <div className="space-y-3 border-t border-white/10 pt-4">
                   <div>

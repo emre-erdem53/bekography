@@ -1,7 +1,6 @@
 import { parseDateOnlyInput } from "@/lib/date-only";
 import { prisma } from "@/lib/prisma";
 import {
-  applyStageTagsToDetailSections,
   type ItemWorkflowStageTags,
 } from "@/lib/item-workflow-stage-tags";
 import {
@@ -31,16 +30,9 @@ export type ReservationItemInput = {
 
 function withStageTags(
   snapshot: ReservationProductSnapshot,
-  workflowStageTags?: ItemWorkflowStageTags,
+  _workflowStageTags?: ItemWorkflowStageTags,
 ): ReservationProductSnapshot {
-  if (!workflowStageTags) return snapshot;
-  return {
-    ...snapshot,
-    detailSections: applyStageTagsToDetailSections(
-      snapshot.detailSections,
-      workflowStageTags,
-    ),
-  };
+  return snapshot;
 }
 
 function mapItemBase(
