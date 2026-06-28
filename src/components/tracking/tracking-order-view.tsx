@@ -368,14 +368,13 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
 
       <div className="mt-6 space-y-6 border-t border-white/10 pt-6">
         {item.isOutdoor ? (
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] md:gap-x-10 md:gap-y-0">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
             <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
             <ShootMetaBlock
               label="Çekim İçeriği"
               value={shootContentLabel}
               size="lg"
               nowrap
-              valueClassName="text-xs sm:text-sm md:text-base lg:text-lg"
             />
             <ShootMetaBlock
               label="Rize'den Çıkış"
@@ -389,14 +388,13 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] md:gap-x-10 md:gap-y-0">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
             <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
             <ShootMetaBlock
               label="Çekim İçeriği"
               value={shootContentLabel}
               size="lg"
               nowrap
-              valueClassName="text-xs sm:text-sm md:text-base lg:text-lg"
             />
             <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} size="lg" />
             <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} size="lg" />
