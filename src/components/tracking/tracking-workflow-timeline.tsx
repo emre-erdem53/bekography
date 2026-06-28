@@ -166,33 +166,41 @@ export function TrackingWorkflowTimeline({
                 >
                   {getTrackingStageLabel(stage.id, stage.state)}
                 </p>
-                {stage.deadlineDate ? (
-                  <p
-                    className={`mt-1 w-full px-0.5 text-center text-[9px] leading-tight sm:text-[10px] ${
-                      isCurrent
-                        ? "text-amber-200/80"
-                        : isCompleted
-                          ? "text-emerald-400/70"
-                          : "text-zinc-600"
-                    }`}
-                  >
-                    {format(new Date(stage.deadlineDate), "d MMM yyyy", {
-                      locale: tr,
-                    })}
-                  </p>
-                ) : null}
-                {stage.deadlineHint ? (
-                  <p
-                    className={`mt-1 w-full px-0.5 text-center text-[8px] leading-snug sm:text-[9px] ${
-                      isCurrent
-                        ? "text-amber-200/60"
-                        : isUpcoming
-                          ? "text-zinc-600"
-                          : "text-zinc-500"
-                    }`}
-                  >
-                    {stage.deadlineHint}
-                  </p>
+                {stage.deadlineDate || stage.deadlineHint ? (
+                  <>
+                    {stage.deadlineDate ? (
+                      <p
+                        className={`mt-1 w-full px-0.5 text-center text-[8px] leading-snug sm:text-[9px] ${
+                          isCurrent
+                            ? "text-amber-200/80"
+                            : isCompleted
+                              ? "text-emerald-400/70"
+                              : "text-zinc-600"
+                        }`}
+                      >
+                        {stage.deadlineHintContinuesDate && stage.deadlineHint
+                          ? `${format(new Date(stage.deadlineDate), "d MMM yyyy", {
+                              locale: tr,
+                            })}${stage.deadlineHint}`
+                          : format(new Date(stage.deadlineDate), "d MMM yyyy", {
+                              locale: tr,
+                            })}
+                      </p>
+                    ) : null}
+                    {stage.deadlineHint && !stage.deadlineHintContinuesDate ? (
+                      <p
+                        className={`mt-1 w-full px-0.5 text-center text-[8px] leading-snug sm:text-[9px] ${
+                          isCurrent
+                            ? "text-amber-200/60"
+                            : isUpcoming
+                              ? "text-zinc-600"
+                              : "text-zinc-500"
+                        }`}
+                      >
+                        {stage.deadlineHint}
+                      </p>
+                    ) : null}
+                  </>
                 ) : null}
                 {stageTagList.length > 0 ? (
                   <div className="mt-2 flex w-full flex-col items-center gap-1 px-0.5">

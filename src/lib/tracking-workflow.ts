@@ -48,6 +48,8 @@ export type TrackingWorkflowStageView = {
   deadlineDate?: string;
   /** Tarihin altında gösterilen kısa açıklama. */
   deadlineHint?: string;
+  /** true ise deadlineHint, gösterilen tarihten sonra cümleyi sürdürür. */
+  deadlineHintContinuesDate?: boolean;
 };
 
 export type TrackingWorkflowView = {
@@ -397,30 +399,31 @@ function computeStageTone(
 function resolveStageDeadlineHint(
   id: TrackingWorkflowStageId,
   state: TrackingWorkflowStageState,
-  deadlines: WorkflowDeadlines,
   dayCounts: { editingDaysAfter: number; printingDaysAfter: number },
-): string | undefined {
-  if (state === "completed") return undefined;
-
-  const formatDate = (date: Date) => format(date, "d MMMM yyyy", { locale: tr });
+): { hint?: string; continuesDate?: boolean } {
+  if (state === "completed") return {};
 
   switch (id) {
     case "dijital":
-      return `${formatDate(deadlines.digitalSelection)}'a kadar teslim alınmalı.`;
+      return { hint: "'a kadar teslim alınmalı.", continuesDate: true };
     case "secim":
-      return `${formatDate(deadlines.digitalSelection)}'a kadar seçim yapılmalı.`;
+      return { hint: "'a kadar seçim yapılmalı.", continuesDate: true };
     case "duzenleme":
       if (state === "current") {
-        return `${formatDate(deadlines.editing)}'a kadar düzenlemeler bitecek.`;
+        return { hint: "'a kadar düzenlemeler bitecek.", continuesDate: true };
       }
-      return `Seçimden sonraki ${dayCounts.editingDaysAfter} günde düzenlemeler bitecek.`;
+      return {
+        hint: `Seçimden sonraki ${dayCounts.editingDaysAfter} günde düzenlemeler bitecek.`,
+      };
     case "baski":
       if (state === "current") {
-        return `${formatDate(deadlines.printing)}'a kadar kargoya verilecek.`;
+        return { hint: "'a kadar kargoya verilecek.", continuesDate: true };
       }
-      return `Düzenlemeden sonraki ${dayCounts.printingDaysAfter} günde kargoya verilecek.`;
+      return {
+        hint: `Düzenlemeden sonraki ${dayCounts.printingDaysAfter} günde kargoya verilecek.`,
+      };
     default:
-      return undefined;
+      return {};
   }
 }
 
@@ -454,13 +457,15 @@ function buildStagesFromEffectiveStage(
       shootPassed,
       workflow,
     );
+    const { hint, continuesDate } = resolveStageDeadlineHint(id, state, dayCounts);
     return {
       id,
       label: stageDefaultLabel(id, state),
       state,
       tone: computeStageTone(id, state),
       deadlineDate: resolveStageDeadlineDate(id, deadlines, workflow).toISOString(),
-      deadlineHint: resolveStageDeadlineHint(id, state, deadlines, dayCounts),
+      deadlineHint: hint,
+      deadlineHintContinuesDate: continuesDate,
     };
   });
 }
