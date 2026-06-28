@@ -254,106 +254,106 @@ function DayTimeline({
         </p>
       </div>
 
-      {events.length === 0 ? (
-        <p className="px-4 py-8 text-sm text-zinc-500">
-          Bu gün için rezervasyon yok.
-        </p>
-      ) : (
-        <div className="relative px-3 py-4 sm:px-4">
-          <div className="flex gap-3">
-            <div
-              className="relative shrink-0 text-right text-[11px] text-zinc-500"
-              style={{ width: "2.75rem", height: timelineHeightPx }}
-            >
-              {timelineHours.map((hour) => {
-                const top =
-                  ((hour * 60 - timelineStartMin) / timelineSpanMin) *
-                  timelineHeightPx;
+      <div className="relative px-3 py-4 sm:px-4">
+        <div className="flex gap-3">
+          <div
+            className="relative shrink-0 text-right text-[11px] text-zinc-500"
+            style={{ width: "2.75rem", height: timelineHeightPx }}
+          >
+            {timelineHours.map((hour) => {
+              const top =
+                ((hour * 60 - timelineStartMin) / timelineSpanMin) *
+                timelineHeightPx;
 
-                return (
-                  <span
-                    key={hour}
-                    className="absolute right-0 -translate-y-1/2 leading-none"
-                    style={{ top }}
-                  >
-                    {String(hour).padStart(2, "0")}:00
-                  </span>
-                );
-              })}
-            </div>
-
-            <div
-              className="relative min-w-0 flex-1"
-              style={{ height: timelineHeightPx }}
-            >
-              {timelineHours.map((hour) => {
-                const top =
-                  ((hour * 60 - timelineStartMin) / timelineSpanMin) *
-                  timelineHeightPx;
-
-                return (
-                  <span
-                    key={hour}
-                    className="pointer-events-none absolute left-0 right-0 border-t border-zinc-800"
-                    style={{ top }}
-                  />
-                );
-              })}
-
-              {showNowLine ? (
-                <div
-                  className="pointer-events-none absolute left-0 right-0 z-20 flex items-center"
-                  style={{ top: nowTopPx }}
+              return (
+                <span
+                  key={hour}
+                  className="absolute right-0 -translate-y-1/2 leading-none"
+                  style={{ top }}
                 >
-                  <span className="-ml-[3.25rem] rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
-                    {format(now, "HH:mm")}
-                  </span>
-                  <span className="h-0.5 flex-1 bg-red-500" />
-                </div>
-              ) : null}
+                  {String(hour).padStart(2, "0")}:00
+                </span>
+              );
+            })}
+          </div>
 
-              {events.map((event) => {
-                const { startMin, endMin } = resolveEventWindow(event);
-                const topPx =
-                  ((startMin - timelineStartMin) / timelineSpanMin) *
-                  timelineHeightPx;
-                const heightPx = Math.max(
-                  44,
-                  ((endMin - startMin) / timelineSpanMin) * timelineHeightPx,
-                );
-                const timeLabel = `${event.startTime} – ${event.endTime}`;
-                const eventTitle = `${event.categoryTitle} (${event.coupleLabel})`;
+          <div
+            className="relative min-w-0 flex-1"
+            style={{ height: timelineHeightPx }}
+          >
+            {timelineHours.map((hour) => {
+              const top =
+                ((hour * 60 - timelineStartMin) / timelineSpanMin) *
+                timelineHeightPx;
 
-                return (
-                  <button
-                    key={event.id}
-                    type="button"
-                    onClick={() => onOpenReservation(event.reservationId)}
-                    className="absolute left-0 right-0 z-10 overflow-hidden rounded-md border-l-4 px-3 py-2 text-left transition-opacity hover:opacity-95"
-                    style={{
-                      top: topPx,
-                      height: heightPx,
-                      borderLeftColor: event.accentColor,
-                      backgroundColor: `${event.accentColor}22`,
-                    }}
+              return (
+                <span
+                  key={hour}
+                  className="pointer-events-none absolute left-0 right-0 border-t border-zinc-800"
+                  style={{ top }}
+                />
+              );
+            })}
+
+            {events.length === 0 ? (
+              <p className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 px-2 text-center text-sm text-zinc-600">
+                Bu gün için rezervasyon yok.
+              </p>
+            ) : null}
+
+            {showNowLine ? (
+              <div
+                className="pointer-events-none absolute left-0 right-0 z-20 flex items-center"
+                style={{ top: nowTopPx }}
+              >
+                <span className="-ml-[3.25rem] rounded-md bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                  {format(now, "HH:mm")}
+                </span>
+                <span className="h-0.5 flex-1 bg-red-500" />
+              </div>
+            ) : null}
+
+            {events.map((event) => {
+              const { startMin, endMin } = resolveEventWindow(event);
+              const topPx =
+                ((startMin - timelineStartMin) / timelineSpanMin) *
+                timelineHeightPx;
+              const heightPx = Math.max(
+                44,
+                ((endMin - startMin) / timelineSpanMin) * timelineHeightPx,
+              );
+              const timeLabel = `${event.startTime} – ${event.endTime}`;
+              const eventTitle = `${event.categoryTitle} (${event.coupleLabel})`;
+
+              return (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => onOpenReservation(event.reservationId)}
+                  className="absolute left-0 right-0 z-10 overflow-hidden rounded-md border-l-4 px-3 py-2 text-left transition-opacity hover:opacity-95"
+                  style={{
+                    top: topPx,
+                    height: heightPx,
+                    borderLeftColor: event.accentColor,
+                    backgroundColor: `${event.accentColor}22`,
+                  }}
+                >
+                  <p
+                    className="truncate text-sm font-semibold leading-snug"
+                    style={{ color: event.accentColor }}
                   >
-                    <p
-                      className="truncate text-sm font-semibold leading-snug"
-                      style={{ color: event.accentColor }}
-                    >
-                      {eventTitle}
-                    </p>
-                    <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
-                      <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      <span>{timeLabel}</span>
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+                    {eventTitle}
+                  </p>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-zinc-400">
+                    <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>{timeLabel}</span>
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

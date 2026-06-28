@@ -46,6 +46,8 @@ export type TrackingWorkflowStageView = {
   tone?: "green" | "red" | "amber" | "default";
   /** Aşamanın hedef / tamamlanma tarihi (ISO). */
   deadlineDate?: string;
+  /** Tarihin altında gösterilen kısa açıklama. */
+  deadlineHint?: string;
 };
 
 export type TrackingWorkflowView = {
@@ -392,6 +394,36 @@ function computeStageTone(
   return "default";
 }
 
+function resolveStageDeadlineHint(
+  id: TrackingWorkflowStageId,
+  state: TrackingWorkflowStageState,
+  deadlines: WorkflowDeadlines,
+  dayCounts: { editingDaysAfter: number; printingDaysAfter: number },
+): string | undefined {
+  if (state === "completed") return undefined;
+
+  const formatDate = (date: Date) => format(date, "d MMMM yyyy", { locale: tr });
+
+  switch (id) {
+    case "dijital":
+      return `${formatDate(deadlines.digitalSelection)}'a kadar teslim alınmalı.`;
+    case "secim":
+      return `${formatDate(deadlines.digitalSelection)}'a kadar seçim yapılmalı.`;
+    case "duzenleme":
+      if (state === "current") {
+        return `${formatDate(deadlines.editing)}'a kadar düzenlemeler bitecek.`;
+      }
+      return `Seçimden sonraki ${dayCounts.editingDaysAfter} günde düzenlemeler bitecek.`;
+    case "baski":
+      if (state === "current") {
+        return `${formatDate(deadlines.printing)}'a kadar kargoya verilecek.`;
+      }
+      return `Düzenlemeden sonraki ${dayCounts.printingDaysAfter} günde kargoya verilecek.`;
+    default:
+      return undefined;
+  }
+}
+
 function buildStagesFromEffectiveStage(
   effectiveStageId: TrackingWorkflowStageId,
   deadlines: WorkflowDeadlines,
@@ -399,8 +431,10 @@ function buildStagesFromEffectiveStage(
   shootPassed: boolean,
   allCompleted: boolean,
   workflow: TrackingWorkflowFlags,
+  postShoot?: PostShootSnapshot,
 ): TrackingWorkflowStageView[] {
   const order = workflowStageOrder(hasPrinting);
+  const dayCounts = getWorkflowDayCounts(postShoot);
 
   if (allCompleted) {
     return order.map((id) => ({
@@ -426,6 +460,7 @@ function buildStagesFromEffectiveStage(
       state,
       tone: computeStageTone(id, state),
       deadlineDate: resolveStageDeadlineDate(id, deadlines, workflow).toISOString(),
+      deadlineHint: resolveStageDeadlineHint(id, state, deadlines, dayCounts),
     };
   });
 }
@@ -559,6 +594,7 @@ function buildViewFromAdminStage(
     shootPassed,
     false,
     workflow,
+    postShoot,
   );
 
   const copy = buildPrimaryCopy(resolvedStage, deadlines, false, hasPrinting);
@@ -657,6 +693,7 @@ export function buildTrackingWorkflowView(input: {
         shootPassed,
         true,
         workflow,
+        postShoot,
       ),
       availableAdminActions: [],
     };
@@ -692,6 +729,7 @@ export function buildTrackingWorkflowView(input: {
       shootPassed,
       false,
       workflow,
+      postShoot,
     ),
     availableAdminActions,
   };

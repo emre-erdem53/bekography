@@ -117,9 +117,9 @@ export function TrackingWorkflowTimeline({
                 key={stage.id}
                 className={`flex flex-col items-center ${
                   embedded
-                    ? "min-w-[3.5rem] flex-1 sm:min-w-[4rem]"
-                    : `min-w-[4.75rem] flex-1 sm:min-w-[5.5rem] ${
-                        isCurrent ? "md:min-w-[7rem]" : ""
+                    ? "min-w-[4.5rem] flex-1 sm:min-w-[5.5rem]"
+                    : `min-w-[5.5rem] flex-1 sm:min-w-[6.5rem] ${
+                        isCurrent ? "md:min-w-[8rem]" : ""
                       }`
                 }`}
               >
@@ -179,6 +179,19 @@ export function TrackingWorkflowTimeline({
                     {format(new Date(stage.deadlineDate), "d MMM yyyy", {
                       locale: tr,
                     })}
+                  </p>
+                ) : null}
+                {stage.deadlineHint ? (
+                  <p
+                    className={`mt-1 w-full px-0.5 text-center text-[8px] leading-snug sm:text-[9px] ${
+                      isCurrent
+                        ? "text-amber-200/60"
+                        : isUpcoming
+                          ? "text-zinc-600"
+                          : "text-zinc-500"
+                    }`}
+                  >
+                    {stage.deadlineHint}
                   </p>
                 ) : null}
                 {stageTagList.length > 0 ? (
