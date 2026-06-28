@@ -1,9 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://bekography.com").replace(
-  /\/$/,
-  "",
-);
+import { SITE_URL } from "@/lib/seo";
 
 const routes = [
   "",
@@ -18,7 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
 
   return routes.map((route) => ({
-    url: `${siteUrl}${route}`,
+    url: `${SITE_URL}${route}`,
     lastModified,
   }));
 }

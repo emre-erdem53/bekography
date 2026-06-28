@@ -253,22 +253,22 @@ function CoupleOrderHeader({ data }: { data: TrackingData }) {
 
   return (
     <header className="pb-2 pt-2 text-center sm:pt-4">
-      <h1 className="font-couple text-4xl leading-none text-white sm:text-5xl md:text-6xl">
+      <h1 className="font-couple text-4xl italic leading-none text-white sm:text-5xl md:text-6xl">
         {coupleTitle}
       </h1>
 
-      <div className="mt-8 w-full space-y-4">
-        <ContactPersonBar
-          iconSrc="/bride.svg"
-          name={formatPersonDisplayName(data.brideName)}
-          phone={formatTurkishPhone(data.bridePhone)}
-          tc={data.brideTc}
-        />
+      <div className="mt-8 w-full space-y-3">
         <ContactPersonBar
           iconSrc="/groom.svg"
           name={formatPersonDisplayName(data.groomName)}
           phone={formatTurkishPhone(data.groomPhone)}
           tc={data.groomTc}
+        />
+        <ContactPersonBar
+          iconSrc="/bride.svg"
+          name={formatPersonDisplayName(data.brideName)}
+          phone={formatTurkishPhone(data.bridePhone)}
+          tc={data.brideTc}
         />
       </div>
     </header>
@@ -287,32 +287,29 @@ function ContactPersonBar({
   tc: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-white/15 bg-[#0a0a0a] px-5 py-4 sm:px-6 sm:py-5">
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1.5 sm:h-10 sm:w-10">
+    <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-2xl border border-white/15 bg-[#0a0a0a] px-5 py-4 text-sm sm:gap-x-8 sm:px-6">
+      <span className="inline-flex min-w-0 items-center gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1.5">
           <img
             src={iconSrc}
             alt=""
             className="h-full w-full object-contain brightness-0 invert"
           />
         </span>
-        <p className="truncate text-sm font-medium tracking-wide text-zinc-200 sm:text-base">
+        <span className="truncate font-medium tracking-wide text-zinc-200">
           {name}
-        </p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-zinc-400">
-        <span className="inline-flex items-center gap-1.5">
-          <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span>{phone}</span>
         </span>
-        {tc ? (
-          <span className="inline-flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            <span className="tracking-wide">{tc}</span>
-          </span>
-        ) : null}
-      </div>
+      </span>
+      <span className="inline-flex items-center gap-1.5 text-zinc-400">
+        <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <span>{phone}</span>
+      </span>
+      {tc ? (
+        <span className="inline-flex items-center gap-1.5 text-zinc-400">
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span className="tracking-wide">{tc}</span>
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -366,48 +363,61 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
         ) : null}
       </div>
 
-      <div className="mt-6 space-y-6 border-t border-white/10 pt-6">
-        {item.isOutdoor ? (
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
-            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
-            <ShootMetaBlock
-              label="Çekim İçeriği"
-              value={shootContentLabel}
-              size="lg"
-              nowrap
-            />
-            <ShootMetaBlock
-              label="Rize'den Çıkış"
-              value={item.departureTime || "—"}
-              size="lg"
-            />
-            <ShootMetaBlock
-              label="Rize'ye Varış"
-              value={item.arrivalTime || "—"}
-              size="lg"
-            />
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
-            <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
-            <ShootMetaBlock
-              label="Çekim İçeriği"
-              value={shootContentLabel}
-              size="lg"
-              nowrap
-            />
-            <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} size="lg" />
-            <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} size="lg" />
-          </div>
-        )}
+      <div className="mt-6 space-y-4 border-t border-white/10 pt-6">
+        <div className="-mx-1 rounded-xl bg-white/[0.04] px-4 py-5 sm:px-5">
+          {item.isOutdoor ? (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
+              <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
+              <ShootMetaBlock
+                label="Çekim İçeriği"
+                value={shootContentLabel}
+                size="lg"
+                nowrap
+              />
+              <ShootMetaBlock
+                label="Rize'den Çıkış"
+                value={item.departureTime || "—"}
+                size="lg"
+              />
+              <ShootMetaBlock
+                label="Rize'ye Varış"
+                value={item.arrivalTime || "—"}
+                size="lg"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
+              <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
+              <ShootMetaBlock
+                label="Çekim İçeriği"
+                value={shootContentLabel}
+                size="lg"
+                nowrap
+              />
+              <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} size="lg" />
+              <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} size="lg" />
+            </div>
+          )}
+        </div>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:gap-x-8 md:grid-cols-3 md:gap-x-10">
-          <ShootMetaBlock label="Hazır Olma Saati" value={readyTimeLabel} size="sm" />
-          <ShootMetaBlock label="Çekim Yeri" value={locationLabel} size="sm" />
+          <ShootMetaBlock
+            label="Hazır Olma Saati"
+            value={readyTimeLabel}
+            size="sm"
+            valueClassName="text-xs font-medium text-zinc-500 sm:text-sm md:text-base"
+          />
+          <ShootMetaBlock
+            label="Çekim Yeri"
+            value={locationLabel}
+            size="sm"
+            valueClassName="text-xs font-medium text-zinc-500 sm:text-sm md:text-base"
+          />
           <ShootMetaBlock
             label="B. Fiyat"
             value={formatPrice(item.agreedUnitPrice)}
             size="sm"
+            valueClassName="text-xs font-medium text-zinc-500 sm:text-sm md:text-base"
           />
         </div>
       </div>

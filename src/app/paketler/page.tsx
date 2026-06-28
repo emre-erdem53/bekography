@@ -6,11 +6,14 @@ import {
 } from "@/lib/packages";
 import type { PackageCategoryData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Paketler",
-  description: "Paket detayları ve hizmet farkları.",
-};
+  description:
+    "Düğün fotoğraf & film paketleri. Dış çekim, düğün, nişan ve özel gün paketlerini inceleyin.",
+  path: "/paketler",
+});
 
 export const dynamic = "force-dynamic";
 

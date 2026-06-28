@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { Download, ArrowLeft } from "lucide-react";
+import { Download, ArrowLeft, Pencil } from "lucide-react";
 import { toPng } from "html-to-image";
 import { TrackingOrderView } from "@/components/tracking/tracking-order-view";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
@@ -59,6 +59,13 @@ export function ReservationSummaryClient({
   return (
     <div className="relative flex min-h-screen flex-col bg-black">
       <div className="fixed bottom-6 right-4 z-[70] flex max-w-[calc(100vw-2rem)] flex-col gap-2 sm:right-6 sm:flex-row sm:items-center">
+        <Link
+          href={`/admin/rezervasyonlar/${reservationId}/duzenle`}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/90 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/10"
+        >
+          <Pencil className="h-4 w-4" />
+          Düzenle
+        </Link>
         <Link
           href={`/admin/rezervasyonlar/${reservationId}`}
           className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-black/90 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-md transition hover:bg-white/10"

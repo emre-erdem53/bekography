@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
+import { SiteJsonLd } from "@/components/seo/json-ld";
 import { SiteSettingsProvider } from "@/components/site-settings-provider";
 import { SiteShell } from "@/components/site-shell";
+import { createRootMetadata } from "@/lib/seo";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import "./globals.css";
 
@@ -24,27 +26,7 @@ const andes = localFont({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://bekography.com";
-
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: "bekography | Monochrome Studio",
-    template: "%s | bekography",
-  },
-  description:
-    "Fine art monochrome photography — cinematic narratives, high contrast, timeless frames.",
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon-48.png", type: "image/png", sizes: "48x48" },
-      { url: "/icon.png", type: "image/png", sizes: "32x32" },
-      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
-    ],
-    shortcut: "/favicon.ico",
-    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
-  },
-};
+export const metadata: Metadata = createRootMetadata();
 
 export default async function RootLayout({
   children,
@@ -60,6 +42,7 @@ export default async function RootLayout({
       suppressHydrationWarning
     >
       <body className="flex min-h-full flex-col">
+        <SiteJsonLd />
         <AuthSessionProvider>
           <SiteSettingsProvider initialSettings={siteSettings}>
             <SiteShell>{children}</SiteShell>

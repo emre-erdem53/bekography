@@ -45,7 +45,6 @@ const turkishMobilePhoneSchema = z
 export const createRequestSchema = z.object({
   contactFirstName: personFirstNameSchema,
   contactLastName: personLastNameSchema,
-  contactPhone: turkishMobilePhoneSchema,
   contactRole: z.enum(["gelin", "damat"], {
     message: "Gelin veya damat seçin",
   }),

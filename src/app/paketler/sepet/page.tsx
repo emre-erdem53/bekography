@@ -7,10 +7,15 @@ import {
 import type { PackageCategoryData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 
-export const metadata: Metadata = {
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
   title: "Sepetim",
-  description: "Seçtiğiniz paketler ve talep oluşturma.",
-};
+  description:
+    "Seçtiğiniz düğün fotoğraf & film paketleri. Talep oluşturun.",
+  path: "/paketler/sepet",
+  noIndex: true,
+});
 
 export const dynamic = "force-dynamic";
 

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { HomeExploreCarousel } from "@/components/home/home-explore-carousel";
 import { videoMediaItems } from "@/lib/explore-media";
+import { createPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createPageMetadata({
   title: "Videolar",
-  description: "bekography video akışı.",
-};
+  description:
+    "Düğün filmleri ve sinematik video çekimleri. Bekography düğün ve dış çekim film seçkisi.",
+  path: "/videolar",
+});
 
 export default function VideolarPage() {
   return (

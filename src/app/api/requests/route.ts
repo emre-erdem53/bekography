@@ -21,12 +21,12 @@ export async function POST(request: Request) {
       );
     }
 
-    const { contactFirstName, contactLastName, contactPhone, contactRole, items } =
+    const { contactFirstName, contactLastName, contactRole, items } =
       parsed.data;
     const roleLabel = contactRole === "gelin" ? "Gelin" : "Damat";
     const contactFullName = joinPersonName(contactFirstName, contactLastName);
     const customerName = `${contactFullName} (${roleLabel})`;
-    const customerPhone = contactPhone;
+    const customerPhone = "—";
 
     const options = await prisma.packageOption.findMany({
       where: {

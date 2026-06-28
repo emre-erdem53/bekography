@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HomePageClient } from "@/components/home/home-page-client";
 import { AboutPageContent } from "@/components/about/about-page-content";
 import { ContactPageClient } from "@/components/contact/contact-page-client";
@@ -8,6 +9,13 @@ import {
 } from "@/lib/packages";
 import type { PackageCategoryData } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import { createPageMetadata } from "@/lib/seo";
+
+export const metadata: Metadata = createPageMetadata({
+  description:
+    "Düğün fotoğrafçılığı ve film. Bekography ile dış çekim, düğün ve özel günlerinize sinematik bir dokunuş.",
+  path: "/",
+});
 
 export const dynamic = "force-dynamic";
 

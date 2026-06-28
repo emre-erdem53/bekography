@@ -163,6 +163,23 @@ export function parseDeadlineDaysFromPills(
   return fallback;
 }
 
+/** Dijital teslim / seçim son günü — "X Günde Hazır" etiketini yok sayar. */
+function parseDigitalDeadlineDaysFromPills(
+  pills: string[],
+  fallback = 30,
+): number {
+  for (const pill of pills) {
+    const alinmali = pill.match(/(\d+)\s*Günde\s*Alınmalı/i);
+    if (alinmali) return Number.parseInt(alinmali[1], 10);
+  }
+  for (const pill of pills) {
+    if (/Hazır/i.test(pill)) continue;
+    const match = pill.match(/(\d+)\s*Gün/i);
+    if (match) return Number.parseInt(match[1], 10);
+  }
+  return fallback;
+}
+
 function formatDeadline(date: Date): string {
   return format(date, "d MMMM yyyy", { locale: tr });
 }
@@ -195,7 +212,7 @@ const DEFAULT_PRINTING_AFTER_EDITING_DAYS = 30;
 
 function getWorkflowDayCounts(postShoot?: PostShootSnapshot) {
   const digitalDays = postShoot
-    ? parseDeadlineDaysFromPills(
+    ? parseDigitalDeadlineDaysFromPills(
         postShoot.digital.pills,
         DEFAULT_DIGITAL_SELECTION_DAYS,
       )
@@ -458,14 +475,19 @@ function buildStagesFromEffectiveStage(
       workflow,
     );
     const { hint, continuesDate } = resolveStageDeadlineHint(id, state, dayCounts);
+    const showDeadline = state !== "upcoming";
+    const showHint =
+      Boolean(hint) && (showDeadline || !continuesDate);
     return {
       id,
       label: stageDefaultLabel(id, state),
       state,
       tone: computeStageTone(id, state),
-      deadlineDate: resolveStageDeadlineDate(id, deadlines, workflow).toISOString(),
-      deadlineHint: hint,
-      deadlineHintContinuesDate: continuesDate,
+      deadlineDate: showDeadline
+        ? resolveStageDeadlineDate(id, deadlines, workflow).toISOString()
+        : undefined,
+      deadlineHint: showHint ? hint : undefined,
+      deadlineHintContinuesDate: showDeadline ? continuesDate : undefined,
     };
   });
 }
