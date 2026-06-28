@@ -366,15 +366,16 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
         ) : null}
       </div>
 
-      <div className="mt-6 space-y-5 border-t border-white/10 pt-6">
+      <div className="mt-6 space-y-6 border-t border-white/10 pt-6">
         {item.isOutdoor ? (
-          <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] md:gap-x-10 md:gap-y-0">
             <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
             <ShootMetaBlock
               label="Çekim İçeriği"
               value={shootContentLabel}
               size="lg"
               nowrap
+              valueClassName="text-xs sm:text-sm md:text-base lg:text-lg"
             />
             <ShootMetaBlock
               label="Rize'den Çıkış"
@@ -388,20 +389,21 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
             />
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-2 sm:gap-4 md:gap-6">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] md:gap-x-10 md:gap-y-0">
             <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
             <ShootMetaBlock
               label="Çekim İçeriği"
               value={shootContentLabel}
               size="lg"
               nowrap
+              valueClassName="text-xs sm:text-sm md:text-base lg:text-lg"
             />
             <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} size="lg" />
             <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} size="lg" />
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:gap-x-8 md:grid-cols-3 md:gap-x-10">
           <ShootMetaBlock label="Hazır Olma Saati" value={readyTimeLabel} size="sm" />
           <ShootMetaBlock label="Çekim Yeri" value={locationLabel} size="sm" />
           <ShootMetaBlock
@@ -451,14 +453,14 @@ function ShootMetaBlock({
       : "text-sm sm:text-xl md:text-2xl";
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 pr-1 last:pr-0">
       <p
-        className={`font-medium uppercase leading-tight tracking-wide text-zinc-500 ${labelSize}`}
+        className={`font-medium uppercase leading-snug tracking-wide text-zinc-500 ${labelSize}`}
       >
         {label}
       </p>
       <p
-        className={`mt-1.5 font-semibold leading-tight text-white sm:mt-2 ${valueClassName ?? defaultValueSize} ${
+        className={`mt-1.5 font-semibold leading-snug text-white sm:mt-2 ${valueClassName ?? defaultValueSize} ${
           nowrap ? "whitespace-nowrap" : ""
         }`}
       >
