@@ -30,6 +30,20 @@ export type PackageRequestFieldLabels = {
   cityLabel: string;
 };
 
+export type PackageWorkflowStageDefinition = {
+  id: string;
+  label: string;
+  kind: "builtin" | "custom";
+  builtinKey?:
+    | "rezervasyon"
+    | "cekim"
+    | "dijital"
+    | "secim"
+    | "duzenleme"
+    | "baski";
+  daysAfterPrevious?: number;
+};
+
 export type PackageCategoryContent = {
   serviceGridColor: string;
   serviceTextColor: string;
@@ -44,21 +58,15 @@ export type PackageCategoryContent = {
   detailSections?: PackageDetailSection[];
   detailSectionsByOption?: Record<string, PackageDetailSection[]>;
   inspectEnabledByOption?: Record<string, boolean>;
-  /** Takip ekranı süreç etiketleri — çekim türüne göre (option id veya label anahtarı). */
+  /** Takip ekranı süreç etiketleri — aşama id veya built-in key. */
   workflowStageTagsByOption?: Record<
     string,
-    Partial<
-      Record<
-        | "rezervasyon"
-        | "cekim"
-        | "dijital"
-        | "secim"
-        | "duzenleme"
-        | "baski",
-        string[]
-      >
-    >
+    Partial<Record<string, string[]>>
   >;
+  /** Paket varsayılan süreç aşamaları. */
+  workflowStages?: PackageWorkflowStageDefinition[];
+  /** Çekim türüne göre süreç aşamaları (option id veya label anahtarı). */
+  workflowStagesByOption?: Record<string, PackageWorkflowStageDefinition[]>;
   requestFieldLabels?: PackageRequestFieldLabels;
 };
 

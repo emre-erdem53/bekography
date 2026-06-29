@@ -140,14 +140,14 @@ export function getReservationWorkflowStageLabel(
 export function getReservationItemWorkflowStage(
   reservation: ReservationListRow,
   item: ReservationListItem,
-): TrackingWorkflowStageId | null {
+): string | null {
   const workflow = buildItemWorkflowView(reservation, item);
   return getCurrentWorkflowStageId(workflow);
 }
 
 export function reservationMatchesWorkflowStage(
   reservation: ReservationListRow,
-  stage: TrackingWorkflowStageId,
+  stage: string,
 ): boolean {
   return reservation.items.some(
     (item) => getReservationItemWorkflowStage(reservation, item) === stage,

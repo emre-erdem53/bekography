@@ -3,6 +3,10 @@ import {
   hasAnyWorkflowStageTags,
   resolvePackageWorkflowStageTags,
 } from "@/lib/package-workflow-stage-tags";
+import {
+  adminOptionsFromStageDefinitions,
+  resolveWorkflowStagesForOption,
+} from "@/lib/package-workflow-stages";
 import type { InspectCategory } from "@/lib/post-shoot-from-inspect";
 import {
   TRACKING_WORKFLOW_STAGE_ORDER,
@@ -10,7 +14,7 @@ import {
 } from "@/lib/tracking-workflow";
 import { mapSectionTitleToWorkflowStage } from "@/lib/tracking-stage-tags";
 
-export type ItemWorkflowStageTags = Record<TrackingWorkflowStageId, string[]>;
+export type ItemWorkflowStageTags = Record<string, string[]>;
 
 export const WORKFLOW_STAGE_TAG_LABELS: Record<TrackingWorkflowStageId, string> = {
   rezervasyon: "Rezervasyon",
@@ -97,6 +101,19 @@ export function getEditableStagesForCategory(
     return [...TRACKING_WORKFLOW_STAGE_ORDER];
   }
   return TRACKING_WORKFLOW_STAGE_ORDER.filter((stage) => stage !== "baski");
+}
+
+export function getEditableStagesForPackage(
+  content: Partial<PackageCategoryContent> | undefined,
+  packageOptionId: string,
+  optionLabel?: string,
+): Array<{ id: string; label: string }> {
+  const definitions = resolveWorkflowStagesForOption(
+    content,
+    packageOptionId,
+    optionLabel,
+  );
+  return adminOptionsFromStageDefinitions(definitions);
 }
 
 export function remapItemStageTagsByKeys(

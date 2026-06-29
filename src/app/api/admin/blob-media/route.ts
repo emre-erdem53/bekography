@@ -1,7 +1,8 @@
-import { list } from "@vercel/blob";
+import { del, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { decodeBlobPathname, getBlobMediaKind } from "@/lib/blob-media";
+import { prisma } from "@/lib/prisma";
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -43,6 +44,21 @@ async function listAllMediaBlobs() {
     );
 }
 
+async function findPackageUsageCount(url: string) {
+  const categories = await prisma.packageCategory.findMany({
+    select: { content: true },
+  });
+
+  let count = 0;
+  for (const category of categories) {
+    const content = category.content;
+    if (!content || typeof content !== "object") continue;
+    const json = JSON.stringify(content);
+    if (json.includes(url)) count += 1;
+  }
+  return count;
+}
+
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
   if (authResult.error) return authResult.error;
@@ -76,6 +92,46 @@ export async function GET(request: Request) {
     console.error("GET /api/admin/blob-media", error);
     return NextResponse.json(
       { error: "Blob medyaları listelenemedi" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  const authResult = await requireAdmin();
+  if (authResult.error) return authResult.error;
+
+  try {
+    const body = (await request.json()) as { pathname?: string; url?: string };
+    const pathname = body.pathname?.trim();
+    const url = body.url?.trim();
+
+    if (!pathname && !url) {
+      return NextResponse.json(
+        { error: "Silinecek dosya belirtilmedi" },
+        { status: 400 },
+      );
+    }
+
+    if (url) {
+      const usageCount = await findPackageUsageCount(url);
+      if (usageCount > 0) {
+        return NextResponse.json(
+          {
+            error: `Bu dosya ${usageCount} pakette kullanılıyor. Önce paket galerilerinden kaldırın.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    await del(pathname || url!);
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("DELETE /api/admin/blob-media", error);
+    return NextResponse.json(
+      { error: "Dosya silinemedi" },
       { status: 500 },
     );
   }

@@ -9,8 +9,19 @@ import { toDateInputValue } from "@/lib/date-only";
 import { getPaymentTypeLabels } from "@/lib/site-settings";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import { formatCoupleName } from "@/lib/reservation-utils";
-import { isOutdoorCategory, itemHasPrintingStage, parsePostShootSnapshot, getItemWorkflowFlags, ensureItemWorkflows, reservationHasPrintingPackage } from "@/lib/post-shoot";
+import {
+  isOutdoorCategory,
+  parsePostShootSnapshot,
+  getItemWorkflowFlags,
+  ensureItemWorkflows,
+  reservationHasPrintingPackage,
+} from "@/lib/post-shoot";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import {
+  packageHasPrintingStage,
+  resolveWorkflowStagesForOption,
+  type PackageWorkflowStageDefinition,
+} from "@/lib/package-workflow-stages";
 import {
   buildProductSnapshotFromOption,
   getShootTypeLabel,
@@ -19,9 +30,7 @@ import {
   snapshotNeedsDetailEnrichment,
 } from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
-import {
-  buildTrackingWorkflowView,
-} from "@/lib/tracking-workflow";
+import { buildTrackingWorkflowView } from "@/lib/tracking-workflow";
 import {
   buildWorkflowStageTags,
   resolveDetailSectionsForStageTags,
@@ -140,9 +149,19 @@ function buildPayloadFromReservation(
     postShoot,
     workflow: workflowFlags,
     hasPrinting: reservationHasPrintingPackage(
-      reservation.items.map((item) => ({
-        categorySlug: item.packageOption.category.slug,
-      })),
+      reservation.items.map((item) => {
+        const categoryContent =
+          item.packageOption.category.content &&
+          typeof item.packageOption.category.content === "object"
+            ? (item.packageOption.category.content as PackageCategoryContent)
+            : undefined;
+        return {
+          categorySlug: item.packageOption.category.slug,
+          categoryContent,
+          packageOptionId: item.packageOption.id,
+          optionLabel: item.packageOption.label,
+        };
+      }),
     ),
   });
 
@@ -188,18 +207,25 @@ function buildPayloadFromReservation(
           : {};
       const outdoor = isOutdoorCategory(category.slug, content);
       const snapshot = resolveItemProductSnapshot(item);
-      const hasPrinting = itemHasPrintingStage(category.slug);
+      const categoryContent =
+        category.content && typeof category.content === "object"
+          ? (category.content as PackageCategoryContent)
+          : undefined;
+      const stageDefinitions = resolveWorkflowStagesForOption(
+        categoryContent,
+        item.packageOption.id,
+        item.packageOption.label,
+      );
+      const hasPrinting = packageHasPrintingStage(stageDefinitions);
       const itemWorkflowFlags = getItemWorkflowFlags(postShoot, item.id);
       const itemWorkflow = buildTrackingWorkflowView({
         shootDate: item.shootDate,
         postShoot,
         workflow: itemWorkflowFlags,
         hasPrinting,
+        stageDefinitions,
       });
-      const categoryContent =
-        category.content && typeof category.content === "object"
-          ? (category.content as PackageCategoryContent)
-          : undefined;
+      const categoryContentForTags = categoryContent;
       const workflowStageTags = buildWorkflowStageTags(
         snapshot.detailSections ?? [],
         postShoot,
@@ -208,7 +234,7 @@ function buildPayloadFromReservation(
           categoryTitle: snapshot.categoryTitle || category.title,
           optionLabel: snapshot.optionLabel || item.packageOption.label,
           packageOptionId: snapshot.packageOptionId || item.packageOption.id,
-          categoryContent,
+          categoryContent: categoryContentForTags,
         },
         item.id,
       );
@@ -229,6 +255,7 @@ function buildPayloadFromReservation(
         paymentType: paymentLabels[item.paymentType],
         isOutdoor: outdoor,
         hasPrinting,
+        stageDefinitions,
         departureTime: item.departureTime,
         arrivalTime: item.arrivalTime,
         startTime: item.startTime,

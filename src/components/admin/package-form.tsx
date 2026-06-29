@@ -6,11 +6,12 @@ import Link from "next/link";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ReorderableTagsEditor } from "@/components/admin/reorderable-tags-editor";
 import { PostShootTagsEditor } from "@/components/admin/post-shoot-section-editor";
+import { PackageWorkflowStagesEditor } from "@/components/admin/package-workflow-stages-editor";
 import {
-  emptyItemWorkflowStageTags,
-  getEditableStagesForScheduleType,
-  WORKFLOW_STAGE_TAG_LABELS,
-} from "@/lib/item-workflow-stage-tags";
+  defaultBuiltinStageDefinitions,
+  resolveStageTagsForDefinition,
+  resolveWorkflowStagesForOption,
+} from "@/lib/package-workflow-stages";
 import type {
   PackageCategoryContent,
   PackageDetailSection,
@@ -19,6 +20,7 @@ import type {
 import {
   defaultRequestFieldLabels,
 } from "@/lib/package-seed-data";
+import { applyPackageCopyTransform } from "@/lib/package-copy";
 import {
   mergeDefaultPostShootSections,
   STANDARD_INSPECT_SECTION_TITLES,
@@ -79,6 +81,7 @@ function removeOptionContentKeys(
   const nextOptionIconKeys = { ...(content.optionIconKeys ?? {}) };
   const nextGalleryMedia = { ...(content.galleryMediaByOption ?? {}) };
   const nextWorkflowStageTags = { ...(content.workflowStageTagsByOption ?? {}) };
+  const nextWorkflowStages = { ...(content.workflowStagesByOption ?? {}) };
 
   delete nextDetailSections[key];
   delete nextInspectEnabled[key];
@@ -86,6 +89,7 @@ function removeOptionContentKeys(
   delete nextOptionIconKeys[key];
   delete nextGalleryMedia[key];
   delete nextWorkflowStageTags[key];
+  delete nextWorkflowStages[key];
   if (labelKey) {
     delete nextDetailSections[labelKey];
     delete nextInspectEnabled[labelKey];
@@ -93,6 +97,7 @@ function removeOptionContentKeys(
     delete nextOptionIconKeys[labelKey];
     delete nextGalleryMedia[labelKey];
     delete nextWorkflowStageTags[labelKey];
+    delete nextWorkflowStages[labelKey];
   }
 
   return {
@@ -103,6 +108,7 @@ function removeOptionContentKeys(
     optionIconKeys: nextOptionIconKeys,
     galleryMediaByOption: nextGalleryMedia,
     workflowStageTagsByOption: nextWorkflowStageTags,
+    workflowStagesByOption: nextWorkflowStages,
   };
 }
 
@@ -225,11 +231,14 @@ function buildGalleryMediaByOption(
 
 export function PackageForm({
   packageId,
+  copyFromId,
 }: {
   packageId?: string;
+  copyFromId?: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
+  const [copySlug, setCopySlug] = useState<string | undefined>();
   const [accentColor, setAccentColor] = useState("#ffffff");
   const [iconKey, setIconKey] = useState("Package");
   const [sortOrder, setSortOrder] = useState(0);
@@ -238,7 +247,7 @@ export function PackageForm({
   const [options, setOptions] = useState<OptionForm[]>([
     { label: "", cashPrice: 0, installmentPrice: 0 },
   ]);
-  const [loading, setLoading] = useState(!!packageId);
+  const [loading, setLoading] = useState(!!packageId || !!copyFromId);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>(
@@ -257,11 +266,56 @@ export function PackageForm({
   }
 
   useEffect(() => {
-    if (!packageId) return;
+    const sourceId = packageId ?? copyFromId;
+    if (!sourceId) return;
 
-    fetch(`/api/admin/packages/${packageId}`)
+    fetch(`/api/admin/packages/${sourceId}`)
       .then((res) => res.json())
       .then((data) => {
+        if (copyFromId && !packageId) {
+          const copied = applyPackageCopyTransform(data);
+          setTitle(copied.title);
+          setCopySlug(copied.slug);
+          setAccentColor(
+            normalizeHexColor(copied.accentColor) ?? copied.accentColor,
+          );
+          setIconKey(copied.iconKey);
+          setSortOrder(copied.sortOrder);
+          setIsActive(copied.isActive);
+          const loadedContent = copied.content;
+          setContent({
+            ...loadedContent,
+            ...PACKAGE_SERVICE_THEME,
+            scheduleType: loadedContent.scheduleType ?? "indoor",
+            highlightTags: loadedContent.highlightTags ?? [],
+            highlightTagsByOption: loadedContent.highlightTagsByOption ?? {},
+            optionIconKeys: loadedContent.optionIconKeys ?? {},
+            galleryImages: loadedContent.galleryImages ?? [],
+            galleryMediaByOption: loadedContent.galleryMediaByOption ?? {},
+            detailSections: loadedContent.detailSections ?? [],
+            detailSectionsByOption: loadedContent.detailSectionsByOption ?? {},
+            inspectEnabledByOption: loadedContent.inspectEnabledByOption ?? {},
+            workflowStageTagsByOption: loadedContent.workflowStageTagsByOption ?? {},
+            workflowStages: loadedContent.workflowStages,
+            workflowStagesByOption: loadedContent.workflowStagesByOption ?? {},
+            requestFieldLabels:
+              loadedContent.requestFieldLabels ??
+              defaultRequestFieldLabels(
+                copied.title,
+                loadedContent.scheduleType ?? "indoor",
+              ),
+          });
+          setOptions(
+            copied.options.map((option) => ({
+              label: option.label,
+              cashPrice: option.cashPrice,
+              installmentPrice: option.installmentPrice,
+            })),
+          );
+          setExpandedOptions({});
+          return;
+        }
+
         setTitle(data.title);
         setAccentColor(normalizeHexColor(data.accentColor) ?? data.accentColor);
         setIconKey(data.iconKey);
@@ -315,7 +369,7 @@ export function PackageForm({
         setExpandedOptions({});
       })
       .finally(() => setLoading(false));
-  }, [packageId]);
+  }, [packageId, copyFromId]);
 
   async function uploadFile(file: File) {
     const formData = new FormData();
@@ -470,6 +524,7 @@ export function PackageForm({
 
     const payload = {
       title,
+      ...(copySlug && !packageId ? { slug: copySlug } : {}),
       accentColor: normalizedAccent,
       iconKey,
       highlight: false,
@@ -531,7 +586,7 @@ export function PackageForm({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-white sm:text-2xl">
-            {packageId ? "Paket Düzenle" : "Yeni Paket"}
+            {packageId ? "Paket Düzenle" : copyFromId ? "Paket Kopyala" : "Yeni Paket"}
           </h1>
           <p className="mt-1 text-sm text-zinc-400">Temel bilgiler</p>
         </div>
@@ -650,9 +705,11 @@ export function PackageForm({
             const optionWorkflowTags =
               content.workflowStageTagsByOption?.[key] ??
               content.workflowStageTagsByOption?.[option.label.trim()] ??
-              emptyItemWorkflowStageTags();
-            const workflowStages = getEditableStagesForScheduleType(
-              content.scheduleType,
+              {};
+            const workflowStageDefinitions = resolveWorkflowStagesForOption(
+              content,
+              key,
+              option.label.trim(),
             );
             const sections = resolveDetailSectionsForOption(
               content,
@@ -830,6 +887,27 @@ export function PackageForm({
                 />
 
                 <div className="space-y-3 border-t border-white/10 pt-4">
+                  <PackageWorkflowStagesEditor
+                    stages={
+                      content.workflowStagesByOption?.[key] ??
+                      content.workflowStagesByOption?.[option.label.trim()] ??
+                      content.workflowStages ??
+                      defaultBuiltinStageDefinitions(content.scheduleType)
+                    }
+                    scheduleType={content.scheduleType ?? "indoor"}
+                    onChange={(stages) =>
+                      setContent({
+                        ...content,
+                        workflowStagesByOption: {
+                          ...(content.workflowStagesByOption ?? {}),
+                          [key]: stages,
+                        },
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-3 border-t border-white/10 pt-4">
                   <div>
                     <h4 className="text-sm font-medium text-white">
                       Süreç Etiketleri
@@ -840,11 +918,17 @@ export function PackageForm({
                       bağımsızdır.
                     </p>
                   </div>
-                  {workflowStages.map((stage) => (
+                  {workflowStageDefinitions.map((stageDef) => (
                     <PostShootTagsEditor
-                      key={stage}
-                      title={WORKFLOW_STAGE_TAG_LABELS[stage]}
-                      tags={optionWorkflowTags[stage] ?? []}
+                      key={stageDef.id}
+                      title={stageDef.label}
+                      tags={
+                        resolveStageTagsForDefinition(
+                          optionWorkflowTags as Record<string, string[]>,
+                          stageDef.id,
+                          stageDef.builtinKey,
+                        )
+                      }
                       onChange={(tags) =>
                         setContent({
                           ...content,
@@ -852,7 +936,7 @@ export function PackageForm({
                             ...(content.workflowStageTagsByOption ?? {}),
                             [key]: {
                               ...optionWorkflowTags,
-                              [stage]: tags,
+                              [stageDef.id]: tags,
                             },
                           },
                         })

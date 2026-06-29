@@ -1,5 +1,10 @@
 import { PackageForm } from "@/components/admin/package-form";
 
-export default function NewPackagePage() {
-  return <PackageForm />;
+export default async function NewPackagePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ copyFrom?: string }>;
+}) {
+  const { copyFrom } = await searchParams;
+  return <PackageForm copyFromId={copyFrom} />;
 }

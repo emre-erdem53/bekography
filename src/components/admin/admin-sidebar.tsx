@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CalendarDays,
+  CalendarCheck,
   ClipboardList,
+  Images,
   LayoutDashboard,
   LogOut,
   Package,
-  CalendarCheck,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export const adminNavItems: AdminNavItem[] = [
   { href: "/admin/talepler", label: "Talepler", icon: ClipboardList },
   { href: "/admin/takvim", label: "Takvimim", icon: CalendarDays },
   { href: "/admin/rezervasyonlar", label: "Rezervasyonlar", icon: CalendarCheck },
+  { href: "/admin/medya", label: "Medya", icon: Images },
   { href: "/admin/ayarlar", label: "Ayarlar", icon: Settings },
 ];
 
@@ -44,6 +46,7 @@ export function getAdminPageTitle(pathname: string) {
   if (pathname.includes("/ozet")) return "Müşteri Önizlemesi";
   if (pathname.match(/^\/admin\/rezervasyonlar\/[^/]+$/)) return "Rezervasyon";
   if (pathname.startsWith("/admin/rezervasyonlar")) return "Rezervasyonlar";
+  if (pathname.startsWith("/admin/medya")) return "Medya Kütüphanesi";
   if (pathname.startsWith("/admin/ayarlar")) return "Ayarlar";
   return "Yönetim Paneli";
 }

@@ -1,5 +1,9 @@
 import type { PackageCategoryContent, PackageDetailSection } from "@/lib/package-seed-data";
 import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
+import {
+  packageHasPrintingStage,
+  resolveWorkflowStagesForOption,
+} from "@/lib/package-workflow-stages";
 import type { PostShootSection, PostShootSnapshot } from "@/lib/post-shoot";
 import { syncItemStageTagsForItems } from "@/lib/item-workflow-stage-tags";
 
@@ -101,7 +105,6 @@ function collectContributions(
   items: InspectPackageItem[],
   categories: InspectCategory[],
   kind: PostShootSectionKind,
-  options?: { printingOnlyOutdoor?: boolean },
 ): SectionContribution[] {
   const contributions: SectionContribution[] = [];
 
@@ -111,13 +114,18 @@ function collectContributions(
     );
     if (!category) continue;
 
-    if (options?.printingOnlyOutdoor && kind === "printing") {
-      if (!isPrintingCategorySlug(category.slug)) continue;
-    }
-
     const option = category.options?.find(
       (entry) => entry.id === item.packageOptionId,
     );
+
+    if (kind === "printing") {
+      const stages = resolveWorkflowStagesForOption(
+        category.content,
+        item.packageOptionId,
+        option?.label,
+      );
+      if (!packageHasPrintingStage(stages)) continue;
+    }
     const sections = getDetailSectionsForOption(
       category.content,
       item.packageOptionId,
@@ -154,9 +162,7 @@ export function buildPostShootFromInspect(
     collectContributions(items, categories, "editing"),
   );
   const printing = mergeContributions(
-    collectContributions(items, categories, "printing", {
-      printingOnlyOutdoor: true,
-    }),
+    collectContributions(items, categories, "printing"),
   );
 
   return {
@@ -175,7 +181,16 @@ export function reservationHasPrintingPackage(
     const category = categories.find((entry) =>
       entry.options?.some((option) => option.id === item.packageOptionId),
     );
-    return category ? isPrintingCategorySlug(category.slug) : false;
+    if (!category) return false;
+    const option = category.options?.find(
+      (entry) => entry.id === item.packageOptionId,
+    );
+    const stages = resolveWorkflowStagesForOption(
+      category.content,
+      item.packageOptionId,
+      option?.label,
+    );
+    return packageHasPrintingStage(stages);
   });
 }
 

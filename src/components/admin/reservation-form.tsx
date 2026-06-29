@@ -1062,7 +1062,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 key={item.itemKey}
                 categoryTitle={item.categoryTitle}
                 optionLabel={item.label}
-                categorySlug={item.categorySlug}
+                packageOptionId={item.packageOptionId}
+                categoryContent={findCategoryForOption(item.packageOptionId)?.content}
                 accentColor={item.accentColor}
                 stageTags={
                   postShoot.itemStageTags?.[item.itemKey] ??

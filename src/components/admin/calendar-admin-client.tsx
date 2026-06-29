@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   addMonths,
@@ -25,9 +25,11 @@ import { formatCoupleFirstNames } from "@/lib/reservation-utils";
 const WEEKDAYS_TR = ["P", "S", "Ç", "P", "C", "C", "P"] as const;
 const MONTHS_BACK = 6;
 const MONTHS_FORWARD = 18;
-const TIMELINE_START_HOUR = 12;
-const TIMELINE_END_HOUR = 22;
+const TIMELINE_START_HOUR = 0;
+const TIMELINE_END_HOUR = 23;
 const TIMELINE_HOUR_HEIGHT_PX = 56;
+const TIMELINE_INITIAL_SCROLL_HOUR = 9;
+const TIMELINE_VIEWPORT_MAX_HEIGHT_PX = 600;
 const INDOOR_DEFAULT_START = "10:00";
 const INDOOR_DEFAULT_END = "14:00";
 
@@ -223,13 +225,20 @@ function DayTimeline({
   onOpenReservation: (reservationId: string) => void;
 }) {
   const [now, setNow] = useState(() => new Date());
+  const scrollRef = useRef<HTMLDivElement>(null);
   const timelineHours = buildTimelineHours();
   const timelineStartMin = TIMELINE_START_HOUR * 60;
-  const timelineEndMin = TIMELINE_END_HOUR * 60;
+  const timelineEndMin = (TIMELINE_END_HOUR + 1) * 60;
   const timelineSpanMin = timelineEndMin - timelineStartMin;
   const timelineHeightPx =
-    (TIMELINE_END_HOUR - TIMELINE_START_HOUR) * TIMELINE_HOUR_HEIGHT_PX;
+    (TIMELINE_END_HOUR - TIMELINE_START_HOUR + 1) * TIMELINE_HOUR_HEIGHT_PX;
   const showNowIndicator = isToday(date);
+
+  useLayoutEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    container.scrollTop = TIMELINE_INITIAL_SCROLL_HOUR * TIMELINE_HOUR_HEIGHT_PX;
+  }, [date]);
 
   useEffect(() => {
     if (!showNowIndicator) return;
@@ -243,18 +252,23 @@ function DayTimeline({
   const showNowLine =
     showNowIndicator &&
     nowMinutes >= timelineStartMin &&
-    nowMinutes <= timelineEndMin;
+    nowMinutes < timelineEndMin;
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="border-b border-zinc-800 px-4 py-3">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-zinc-800 px-4 py-3">
         <p className="text-sm font-medium capitalize text-zinc-300">
           {format(date, "d MMM yyyy", { locale: tr })} –{" "}
           {format(date, "EEEE", { locale: tr })}
         </p>
       </div>
 
-      <div className="relative px-3 py-4 sm:px-4">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto"
+        style={{ maxHeight: TIMELINE_VIEWPORT_MAX_HEIGHT_PX }}
+      >
+        <div className="relative px-3 py-4 sm:px-4">
         <div className="flex gap-3">
           <div
             className="relative shrink-0 text-right text-[11px] text-zinc-500"
@@ -352,6 +366,7 @@ function DayTimeline({
               );
             })}
           </div>
+        </div>
         </div>
       </div>
     </div>

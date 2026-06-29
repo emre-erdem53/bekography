@@ -17,7 +17,7 @@ export function TrackingWorkflowTimeline({
   embedded = false,
 }: {
   workflow: TrackingWorkflowView | undefined;
-  stageTags?: Record<TrackingWorkflowStageId, string[]>;
+  stageTags?: Record<string, string[]>;
   compact?: boolean;
   embedded?: boolean;
 }) {
@@ -164,7 +164,11 @@ export function TrackingWorkflowTimeline({
                         : `text-[10px] sm:text-xs ${toneClass}`
                   }`}
                 >
-                  {getTrackingStageLabel(stage.id, stage.state)}
+                  {stage.label ||
+                    getTrackingStageLabel(
+                      stage.id as TrackingWorkflowStageId,
+                      stage.state,
+                    )}
                 </p>
                 {stage.deadlineDate || stage.deadlineHint ? (
                   <>
@@ -231,7 +235,7 @@ export function TrackingWorkflowTimeline({
         <p className="mt-4 text-xs text-zinc-500">
           Şu anda{" "}
           {currentStages
-            .map((stage) => getTrackingStageLabel(stage.id, stage.state))
+            .map((stage) => stage.label || getTrackingStageLabel(stage.id as TrackingWorkflowStageId, stage.state))
             .join(" ve ")}{" "}
           aşamaları
           aktif.

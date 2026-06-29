@@ -143,10 +143,10 @@ export function buildWorkflowStageTags(
     categoryContent?: Partial<PackageCategoryContent>;
   },
   itemId?: string,
-): Record<TrackingWorkflowStageId, string[]> {
+): Record<string, string[]> {
   if (itemId && postShoot?.itemStageTags?.[itemId]) {
     const overrides = postShoot.itemStageTags[itemId];
-    const tags = emptyStageTagsFromOverrides(overrides);
+    const tags = tagsFromItemOverrides(overrides);
     if (hasAnyWorkflowStageTags(tags)) return tags;
   }
 
@@ -164,22 +164,29 @@ export function buildWorkflowStageTags(
   return { ...EMPTY_STAGE_TAGS };
 }
 
+function tagsFromItemOverrides(
+  overrides: Record<string, string[]>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = { ...EMPTY_STAGE_TAGS };
+  for (const [key, value] of Object.entries(overrides)) {
+    if (Array.isArray(value)) {
+      result[key] = value.filter(Boolean);
+    }
+  }
+  return result;
+}
+
 function emptyStageTagsFromOverrides(
-  overrides: Record<TrackingWorkflowStageId, string[]>,
-): Record<TrackingWorkflowStageId, string[]> {
-  return {
-    rezervasyon: [...(overrides.rezervasyon ?? [])],
-    cekim: [...(overrides.cekim ?? [])],
-    dijital: [...(overrides.dijital ?? [])],
-    secim: [...(overrides.secim ?? [])],
-    duzenleme: [...(overrides.duzenleme ?? [])],
-    baski: [...(overrides.baski ?? [])],
-  };
+  overrides: Record<string, string[]>,
+): Record<string, string[]> {
+  return tagsFromItemOverrides(overrides);
 }
 
 export function getStageTagsForWorkflow(
-  stageTags: Record<TrackingWorkflowStageId, string[]>,
-  stageId: TrackingWorkflowStageId,
+  stageTags: Record<string, string[]>,
+  stageId: string,
 ): string[] {
-  return stageTags[stageId] ?? EMPTY_STAGE_TAGS[stageId];
+  if (stageTags[stageId]?.length) return stageTags[stageId];
+  const legacy = stageTags[stageId as TrackingWorkflowStageId];
+  return legacy ?? [];
 }

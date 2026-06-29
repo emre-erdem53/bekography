@@ -1,17 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Check } from "lucide-react";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
 import { getItemWorkflowFlags } from "@/lib/post-shoot";
 import {
   ADMIN_WORKFLOW_STAGE_OPTIONS,
   getCurrentWorkflowStageId,
   workflowStageOrder,
-  type TrackingWorkflowStageId,
   type TrackingWorkflowView,
 } from "@/lib/tracking-workflow";
+import { adminStageOptionsFromDefinitions } from "@/lib/tracking-workflow-dynamic";
+import type { PackageWorkflowStageDefinition } from "@/lib/package-workflow-stages";
 import { StatusSelect } from "@/components/admin/status-select";
+
+const DELIVERED_SELECT_VALUE = "__delivered__";
 
 export function ReservationItemWorkflowAdmin({
   reservationId,
@@ -20,6 +22,7 @@ export function ReservationItemWorkflowAdmin({
   postShoot,
   workflow,
   hasPrinting = false,
+  stageDefinitions,
   onWorkflowChange,
 }: {
   reservationId: string;
@@ -28,26 +31,39 @@ export function ReservationItemWorkflowAdmin({
   postShoot: PostShootSnapshot;
   workflow: TrackingWorkflowView;
   hasPrinting?: boolean;
+  stageDefinitions?: PackageWorkflowStageDefinition[];
   onWorkflowChange?: (postShoot: PostShootSnapshot) => void;
 }) {
   const [saving, setSaving] = useState(false);
-  const [deliveredBusy, setDeliveredBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const stageOrder = workflowStageOrder(hasPrinting);
+  const stageOrder = stageDefinitions?.length
+    ? stageDefinitions.map((def) => def.id)
+    : workflowStageOrder(hasPrinting);
   const flags = getItemWorkflowFlags(postShoot, itemId);
   const currentStage =
     flags.adminStage ??
     getCurrentWorkflowStageId(workflow) ??
-    ("rezervasyon" as const);
+    stageOrder[0] ??
+    "rezervasyon";
   const isDelivered = Boolean(flags.deliveredAt);
 
-  const options = ADMIN_WORKFLOW_STAGE_OPTIONS.filter((option) =>
-    stageOrder.includes(option.id),
-  ).map((option) => ({
-    value: option.id,
-    label: option.label,
-  }));
+  const stageOptions = stageDefinitions?.length
+    ? adminStageOptionsFromDefinitions(stageDefinitions)
+    : ADMIN_WORKFLOW_STAGE_OPTIONS.filter((option) =>
+        stageOrder.includes(option.id),
+      );
+
+  const options = [
+    ...stageOptions.map((option) => ({
+      value: option.id,
+      label: option.label,
+    })),
+    {
+      value: DELIVERED_SELECT_VALUE,
+      label: isDelivered ? "Teslim Edildi ✓" : "Teslim Edildi İşaretle",
+    },
+  ];
 
   async function postWorkflow(body: Record<string, unknown>) {
     const response = await fetch(
@@ -65,7 +81,7 @@ export function ReservationItemWorkflowAdmin({
     onWorkflowChange?.(payload.postShoot);
   }
 
-  async function updateStage(stage: TrackingWorkflowStageId) {
+  async function updateStage(stage: string) {
     setSaving(true);
     setError(null);
 
@@ -79,7 +95,7 @@ export function ReservationItemWorkflowAdmin({
   }
 
   async function toggleDelivered() {
-    setDeliveredBusy(true);
+    setSaving(true);
     setError(null);
 
     try {
@@ -90,8 +106,16 @@ export function ReservationItemWorkflowAdmin({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Teslim durumu güncellenemedi.");
     } finally {
-      setDeliveredBusy(false);
+      setSaving(false);
     }
+  }
+
+  function handleSelectChange(value: string) {
+    if (value === DELIVERED_SELECT_VALUE) {
+      void toggleDelivered();
+      return;
+    }
+    void updateStage(value);
   }
 
   return (
@@ -105,31 +129,12 @@ export function ReservationItemWorkflowAdmin({
             {itemTitle}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={toggleDelivered}
-            disabled={deliveredBusy || saving}
-            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition disabled:opacity-50 ${
-              isDelivered
-                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                : "border-white/15 bg-white/5 text-zinc-300 hover:bg-white/10"
-            }`}
-          >
-            <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {deliveredBusy
-              ? "Kaydediliyor..."
-              : isDelivered
-                ? "Teslim Edildi"
-                : "Teslim Edildi İşaretle"}
-          </button>
-          <StatusSelect
-            value={currentStage}
-            options={options}
-            disabled={saving || deliveredBusy}
-            onChange={(stage) => updateStage(stage as TrackingWorkflowStageId)}
-          />
-        </div>
+        <StatusSelect
+          value={currentStage}
+          options={options}
+          disabled={saving}
+          onChange={handleSelectChange}
+        />
       </div>
       {error ? <p className="mt-2 text-sm text-red-400">{error}</p> : null}
     </div>

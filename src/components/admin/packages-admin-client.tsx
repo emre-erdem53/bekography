@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy } from "lucide-react";
 import { formatPrice } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
@@ -106,6 +106,13 @@ export function PackagesAdminClient() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
+                <Link
+                  href={`/admin/paketler/yeni?copyFrom=${pkg.id}`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/5"
+                >
+                  <Copy className="h-4 w-4" />
+                  Kopyala
+                </Link>
                 <Link
                   href={`/admin/paketler/${pkg.id}`}
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-white hover:bg-white/5"

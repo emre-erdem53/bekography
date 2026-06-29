@@ -1,5 +1,9 @@
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
+  packageHasPrintingStage,
+  resolveWorkflowStagesForOption,
+} from "@/lib/package-workflow-stages";
+import {
   buildPostShootFromInspect,
   syncPostShootWithInspectItems,
   type InspectCategory,
@@ -141,18 +145,10 @@ function parseItemStageTags(raw: unknown): Record<string, ItemWorkflowStageTags>
     ([key, value]) => {
       if (!value || typeof value !== "object") return [key, undefined] as const;
       const stageData = value as Record<string, unknown>;
-      const tags: ItemWorkflowStageTags = {
-        rezervasyon: [],
-        cekim: [],
-        dijital: [],
-        secim: [],
-        duzenleme: [],
-        baski: [],
-      };
-      for (const stage of Object.keys(tags) as Array<keyof ItemWorkflowStageTags>) {
-        const pills = stageData[stage];
+      const tags: ItemWorkflowStageTags = {};
+      for (const [stageKey, pills] of Object.entries(stageData)) {
         if (Array.isArray(pills)) {
-          tags[stage] = pills.filter(
+          tags[stageKey] = pills.filter(
             (entry): entry is string => typeof entry === "string",
           );
         }
@@ -266,16 +262,44 @@ export function hasPrintingProducts(postShoot: PostShootSnapshot): boolean {
   );
 }
 
-export function itemHasPrintingStage(categorySlug: string): boolean {
+export function itemHasPrintingStage(
+  categorySlug: string,
+  content?: Partial<PackageCategoryContent>,
+  packageOptionId?: string,
+  optionLabel?: string,
+): boolean {
+  if (content) {
+    const stages = resolveWorkflowStagesForOption(
+      content,
+      packageOptionId ?? "",
+      optionLabel,
+    );
+    return packageHasPrintingStage(stages);
+  }
   return categorySlug === "dis-cekim";
 }
 
 export function reservationHasPrintingPackage(
-  items: { categorySlug?: string; hasPrinting?: boolean }[],
+  items: {
+    categorySlug?: string;
+    hasPrinting?: boolean;
+    categoryContent?: Partial<PackageCategoryContent>;
+    packageOptionId?: string;
+    optionLabel?: string;
+  }[],
 ): boolean {
-  return items.some(
-    (item) => item.hasPrinting ?? itemHasPrintingStage(item.categorySlug ?? ""),
-  );
+  return items.some((item) => {
+    if (item.hasPrinting !== undefined) return item.hasPrinting;
+    if (item.categoryContent) {
+      return itemHasPrintingStage(
+        item.categorySlug ?? "",
+        item.categoryContent,
+        item.packageOptionId,
+        item.optionLabel,
+      );
+    }
+    return itemHasPrintingStage(item.categorySlug ?? "");
+  });
 }
 
 export function hasOutdoorPackageInItems(

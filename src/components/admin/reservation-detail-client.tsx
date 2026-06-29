@@ -15,9 +15,8 @@ import type { TrackingData } from "@/lib/tracking-types";
 import { parsePostShootSnapshot } from "@/lib/post-shoot";
 import {
   emptyItemWorkflowStageTags,
-  getEditableStagesForCategory,
-  WORKFLOW_STAGE_TAG_LABELS,
 } from "@/lib/item-workflow-stage-tags";
+import { adminStageOptionsFromDefinitions } from "@/lib/tracking-workflow-dynamic";
 import {
   getTrackingLinkExpiresAt,
   isTrackingLinkExpired,
@@ -225,6 +224,7 @@ export function ReservationDetailClient({
                 postShoot={trackingData.postShoot}
                 workflow={item.workflow}
                 hasPrinting={item.hasPrinting}
+                stageDefinitions={item.stageDefinitions}
                 onWorkflowChange={handleWorkflowChange}
               />
             ))}
@@ -344,35 +344,43 @@ export function ReservationDetailClient({
 
       <Section title="Süreç Etiketleri">
         <div className="space-y-4">
-          {reservation.items.map((item) => {
-            const stageTags =
-              postShoot.itemStageTags?.[item.id] ?? emptyItemWorkflowStageTags();
-            const stages = getEditableStagesForCategory(
-              item.packageOption.category.slug,
+          {(trackingData?.items ?? []).map((trackingItem) => {
+            const reservationItem = reservation.items.find(
+              (item) => item.id === trackingItem.id,
             );
+            if (!reservationItem) return null;
+
+            const stageTags =
+              postShoot.itemStageTags?.[trackingItem.id] ??
+              trackingItem.workflowStageTags ??
+              emptyItemWorkflowStageTags();
+            const stages = trackingItem.stageDefinitions?.length
+              ? adminStageOptionsFromDefinitions(trackingItem.stageDefinitions)
+              : Object.keys(stageTags).map((id) => ({ id, label: id }));
 
             return (
               <div
-                key={item.id}
+                key={trackingItem.id}
                 className="rounded-xl border border-white/10 bg-white/5 p-4"
                 style={{
-                  borderColor: `${item.packageOption.category.accentColor}55`,
+                  borderColor: `${reservationItem.packageOption.category.accentColor}55`,
                 }}
               >
                 <h3
                   className="text-sm font-semibold"
-                  style={{ color: item.packageOption.category.accentColor }}
+                  style={{ color: reservationItem.packageOption.category.accentColor }}
                 >
-                  {item.packageOption.category.title} · {item.shootContent}
+                  {reservationItem.packageOption.category.title} ·{" "}
+                  {reservationItem.shootContent}
                 </h3>
                 <div className="mt-3 space-y-3">
                   {stages.map((stage) => {
-                    const tags = stageTags[stage] ?? [];
+                    const tags = stageTags[stage.id] ?? [];
                     if (tags.length === 0) return null;
                     return (
                       <PostShootTagsReadOnly
-                        key={stage}
-                        title={WORKFLOW_STAGE_TAG_LABELS[stage]}
+                        key={stage.id}
+                        title={stage.label}
                         tags={tags}
                       />
                     );
@@ -381,6 +389,9 @@ export function ReservationDetailClient({
               </div>
             );
           })}
+          {!trackingData?.items.length ? (
+            <p className="text-sm text-zinc-500">Süreç etiketleri yüklenemedi.</p>
+          ) : null}
         </div>
         <p className="mt-2 text-xs text-zinc-500">
           Etiketleri düzenlemek için{" "}

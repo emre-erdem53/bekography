@@ -4,26 +4,25 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
   ensureItemWorkflows,
+  itemHasPrintingStage,
   parsePostShootSnapshot,
   setItemWorkflowFlags,
 } from "@/lib/post-shoot";
+import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
-  TRACKING_WORKFLOW_STAGE_ORDER,
+  resolveWorkflowStagesForOption,
+} from "@/lib/package-workflow-stages";
+import {
   mergeWorkflowAction,
   parseTrackingWorkflowFlags,
   workflowFlagsForAdminStage,
   type TrackingWorkflowAction,
-  type TrackingWorkflowStageId,
 } from "@/lib/tracking-workflow";
+import { workflowFlagsForAdminStageFromDefinitions } from "@/lib/tracking-workflow-dynamic";
 
 const workflowStageSchema = z.object({
   itemId: z.string().min(1),
-  stage: z.enum(
-    TRACKING_WORKFLOW_STAGE_ORDER as [
-      TrackingWorkflowStageId,
-      ...TrackingWorkflowStageId[],
-    ],
-  ),
+  stage: z.string().min(1),
 });
 
 const workflowActionSchema = z.object({
@@ -62,7 +61,13 @@ export async function POST(
           select: {
             id: true,
             packageOption: {
-              select: { category: { select: { slug: true } } },
+              select: {
+                id: true,
+                label: true,
+                category: {
+                  select: { slug: true, content: true },
+                },
+              },
             },
           },
         },
@@ -79,7 +84,8 @@ export async function POST(
       ? stageParsed.data.itemId
       : actionParsed.data!.itemId;
 
-    if (!reservation.items.some((item) => item.id === itemId)) {
+    const item = reservation.items.find((entry) => entry.id === itemId);
+    if (!item) {
       return NextResponse.json(
         { error: "Paket bulunamadı" },
         { status: 404 },
@@ -88,17 +94,47 @@ export async function POST(
 
     let postShoot = ensureItemWorkflows(
       parsePostShootSnapshot(reservation.postShoot),
-      reservation.items.map((item) => item.id),
+      reservation.items.map((entry) => entry.id),
     );
 
-    const item = reservation.items.find((entry) => entry.id === itemId);
-    const hasPrinting = item?.packageOption.category.slug === "dis-cekim";
+    const categoryContent =
+      item.packageOption.category.content &&
+      typeof item.packageOption.category.content === "object"
+        ? (item.packageOption.category.content as PackageCategoryContent)
+        : undefined;
+    const stageDefinitions = resolveWorkflowStagesForOption(
+      categoryContent,
+      item.packageOption.id,
+      item.packageOption.label,
+    );
+    const validStageIds = new Set(stageDefinitions.map((def) => def.id));
+    const hasPrinting = itemHasPrintingStage(
+      item.packageOption.category.slug,
+      categoryContent,
+      item.packageOption.id,
+      item.packageOption.label,
+    );
+
+    if (stageParsed.success && !validStageIds.has(stageParsed.data.stage)) {
+      return NextResponse.json({ error: "Geçersiz aşama" }, { status: 400 });
+    }
+
     const currentFlags = parseTrackingWorkflowFlags(
       postShoot.itemWorkflows?.[itemId],
     );
 
     const nextFlags = stageParsed.success
-      ? workflowFlagsForAdminStage(stageParsed.data.stage, hasPrinting)
+      ? stageDefinitions.length
+        ? workflowFlagsForAdminStageFromDefinitions(
+            stageParsed.data.stage,
+            stageDefinitions,
+          )
+        : workflowFlagsForAdminStage(
+            stageParsed.data.stage as Parameters<
+              typeof workflowFlagsForAdminStage
+            >[0],
+            hasPrinting,
+          )
       : mergeWorkflowAction(
           currentFlags,
           actionParsed.data!.action as TrackingWorkflowAction,

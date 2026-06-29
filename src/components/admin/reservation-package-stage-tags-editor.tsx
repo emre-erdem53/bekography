@@ -1,17 +1,17 @@
 "use client";
 
 import {
-  getEditableStagesForCategory,
-  WORKFLOW_STAGE_TAG_LABELS,
+  getEditableStagesForPackage,
   type ItemWorkflowStageTags,
 } from "@/lib/item-workflow-stage-tags";
-import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
+import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { PostShootTagsEditor } from "@/components/admin/post-shoot-section-editor";
 
 type ReservationPackageStageTagsEditorProps = {
   categoryTitle: string;
   optionLabel: string;
-  categorySlug: string;
+  packageOptionId: string;
+  categoryContent?: Partial<PackageCategoryContent>;
   accentColor?: string;
   stageTags: ItemWorkflowStageTags;
   onChange: (stageTags: ItemWorkflowStageTags) => void;
@@ -20,17 +20,22 @@ type ReservationPackageStageTagsEditorProps = {
 export function ReservationPackageStageTagsEditor({
   categoryTitle,
   optionLabel,
-  categorySlug,
+  packageOptionId,
+  categoryContent,
   accentColor,
   stageTags,
   onChange,
 }: ReservationPackageStageTagsEditorProps) {
-  const stages = getEditableStagesForCategory(categorySlug);
+  const stages = getEditableStagesForPackage(
+    categoryContent,
+    packageOptionId,
+    optionLabel,
+  );
 
-  function updateStageTags(stage: TrackingWorkflowStageId, tags: string[]) {
+  function updateStageTags(stageId: string, tags: string[]) {
     onChange({
       ...stageTags,
-      [stage]: tags,
+      [stageId]: tags,
     });
   }
 
@@ -51,10 +56,10 @@ export function ReservationPackageStageTagsEditor({
       <div className="mt-4 space-y-4">
         {stages.map((stage) => (
           <PostShootTagsEditor
-            key={stage}
-            title={WORKFLOW_STAGE_TAG_LABELS[stage]}
-            tags={stageTags[stage] ?? []}
-            onChange={(tags) => updateStageTags(stage, tags)}
+            key={stage.id}
+            title={stage.label}
+            tags={stageTags[stage.id] ?? []}
+            onChange={(tags) => updateStageTags(stage.id, tags)}
           />
         ))}
       </div>

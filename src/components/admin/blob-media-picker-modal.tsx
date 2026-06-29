@@ -2,7 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ImageIcon, Loader2, Video, X } from "lucide-react";
+import {
+  Check,
+  ImageIcon,
+  Loader2,
+  Play,
+  Video,
+  X,
+} from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { PackageGalleryMedia } from "@/lib/package-seed-data";
@@ -14,6 +21,8 @@ type BlobMediaItem = {
   type: "image" | "video";
   label: string;
 };
+
+type MediaTab = "image" | "video";
 
 type BlobMediaPickerModalProps = {
   open: boolean;
@@ -30,6 +39,7 @@ export function BlobMediaPickerModal({
   existingUrls = [],
   title = "Medya Kütüphanesi",
 }: BlobMediaPickerModalProps) {
+  const [tab, setTab] = useState<MediaTab>("image");
   const [items, setItems] = useState<BlobMediaItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [offset, setOffset] = useState(0);
@@ -37,25 +47,29 @@ export function BlobMediaPickerModal({
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [previewVideo, setPreviewVideo] = useState<BlobMediaItem | null>(null);
 
   const existingSet = new Set(existingUrls);
 
-  const fetchPage = useCallback(async (pageOffset: number, append: boolean) => {
-    const response = await fetch(
-      `/api/admin/blob-media?limit=20&offset=${pageOffset}`,
-    );
-    if (!response.ok) {
-      throw new Error("Medya listesi alınamadı");
-    }
-    const data = (await response.json()) as {
-      items: BlobMediaItem[];
-      hasMore: boolean;
-      nextOffset: number | null;
-    };
-    setItems((prev) => (append ? [...prev, ...data.items] : data.items));
-    setHasMore(data.hasMore);
-    setOffset(data.nextOffset ?? pageOffset + data.items.length);
-  }, []);
+  const fetchPage = useCallback(
+    async (pageOffset: number, append: boolean, mediaType: MediaTab) => {
+      const response = await fetch(
+        `/api/admin/blob-media?limit=20&offset=${pageOffset}&type=${mediaType}`,
+      );
+      if (!response.ok) {
+        throw new Error("Medya listesi alınamadı");
+      }
+      const data = (await response.json()) as {
+        items: BlobMediaItem[];
+        hasMore: boolean;
+        nextOffset: number | null;
+      };
+      setItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      setHasMore(data.hasMore);
+      setOffset(data.nextOffset ?? pageOffset + data.items.length);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -64,9 +78,10 @@ export function BlobMediaPickerModal({
     setItems([]);
     setOffset(0);
     setError("");
+    setPreviewVideo(null);
     setLoading(true);
 
-    fetchPage(0, false)
+    fetchPage(0, false, tab)
       .catch((fetchError) => {
         setError(
           fetchError instanceof Error
@@ -75,7 +90,7 @@ export function BlobMediaPickerModal({
         );
       })
       .finally(() => setLoading(false));
-  }, [open, fetchPage]);
+  }, [open, tab, fetchPage]);
 
   function toggleItem(url: string) {
     if (existingSet.has(url)) return;
@@ -102,7 +117,7 @@ export function BlobMediaPickerModal({
     setLoadingMore(true);
     setError("");
     try {
-      await fetchPage(offset, true);
+      await fetchPage(offset, true, tab);
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -135,8 +150,7 @@ export function BlobMediaPickerModal({
               <div>
                 <h3 className="text-lg font-semibold text-white">{title}</h3>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Blob&apos;a daha önce yüklediğiniz görseller ve videolar. En
-                  yeni yükleme en üstte.
+                  Blob&apos;a daha önce yüklediğiniz görseller ve videolar.
                 </p>
               </div>
               <button
@@ -146,6 +160,33 @@ export function BlobMediaPickerModal({
                 aria-label="Kapat"
               >
                 <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="flex gap-2 border-b border-white/10 px-5 py-3">
+              <button
+                type="button"
+                onClick={() => setTab("image")}
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  tab === "image"
+                    ? "bg-white text-black"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                Fotoğraflar
+              </button>
+              <button
+                type="button"
+                onClick={() => setTab("video")}
+                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                  tab === "video"
+                    ? "bg-white text-black"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Video className="h-3.5 w-3.5" />
+                Videolar
               </button>
             </div>
 
@@ -161,7 +202,7 @@ export function BlobMediaPickerModal({
                 </p>
               ) : items.length === 0 ? (
                 <p className="py-16 text-center text-sm text-zinc-500">
-                  Blob&apos;da görsel veya video bulunamadı.
+                  Bu kategoride medya bulunamadı.
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -169,11 +210,8 @@ export function BlobMediaPickerModal({
                     const isExisting = existingSet.has(item.url);
                     const isSelected = selected.has(item.url);
                     return (
-                      <button
+                      <div
                         key={item.url}
-                        type="button"
-                        disabled={isExisting}
-                        onClick={() => toggleItem(item.url)}
                         className={`group relative overflow-hidden rounded-2xl border text-left transition-all ${
                           isExisting
                             ? "cursor-not-allowed border-white/5 opacity-45"
@@ -184,13 +222,23 @@ export function BlobMediaPickerModal({
                       >
                         <div className="relative aspect-square bg-[#1a1a1a]">
                           {item.type === "video" ? (
-                            <video
-                              src={item.url}
-                              className="h-full w-full object-cover"
-                              muted
-                              playsInline
-                              preload="metadata"
-                            />
+                            <>
+                              <video
+                                src={item.url}
+                                className="h-full w-full object-cover"
+                                muted
+                                playsInline
+                                preload="metadata"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setPreviewVideo(item)}
+                                className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition group-hover:opacity-100"
+                                aria-label="Videoyu oynat"
+                              >
+                                <Play className="h-8 w-8 text-white" />
+                              </button>
+                            </>
                           ) : (
                             <img
                               src={item.url}
@@ -199,7 +247,14 @@ export function BlobMediaPickerModal({
                               loading="lazy"
                             />
                           )}
-                          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-medium text-white">
+                          <button
+                            type="button"
+                            disabled={isExisting}
+                            onClick={() => toggleItem(item.url)}
+                            className="absolute inset-0 disabled:cursor-not-allowed"
+                            aria-label={isSelected ? "Seçimi kaldır" : "Seç"}
+                          />
+                          <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-medium text-white">
                             {item.type === "video" ? (
                               <Video className="h-3 w-3" />
                             ) : (
@@ -208,12 +263,12 @@ export function BlobMediaPickerModal({
                             {item.type === "video" ? "Video" : "Görsel"}
                           </span>
                           {isSelected ? (
-                            <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#93f8b6] text-black">
+                            <span className="pointer-events-none absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#93f8b6] text-black">
                               <Check className="h-4 w-4" />
                             </span>
                           ) : null}
                           {isExisting ? (
-                            <span className="absolute inset-x-2 bottom-2 rounded-full bg-black/80 px-2 py-1 text-center text-[10px] text-zinc-300">
+                            <span className="pointer-events-none absolute inset-x-2 bottom-2 rounded-full bg-black/80 px-2 py-1 text-center text-[10px] text-zinc-300">
                               Galeride
                             </span>
                           ) : null}
@@ -228,7 +283,7 @@ export function BlobMediaPickerModal({
                             })}
                           </p>
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -273,6 +328,33 @@ export function BlobMediaPickerModal({
               </div>
             </div>
           </motion.div>
+
+          {previewVideo ? (
+            <div
+              className="fixed inset-0 z-[110] flex items-center justify-center bg-black/85 p-4"
+              onClick={() => setPreviewVideo(null)}
+            >
+              <div
+                className="relative w-full max-w-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => setPreviewVideo(null)}
+                  className="absolute -top-10 right-0 rounded-lg p-2 text-white hover:bg-white/10"
+                  aria-label="Kapat"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+                <video
+                  src={previewVideo.url}
+                  controls
+                  autoPlay
+                  className="max-h-[70vh] w-full rounded-2xl bg-black"
+                />
+              </div>
+            </div>
+          ) : null}
         </motion.div>
       ) : null}
     </AnimatePresence>

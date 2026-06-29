@@ -22,25 +22,26 @@ export function resolvePackageWorkflowStageTags(
   content: Partial<PackageCategoryContent> | undefined,
   packageOptionId: string,
   optionLabel?: string,
-): ItemWorkflowStageTags {
+): Record<string, string[]> {
   const stored = pickOptionRecord(
     content?.workflowStageTagsByOption,
     packageOptionId,
     optionLabel,
   );
 
-  if (!stored) return emptyItemWorkflowStageTags();
+  if (!stored) return {};
 
-  const tags = emptyItemWorkflowStageTags();
-  for (const stage of Object.keys(tags) as TrackingWorkflowStageId[]) {
-    const pills = stored[stage];
+  const tags: Record<string, string[]> = {};
+  for (const [stageId, pills] of Object.entries(stored)) {
     if (Array.isArray(pills)) {
-      tags[stage] = pills.filter(Boolean);
+      tags[stageId] = pills.filter(Boolean);
     }
   }
   return tags;
 }
 
-export function hasAnyWorkflowStageTags(tags: ItemWorkflowStageTags): boolean {
+export function hasAnyWorkflowStageTags(
+  tags: Record<string, string[]>,
+): boolean {
   return Object.values(tags).some((entries) => entries.length > 0);
 }

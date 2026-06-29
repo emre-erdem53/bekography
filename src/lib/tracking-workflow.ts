@@ -7,6 +7,8 @@ import {
 } from "date-fns";
 import { tr } from "date-fns/locale";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
+import type { PackageWorkflowStageDefinition } from "@/lib/package-workflow-stages";
+import { buildDynamicTrackingWorkflowView } from "@/lib/tracking-workflow-dynamic";
 
 export type TrackingWorkflowAction =
   | "digital_delivered"
@@ -23,7 +25,9 @@ export type TrackingWorkflowFlags = {
   printingCompletedAt: string | null;
   deliveredAt: string | null;
   /** Admin panelinden doğrudan seçilen güncel aşama. */
-  adminStage?: TrackingWorkflowStageId | null;
+  adminStage?: string | null;
+  /** Özel aşama tamamlanma tarihleri (stage id → ISO). */
+  customCompletedAt?: Record<string, string>;
 };
 
 export type TrackingWorkflowStageId =
@@ -40,7 +44,7 @@ export type TrackingWorkflowStageState =
   | "upcoming";
 
 export type TrackingWorkflowStageView = {
-  id: TrackingWorkflowStageId;
+  id: string;
   label: string;
   state: TrackingWorkflowStageState;
   tone?: "green" | "red" | "amber" | "default";
@@ -80,6 +84,7 @@ export function emptyTrackingWorkflowFlags(): TrackingWorkflowFlags {
     printingCompletedAt: null,
     deliveredAt: null,
     adminStage: null,
+    customCompletedAt: {},
   };
 }
 
@@ -111,10 +116,18 @@ export function parseTrackingWorkflowFlags(
     deliveredAt:
       typeof data.deliveredAt === "string" ? data.deliveredAt : null,
     adminStage:
-      typeof data.adminStage === "string" &&
-      (TRACKING_WORKFLOW_STAGE_ORDER as string[]).includes(data.adminStage)
-        ? (data.adminStage as TrackingWorkflowStageId)
+      typeof data.adminStage === "string" && data.adminStage.trim()
+        ? data.adminStage.trim()
         : null,
+    customCompletedAt:
+      data.customCompletedAt && typeof data.customCompletedAt === "object"
+        ? Object.fromEntries(
+            Object.entries(data.customCompletedAt).filter(
+              (entry): entry is [string, string] =>
+                typeof entry[0] === "string" && typeof entry[1] === "string",
+            ),
+          )
+        : {},
   };
 }
 
@@ -351,7 +364,9 @@ function isShootEffectivelyComplete(
 
   if (workflow.adminStage) {
     const cekimIndex = order.indexOf("cekim");
-    const adminIndex = order.indexOf(workflow.adminStage);
+    const adminIndex = order.indexOf(
+      workflow.adminStage as TrackingWorkflowStageId,
+    );
     if (cekimIndex >= 0 && adminIndex > cekimIndex) return true;
   }
 
@@ -636,7 +651,7 @@ function buildViewFromAdminStage(
 
 export function getCurrentWorkflowStageId(
   workflow: TrackingWorkflowView,
-): TrackingWorkflowStageId | null {
+): string | null {
   const current = workflow.stages.filter((stage) => stage.state === "current");
   if (current.length === 1) return current[0].id;
   if (workflow.isCompleted) {
@@ -651,8 +666,19 @@ export function buildTrackingWorkflowView(input: {
   postShoot: PostShootSnapshot;
   workflow: TrackingWorkflowFlags;
   hasPrinting?: boolean;
+  stageDefinitions?: PackageWorkflowStageDefinition[];
   now?: Date;
 }): TrackingWorkflowView {
+  if (input.stageDefinitions?.length) {
+    return buildDynamicTrackingWorkflowView({
+      shootDate: input.shootDate,
+      postShoot: input.postShoot,
+      workflow: input.workflow,
+      stageDefinitions: input.stageDefinitions,
+      now: input.now,
+    });
+  }
+
   const now = input.now ?? new Date();
   const { postShoot, workflow } = input;
   const hasPrinting = input.hasPrinting ?? false;
@@ -699,7 +725,7 @@ export function buildTrackingWorkflowView(input: {
 
   if (workflow.adminStage) {
     return buildViewFromAdminStage(
-      workflow.adminStage,
+      workflow.adminStage as TrackingWorkflowStageId,
       hasPrinting,
       input.shootDate,
       postShoot,
