@@ -171,6 +171,7 @@ const trackingWorkflowFlagsSchema = z.object({
   editingCompletedAt: z.string().nullable().optional(),
   printingCompletedAt: z.string().nullable().optional(),
   deliveredAt: z.string().nullable().optional(),
+  shootCompletedAt: z.string().nullable().optional(),
   adminStage: z.string().nullable().optional(),
 });
 

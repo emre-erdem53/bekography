@@ -8,6 +8,10 @@ import {
   computeWorkflowDeadlines,
   emptyTrackingWorkflowFlags,
   getTrackingStageLabel,
+  getWorkflowDayCounts,
+  resolveStageDeadlineDate,
+  resolveStageDeadlineHint,
+  stageShowsDeadlineWhenUpcoming,
   type TrackingWorkflowFlags,
   type TrackingWorkflowStageId,
   type TrackingWorkflowStageState,
@@ -227,13 +231,20 @@ function resolveBuiltinStageDeadline(
   workflow: TrackingWorkflowFlags,
   reservationCreatedAt?: Date,
 ): Date | undefined {
-  if (def.builtinKey === "rezervasyon" && reservationCreatedAt) {
-    return endOfDay(startOfDay(reservationCreatedAt));
-  }
-  if (def.builtinKey === "cekim") {
-    return computeEffectiveWorkflowDeadlines(shootDate, postShoot, workflow).shoot;
-  }
-  return undefined;
+  if (!def.builtinKey) return undefined;
+
+  const deadlines = computeEffectiveWorkflowDeadlines(
+    shootDate,
+    postShoot,
+    workflow,
+  );
+
+  return resolveStageDeadlineDate(
+    def.builtinKey,
+    deadlines,
+    workflow,
+    reservationCreatedAt,
+  );
 }
 
 function buildDynamicStages(
@@ -273,7 +284,10 @@ function buildDynamicStages(
             : ("amber" as const)
           : ("default" as const);
 
-    const customDeadline =
+    const dayCounts = getWorkflowDayCounts(postShoot);
+    const builtinKey = def.builtinKey as TrackingWorkflowStageId | undefined;
+
+    const stageDeadline =
       def.kind === "custom"
         ? resolveCustomStageDeadline(
             def,
@@ -291,19 +305,29 @@ function buildDynamicStages(
             reservationCreatedAt,
           );
 
+    const { hint, continuesDate } = builtinKey
+      ? resolveStageDeadlineHint(builtinKey, state, dayCounts)
+      : {};
+    const showDeadline =
+      state !== "upcoming" ||
+      (builtinKey ? stageShowsDeadlineWhenUpcoming(builtinKey) : false);
+    const showHint = Boolean(hint) && (showDeadline || !continuesDate);
+
     return {
       id: def.id,
       label: stageLabelFromDefinition(def, state),
       state,
       tone,
       deadlineDate:
-        state !== "upcoming" && customDeadline
-          ? customDeadline.toISOString()
+        showDeadline && stageDeadline
+          ? stageDeadline.toISOString()
           : undefined,
-      deadlineHint:
-        def.kind === "custom" && def.daysAfterPrevious && state !== "upcoming"
+      deadlineHint: showHint
+        ? hint
+        : def.kind === "custom" && def.daysAfterPrevious && state !== "upcoming"
           ? `Önceki aşamadan ${def.daysAfterPrevious} gün içinde`
           : undefined,
+      deadlineHintContinuesDate: showDeadline ? continuesDate : undefined,
     };
   });
 }
@@ -404,6 +428,11 @@ export function workflowFlagsForAdminStageFromDefinitions(
   const printingIndex = definitions.findIndex(
     (def) => def.builtinKey === "baski",
   );
+  const cekimIndex = definitions.findIndex((def) => def.builtinKey === "cekim");
+
+  if (cekimIndex >= 0 && targetIndex > cekimIndex) {
+    flags.shootCompletedAt = now;
+  }
 
   for (let i = 0; i <= targetIndex; i++) {
     const def = definitions[i];

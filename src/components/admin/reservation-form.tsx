@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -124,6 +124,41 @@ function splitEqualInstallments(
   }));
 }
 
+function redistributeInstallmentAmounts(
+  installments: Installment[],
+  changedIndex: number,
+  amount: number,
+  expectedTotal: number,
+): Installment[] {
+  const next = [...installments];
+  next[changedIndex] = { ...next[changedIndex], amount };
+
+  if (next.length === 2) {
+    const otherIndex = changedIndex === 0 ? 1 : 0;
+    next[otherIndex] = {
+      ...next[otherIndex],
+      amount: Math.max(0, expectedTotal - amount),
+    };
+    return next;
+  }
+
+  const assignedTotal = next.reduce((sum, row, index) => {
+    if (index === changedIndex) return sum + amount;
+    return sum + row.amount;
+  }, 0);
+  const remaining = Math.max(0, expectedTotal - assignedTotal);
+  const adjustableIndexes = next
+    .map((_, index) => index)
+    .filter((index) => index !== changedIndex);
+
+  if (adjustableIndexes.length === 1) {
+    const otherIndex = adjustableIndexes[0];
+    next[otherIndex] = { ...next[otherIndex], amount: remaining };
+  }
+
+  return next;
+}
+
 type ReservationFormProps = {
   reservationId?: string;
 };
@@ -162,6 +197,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [loading, setLoading] = useState(true);
   const [totalPriceManual, setTotalPriceManual] = useState(false);
   const [defaultShootDate, setDefaultShootDate] = useState("");
+  const trackedItemsTotalRef = useRef<number | null>(null);
 
   const itemsTotal = useMemo(
     () => items.reduce((sum, item) => sum + item.agreedUnitPrice, 0),
@@ -220,6 +256,16 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     setInstallments((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], ...patch };
+
+      if (typeof patch.amount === "number") {
+        return redistributeInstallmentAmounts(
+          next,
+          index,
+          patch.amount,
+          expectedPayable,
+        );
+      }
+
       return next;
     });
   }
@@ -479,18 +525,27 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   }, [loading, categories, itemKeysSignature, items]);
 
   useEffect(() => {
-    if (!totalPriceManual && items.length > 0) {
+    if (loading || items.length === 0) return;
+
+    const previousTotal = trackedItemsTotalRef.current;
+    trackedItemsTotalRef.current = itemsTotal;
+
+    if (previousTotal === null) return;
+
+    if (itemsTotal !== previousTotal) {
       setTotalPrice(itemsTotal);
     }
-  }, [itemsTotal, items.length, totalPriceManual]);
+  }, [loading, itemsTotal, items.length]);
 
   useEffect(() => {
     if (loading) return;
 
     setInstallments((prev) => {
       if (hasPartialPayment(items)) {
-        if (prev.length < 2) {
-          return splitEqualInstallments(2, expectedPayable, prev);
+        const count = Math.max(prev.length, 2);
+        const prevTotal = prev.reduce((sum, row) => sum + row.amount, 0);
+        if (prev.length < 2 || prevTotal !== expectedPayable) {
+          return splitEqualInstallments(count, expectedPayable, prev);
         }
         return prev;
       }

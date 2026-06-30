@@ -3,10 +3,9 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { Download, ArrowLeft, Pencil } from "lucide-react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import { TrackingOrderView } from "@/components/tracking/tracking-order-view";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
+import { exportElementToPdf } from "@/lib/export-tracking-pdf";
 import type { TrackingData } from "@/lib/tracking-types";
 
 function slugifyFileName(value: string) {
@@ -38,27 +37,12 @@ export function ReservationSummaryClient({
     setError("");
 
     try {
-      await document.fonts.ready;
-
-      const canvas = await html2canvas(exportRef.current, {
-        backgroundColor: "#000000",
-        scale: 2,
-        useCORS: true,
-        logging: false,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height],
-      });
-
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-      pdf.save(
+      await exportElementToPdf(
+        exportRef.current,
         `${slugifyFileName(data.coupleName) || "rezervasyon"}-siparis-formu.pdf`,
       );
-    } catch {
+    } catch (exportError) {
+      console.error("PDF export failed", exportError);
       setError("PDF oluşturulamadı. Lütfen tekrar deneyin.");
     } finally {
       setDownloading(false);

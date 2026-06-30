@@ -24,6 +24,8 @@ export type TrackingWorkflowFlags = {
   editingCompletedAt: string | null;
   printingCompletedAt: string | null;
   deliveredAt: string | null;
+  /** Çekim tamamlandı sayıldığı gün (manuel aşama değişimi vb.). */
+  shootCompletedAt?: string | null;
   /** Admin panelinden doğrudan seçilen güncel aşama. */
   adminStage?: string | null;
   /** Özel aşama tamamlanma tarihleri (stage id → ISO). */
@@ -115,6 +117,10 @@ export function parseTrackingWorkflowFlags(
         : null,
     deliveredAt:
       typeof data.deliveredAt === "string" ? data.deliveredAt : null,
+    shootCompletedAt:
+      typeof data.shootCompletedAt === "string"
+        ? data.shootCompletedAt
+        : null,
     adminStage:
       typeof data.adminStage === "string" && data.adminStage.trim()
         ? data.adminStage.trim()
@@ -138,11 +144,16 @@ export function mergeWorkflowAction(
   const now = new Date().toISOString();
   switch (action) {
     case "digital_delivered":
-      return { ...flags, digitalDeliveredAt: flags.digitalDeliveredAt ?? now };
+      return {
+        ...flags,
+        digitalDeliveredAt: flags.digitalDeliveredAt ?? now,
+        shootCompletedAt: flags.shootCompletedAt ?? now,
+      };
     case "selection_completed":
       return {
         ...flags,
         selectionCompletedAt: flags.selectionCompletedAt ?? now,
+        shootCompletedAt: flags.shootCompletedAt ?? now,
       };
     case "editing_completed":
       return { ...flags, editingCompletedAt: flags.editingCompletedAt ?? now };
@@ -223,7 +234,7 @@ const DEFAULT_DIGITAL_SELECTION_DAYS = 30;
 const DEFAULT_EDITING_AFTER_SELECTION_DAYS = 70;
 const DEFAULT_PRINTING_AFTER_EDITING_DAYS = 30;
 
-function getWorkflowDayCounts(postShoot?: PostShootSnapshot) {
+export function getWorkflowDayCounts(postShoot?: PostShootSnapshot) {
   const digitalDays = postShoot
     ? parseDigitalDeadlineDaysFromPills(
         postShoot.digital.pills,
@@ -280,7 +291,9 @@ export function computeEffectiveWorkflowDeadlines(
   const { digitalDays, editingDaysAfter, printingDaysAfter } =
     getWorkflowDayCounts(postShoot);
 
-  const digitalSelection = endOfDay(addDays(shootDay, digitalDays));
+  const cekimDay =
+    completionDay(workflow.shootCompletedAt) ?? shootDay;
+  const digitalSelection = endOfDay(addDays(cekimDay, digitalDays));
   const selectionAnchor =
     completionDay(workflow.selectionCompletedAt) ?? digitalSelection;
   const editing = endOfDay(addDays(selectionAnchor, editingDaysAfter));
@@ -296,7 +309,7 @@ export function computeEffectiveWorkflowDeadlines(
   };
 }
 
-function resolveStageDeadlineDate(
+export function resolveStageDeadlineDate(
   id: TrackingWorkflowStageId,
   deadlines: WorkflowDeadlines,
   workflow: TrackingWorkflowFlags,
@@ -432,7 +445,7 @@ function computeStageTone(
   return "default";
 }
 
-function resolveStageDeadlineHint(
+export function resolveStageDeadlineHint(
   id: TrackingWorkflowStageId,
   state: TrackingWorkflowStageState,
   dayCounts: { editingDaysAfter: number; printingDaysAfter: number },
@@ -441,26 +454,38 @@ function resolveStageDeadlineHint(
 
   switch (id) {
     case "dijital":
-      return { hint: "'a kadar teslim alınmalı.", continuesDate: true };
+      if (state === "current") {
+        return { hint: "'a kadar teslim alınmalı.", continuesDate: true };
+      }
+      return {};
     case "secim":
-      return { hint: "'a kadar seçim yapılmalı.", continuesDate: true };
+      if (state === "current") {
+        return { hint: "'a kadar seçim yapılmalı.", continuesDate: true };
+      }
+      return {};
     case "duzenleme":
       if (state === "current") {
-        return { hint: "'a kadar düzenlemeler bitecek.", continuesDate: true };
+        return { hint: " tarihe kadar bitecek.", continuesDate: true };
       }
       return {
-        hint: `Seçimden sonraki ${dayCounts.editingDaysAfter} günde düzenlemeler bitecek.`,
+        hint: `Seçimden sonra en fazla ${dayCounts.editingDaysAfter} gün`,
       };
     case "baski":
       if (state === "current") {
-        return { hint: "'a kadar kargoya verilecek.", continuesDate: true };
+        return { hint: " tarihe kadar kargoda", continuesDate: true };
       }
       return {
-        hint: `Düzenlemeden sonraki ${dayCounts.printingDaysAfter} günde kargoya verilecek.`,
+        hint: `Düzenlemeden sonra en fazla ${dayCounts.printingDaysAfter} gün`,
       };
     default:
       return {};
   }
+}
+
+export function stageShowsDeadlineWhenUpcoming(
+  id: TrackingWorkflowStageId,
+): boolean {
+  return id === "dijital" || id === "secim";
 }
 
 function buildStagesFromEffectiveStage(
@@ -500,7 +525,8 @@ function buildStagesFromEffectiveStage(
       workflow,
     );
     const { hint, continuesDate } = resolveStageDeadlineHint(id, state, dayCounts);
-    const showDeadline = state !== "upcoming";
+    const showDeadline =
+      state !== "upcoming" || stageShowsDeadlineWhenUpcoming(id);
     const showHint =
       Boolean(hint) && (showDeadline || !continuesDate);
     return {
@@ -613,8 +639,13 @@ export function workflowFlagsForAdminStage(
   const flags = emptyTrackingWorkflowFlags();
   flags.adminStage = stageId;
 
+  const cekimIndex = order.indexOf("cekim");
   const editingIndex = order.indexOf("duzenleme");
   const printingIndex = order.indexOf("baski");
+
+  if (cekimIndex >= 0 && stageIndex > cekimIndex) {
+    flags.shootCompletedAt = now;
+  }
 
   if (stageIndex >= editingIndex && editingIndex >= 0) {
     flags.digitalDeliveredAt = now;
