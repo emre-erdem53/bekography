@@ -26,6 +26,9 @@ export function normalizeTrackingData(
     value.shootDate ??
     value.items[0]?.shootDate ??
     new Date().toISOString();
+  const reservationCreatedAt = value.createdAt
+    ? new Date(value.createdAt)
+    : undefined;
 
   const items = value.items.map((item) => {
     const itemId = item.id ?? "";
@@ -43,6 +46,8 @@ export function normalizeTrackingData(
       postShoot,
       workflow: itemWorkflowFlags,
       hasPrinting,
+      stageDefinitions: item.stageDefinitions,
+      reservationCreatedAt,
     });
     const snapshot = item.productSnapshot ?? emptyProductSnapshot();
     const workflowStageTags = buildWorkflowStageTags(
@@ -72,6 +77,7 @@ export function normalizeTrackingData(
       paymentType: item.paymentType ?? "",
       isOutdoor: item.isOutdoor ?? false,
       hasPrinting,
+      stageDefinitions: item.stageDefinitions,
       departureTime: item.departureTime ?? null,
       arrivalTime: item.arrivalTime ?? null,
       startTime: item.startTime ?? null,
@@ -93,6 +99,7 @@ export function normalizeTrackingData(
         postShoot,
         workflow: workflowFlags,
         hasPrinting: reservationHasPrintingPackage(items),
+        reservationCreatedAt,
       });
 
   return {
@@ -106,6 +113,8 @@ export function normalizeTrackingData(
     formYear: value.formYear ?? new Date(shootDate).getFullYear(),
     city: value.city ?? items[0]?.location ?? "",
     shootDate,
+    createdAt: value.createdAt ?? shootDate,
+    paymentTypeLabel: value.paymentTypeLabel ?? "",
     status: value.status ?? "planlandi",
     statusLabel:
       value.statusLabel ??

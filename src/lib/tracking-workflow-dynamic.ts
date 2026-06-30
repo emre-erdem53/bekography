@@ -220,6 +220,22 @@ function stageLabelFromDefinition(
   return def.label;
 }
 
+function resolveBuiltinStageDeadline(
+  def: PackageWorkflowStageDefinition,
+  shootDate: Date,
+  postShoot: PostShootSnapshot,
+  workflow: TrackingWorkflowFlags,
+  reservationCreatedAt?: Date,
+): Date | undefined {
+  if (def.builtinKey === "rezervasyon" && reservationCreatedAt) {
+    return endOfDay(startOfDay(reservationCreatedAt));
+  }
+  if (def.builtinKey === "cekim") {
+    return computeEffectiveWorkflowDeadlines(shootDate, postShoot, workflow).shoot;
+  }
+  return undefined;
+}
+
 function buildDynamicStages(
   definitions: PackageWorkflowStageDefinition[],
   effectiveStageId: string,
@@ -228,6 +244,7 @@ function buildDynamicStages(
   workflow: TrackingWorkflowFlags,
   shootPassed: boolean,
   allCompleted: boolean,
+  reservationCreatedAt?: Date,
 ): TrackingWorkflowStageView[] {
   if (allCompleted) {
     return definitions.map((def) => ({
@@ -266,7 +283,13 @@ function buildDynamicStages(
             workflow,
             postShoot,
           )
-        : undefined;
+        : resolveBuiltinStageDeadline(
+            def,
+            shootDate,
+            postShoot,
+            workflow,
+            reservationCreatedAt,
+          );
 
     return {
       id: def.id,
@@ -291,6 +314,7 @@ function buildPrimaryCopyForDynamic(
   postShoot: PostShootSnapshot,
   workflow: TrackingWorkflowFlags,
   allCompleted: boolean,
+  reservationCreatedAt?: Date,
 ): Pick<
   TrackingWorkflowView,
   "primaryTitle" | "primarySubtitle" | "deadlineDate" | "deadlineLabel"
@@ -323,7 +347,9 @@ function buildPrimaryCopyForDynamic(
     case "rezervasyon":
       return {
         primaryTitle: "Rezervasyon",
-        primarySubtitle: `Çekim tarihi: ${formatDeadline(deadlines.shoot)}`,
+        primarySubtitle: reservationCreatedAt
+          ? `Rezervasyon tarihi: ${formatDeadline(endOfDay(startOfDay(reservationCreatedAt)))}`
+          : "Rezervasyon alındı",
       };
     case "cekim":
       return {
@@ -405,10 +431,11 @@ export function buildDynamicTrackingWorkflowView(input: {
   postShoot: PostShootSnapshot;
   workflow: TrackingWorkflowFlags;
   stageDefinitions: PackageWorkflowStageDefinition[];
+  reservationCreatedAt?: Date;
   now?: Date;
 }): TrackingWorkflowView {
   const now = input.now ?? new Date();
-  const { workflow, postShoot, stageDefinitions } = input;
+  const { workflow, postShoot, stageDefinitions, reservationCreatedAt } = input;
   const hasPrinting = packageHasPrintingStage(stageDefinitions);
   const baseDeadlines = computeWorkflowDeadlines(input.shootDate, postShoot);
   const shootDay = startOfDay(input.shootDate);
@@ -432,6 +459,7 @@ export function buildDynamicTrackingWorkflowView(input: {
         workflow,
         shootPassed,
         true,
+        reservationCreatedAt,
       ),
       availableAdminActions: [],
     };
@@ -456,6 +484,7 @@ export function buildDynamicTrackingWorkflowView(input: {
     postShoot,
     workflow,
     false,
+    reservationCreatedAt,
   );
 
   return {
@@ -469,6 +498,7 @@ export function buildDynamicTrackingWorkflowView(input: {
       workflow,
       shootPassed,
       false,
+      reservationCreatedAt,
     ),
     availableAdminActions: [],
   };

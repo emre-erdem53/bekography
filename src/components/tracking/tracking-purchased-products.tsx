@@ -50,11 +50,11 @@ export function TrackingPurchasedProducts({
                     >
                       {product.categoryTitle}
                     </h3>
-                    <p className="mt-0.5 text-base font-semibold text-white/90 sm:text-lg">
+                    <p className="mt-0.5 text-base font-semibold leading-tight text-white/90 sm:text-lg">
                       {product.optionLabel}
                     </p>
                     {product.highlightTags.length > 0 ? (
-                      <div className="mt-2 flex flex-wrap gap-1.5">
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
                         {product.highlightTags.map((tag) => (
                           <span
                             key={tag}
@@ -72,7 +72,7 @@ export function TrackingPurchasedProducts({
                   </div>
                 </div>
 
-                <div className="mt-4 flex items-start gap-6 border-t border-white/10 pt-4 sm:mt-5 sm:gap-8">
+                <div className="mt-2 flex items-start gap-6 border-t border-white/10 pt-3 sm:gap-8">
                   <PaymentTypePrice type="pesin" price={product.cashPrice} />
                   <PaymentTypePrice
                     type="taksitli"

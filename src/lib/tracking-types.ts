@@ -55,6 +55,8 @@ export type TrackingData = {
   formYear: number;
   city: string;
   shootDate: string;
+  createdAt: string;
+  paymentTypeLabel: string;
   status: ReservationStatus;
   statusLabel: string;
   timeline: TrackingTimelineStep[];

@@ -300,9 +300,13 @@ function resolveStageDeadlineDate(
   id: TrackingWorkflowStageId,
   deadlines: WorkflowDeadlines,
   workflow: TrackingWorkflowFlags,
+  reservationCreatedAt?: Date,
 ): Date {
   switch (id) {
     case "rezervasyon":
+      return reservationCreatedAt
+        ? endOfDay(startOfDay(reservationCreatedAt))
+        : deadlines.shoot;
     case "cekim":
       return deadlines.shoot;
     case "dijital":
@@ -467,6 +471,7 @@ function buildStagesFromEffectiveStage(
   allCompleted: boolean,
   workflow: TrackingWorkflowFlags,
   postShoot?: PostShootSnapshot,
+  reservationCreatedAt?: Date,
 ): TrackingWorkflowStageView[] {
   const order = workflowStageOrder(hasPrinting);
   const dayCounts = getWorkflowDayCounts(postShoot);
@@ -477,7 +482,12 @@ function buildStagesFromEffectiveStage(
       label: stageCompletedLabel(id),
       state: "completed" as const,
       tone: "green" as const,
-      deadlineDate: resolveStageDeadlineDate(id, deadlines, workflow).toISOString(),
+      deadlineDate: resolveStageDeadlineDate(
+        id,
+        deadlines,
+        workflow,
+        reservationCreatedAt,
+      ).toISOString(),
     }));
   }
 
@@ -499,7 +509,12 @@ function buildStagesFromEffectiveStage(
       state,
       tone: computeStageTone(id, state),
       deadlineDate: showDeadline
-        ? resolveStageDeadlineDate(id, deadlines, workflow).toISOString()
+        ? resolveStageDeadlineDate(
+            id,
+            deadlines,
+            workflow,
+            reservationCreatedAt,
+          ).toISOString()
         : undefined,
       deadlineHint: showHint ? hint : undefined,
       deadlineHintContinuesDate: showDeadline ? continuesDate : undefined,
@@ -536,6 +551,7 @@ function buildPrimaryCopy(
   deadlines: WorkflowDeadlines,
   allCompleted: boolean,
   hasPrinting: boolean,
+  reservationCreatedAt?: Date,
 ): Pick<
   TrackingWorkflowView,
   "primaryTitle" | "primarySubtitle" | "deadlineDate" | "deadlineLabel"
@@ -551,7 +567,9 @@ function buildPrimaryCopy(
     case "rezervasyon":
       return {
         primaryTitle: "Rezervasyon",
-        primarySubtitle: `Çekim tarihi: ${formatDeadline(deadlines.shoot)}`,
+        primarySubtitle: reservationCreatedAt
+          ? `Rezervasyon tarihi: ${formatDeadline(endOfDay(startOfDay(reservationCreatedAt)))}`
+          : "Rezervasyon alındı",
       };
     case "cekim":
       return {
@@ -619,6 +637,7 @@ function buildViewFromAdminStage(
   postShoot: PostShootSnapshot,
   workflow: TrackingWorkflowFlags,
   now: Date = new Date(),
+  reservationCreatedAt?: Date,
 ): TrackingWorkflowView {
   const order = workflowStageOrder(hasPrinting);
   const deadlines = computeEffectiveWorkflowDeadlines(
@@ -637,9 +656,16 @@ function buildViewFromAdminStage(
     false,
     workflow,
     postShoot,
+    reservationCreatedAt,
   );
 
-  const copy = buildPrimaryCopy(resolvedStage, deadlines, false, hasPrinting);
+  const copy = buildPrimaryCopy(
+    resolvedStage,
+    deadlines,
+    false,
+    hasPrinting,
+    reservationCreatedAt,
+  );
 
   return {
     ...copy,
@@ -667,6 +693,7 @@ export function buildTrackingWorkflowView(input: {
   workflow: TrackingWorkflowFlags;
   hasPrinting?: boolean;
   stageDefinitions?: PackageWorkflowStageDefinition[];
+  reservationCreatedAt?: Date;
   now?: Date;
 }): TrackingWorkflowView {
   if (input.stageDefinitions?.length) {
@@ -675,10 +702,12 @@ export function buildTrackingWorkflowView(input: {
       postShoot: input.postShoot,
       workflow: input.workflow,
       stageDefinitions: input.stageDefinitions,
+      reservationCreatedAt: input.reservationCreatedAt,
       now: input.now,
     });
   }
 
+  const reservationCreatedAt = input.reservationCreatedAt;
   const now = input.now ?? new Date();
   const { postShoot, workflow } = input;
   const hasPrinting = input.hasPrinting ?? false;
@@ -731,6 +760,7 @@ export function buildTrackingWorkflowView(input: {
       postShoot,
       workflow,
       now,
+      reservationCreatedAt,
     );
   }
 
@@ -747,6 +777,7 @@ export function buildTrackingWorkflowView(input: {
         true,
         workflow,
         postShoot,
+        reservationCreatedAt,
       ),
       availableAdminActions: [],
     };
@@ -764,6 +795,7 @@ export function buildTrackingWorkflowView(input: {
     deadlines,
     false,
     hasPrinting,
+    reservationCreatedAt,
   );
 
   return {
@@ -783,6 +815,7 @@ export function buildTrackingWorkflowView(input: {
       false,
       workflow,
       postShoot,
+      reservationCreatedAt,
     ),
     availableAdminActions,
   };

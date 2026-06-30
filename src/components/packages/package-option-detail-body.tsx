@@ -42,11 +42,11 @@ export function PackageOptionDetailBody({
         <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
           {categoryTitle}
         </h2>
-        <p className="mt-1 text-lg font-semibold text-white/90 sm:text-xl">
+        <p className="mt-0.5 text-lg font-semibold leading-tight text-white/90 sm:text-xl">
           {optionLabel}
         </p>
         {highlightTags.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-1.5 sm:mt-3 sm:gap-2">
+          <div className="mt-1.5 flex flex-wrap gap-1.5 sm:gap-2">
             {highlightTags.map((tag) => (
               <span
                 key={tag}
@@ -63,7 +63,7 @@ export function PackageOptionDetailBody({
         <PackageGalleryCarousel media={galleryMedia} variant="detail" />
       ) : null}
 
-      <div className="mt-4 flex items-start gap-6 sm:mt-5 sm:gap-8">
+      <div className="mt-3 flex items-start gap-6 sm:gap-8">
         <PaymentTypePrice type="pesin" price={cashPrice} />
         <PaymentTypePrice type="taksitli" price={installmentPrice} />
       </div>

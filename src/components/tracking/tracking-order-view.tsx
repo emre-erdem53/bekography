@@ -3,7 +3,7 @@
 import { forwardRef, type Ref } from "react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AlertTriangle, Camera, Check, Phone, ShieldCheck } from "lucide-react";
+import { Camera, Check, Phone, ShieldCheck } from "lucide-react";
 import {
   RESERVATION_STATUS_LABELS,
   RESERVATION_STATUS_ORDER,
@@ -18,8 +18,11 @@ import {
 } from "@/lib/reservation-utils";
 import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
 import { TrackingPurchasedProducts } from "@/components/tracking/tracking-purchased-products";
-
-import { CANCELLATION_POLICY } from "@/lib/cancellation-fee";
+import {
+  ContractLinkButton,
+  ContractPdfModal,
+  useContractPdfModal,
+} from "@/components/tracking/contract-pdf-modal";
 
 export const TRACKING_PAGE_TOP = "pt-28 md:pt-32";
 
@@ -46,89 +49,104 @@ export const ReservationOrderDocument = forwardRef<
   { data, showCoupleHeader = true, sectionsTagsOnly = false },
   ref,
 ) {
+  const contractModal = useContractPdfModal();
+
   return (
-    <div ref={ref} className="mx-auto max-w-5xl">
-      {showCoupleHeader ? (
-        <CoupleOrderHeader data={data} />
-      ) : null}
+    <>
+      <div ref={ref} className="mx-auto max-w-5xl">
+        {showCoupleHeader ? <CoupleOrderHeader data={data} /> : null}
 
-      <section className={showCoupleHeader ? "mt-10" : "mt-0"}>
-        <SectionHeading icon={Camera}>Çekim Hizmeti</SectionHeading>
-        <div className="mt-5 space-y-4">
-          {data.items.map((item) => (
-            <ShootServiceCard key={item.id || item.categoryTitle} item={item} />
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-10">
-        <SectionHeading>Ödeme Planı</SectionHeading>
-        <div className="mt-5 rounded-2xl border border-white/15 bg-[#0a0a0a]">
-          <div
-            className={`grid grid-cols-1 border-b border-white/10 ${
-              data.discountEnabled ? "md:grid-cols-3" : "md:grid-cols-2"
-            }`}
-          >
-            <PaymentSummaryCell
-              label="Toplam Fiyat"
-              value={formatPrice(data.totalPrice)}
-            />
-            <PaymentSummaryCell
-              label="Cayma Bedeli"
-              value={formatPrice(data.cancellationFeeMax)}
-            />
-            {data.discountEnabled ? (
-              <PaymentSummaryCell
-                label="İndirim"
-                value={formatPrice(data.discountAmount)}
-              />
-            ) : null}
+        <section className={showCoupleHeader ? "mt-5" : "mt-0"}>
+          <SectionHeading icon={Camera}>Çekim Hizmeti</SectionHeading>
+          <div className="mt-2 space-y-4">
+            {data.items.map((item) => (
+              <ShootServiceCard key={item.id || item.categoryTitle} item={item} />
+            ))}
           </div>
-          {data.installments.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data.installments.map((row, index) => {
-                const isPaid = Boolean(row.paidAt);
+        </section>
 
-                return (
-                  <div
-                    key={index}
-                    className="border-b border-white/10 px-5 py-4 last:border-b-0 sm:border-b-0"
-                  >
-                    <p className="text-xs text-zinc-500">
-                      {isPaid ? "Ödendi" : "Ödenecek"}{" "}
-                      {format(new Date(row.dueDate), "d MMMM yyyy", {
-                        locale: tr,
-                      })}
-                    </p>
-                    <p
-                      className={`mt-2 text-xl font-semibold sm:text-2xl ${
-                        isPaid ? "text-zinc-500" : "text-emerald-400"
-                      }`}
-                    >
-                      {formatPrice(row.amount)}
-                    </p>
-                  </div>
-                );
-              })}
+        <section className="mt-10">
+          <SectionHeading>Ödeme Planı</SectionHeading>
+          <div className="mt-5 rounded-2xl border border-white/15 bg-[#0a0a0a]">
+            <div
+              className={`grid grid-cols-2 border-b border-white/10 ${
+                data.discountEnabled ? "md:grid-cols-3" : ""
+              }`}
+            >
+              <PaymentSummaryCell
+                label="Toplam Fiyat"
+                value={formatPrice(data.totalPrice)}
+                sublabel={data.paymentTypeLabel || undefined}
+              />
+              <PaymentSummaryCell
+                label="Cayma Bedeli"
+                value={formatPrice(data.cancellationFeeMax)}
+                sublabel="Maksimum %75"
+                sublabelMuted
+              />
+              {data.discountEnabled ? (
+                <PaymentSummaryCell
+                  label="İndirim"
+                  value={formatPrice(data.discountAmount)}
+                  className="col-span-2 md:col-span-1"
+                />
+              ) : null}
             </div>
-          ) : (
-            <p className="px-5 py-4 text-sm text-zinc-500">
-              Ödeme vadesi tanımlanmamış.
-            </p>
-          )}
-        </div>
-      </section>
+            {data.installments.length > 0 ? (
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {data.installments.map((row, index) => {
+                  const isPaid = Boolean(row.paidAt);
 
-      <TrackingPurchasedProducts
-        products={data.purchasedProducts}
-        sectionsTagsOnly={sectionsTagsOnly}
-      />
+                  return (
+                    <div
+                      key={index}
+                      className="border-b border-r border-white/10 px-4 py-4 last:border-b-0 sm:px-5"
+                    >
+                      <p className="text-xs text-zinc-500">
+                        {isPaid ? "Ödendi" : "Ödenecek"}
+                      </p>
+                      {!isPaid ? (
+                        <p className="mt-1 text-[11px] text-zinc-400">
+                          {format(new Date(row.dueDate), "d MMMM yyyy", {
+                            locale: tr,
+                          })}
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-zinc-500">
+                          {format(new Date(row.paidAt!), "d MMMM yyyy", {
+                            locale: tr,
+                          })}
+                        </p>
+                      )}
+                      <p
+                        className={`mt-2 text-lg font-semibold sm:text-xl ${
+                          isPaid ? "text-zinc-500" : "text-emerald-400"
+                        }`}
+                      >
+                        {formatPrice(row.amount)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="px-5 py-4 text-sm text-zinc-500">
+                Ödeme vadesi tanımlanmamış.
+              </p>
+            )}
+          </div>
+        </section>
 
-      <div className="mt-8 flex gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm leading-relaxed text-amber-100/90">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
-        <p>{CANCELLATION_POLICY}</p>
+        <TrackingPurchasedProducts
+          products={data.purchasedProducts}
+          sectionsTagsOnly={sectionsTagsOnly}
+        />
+
+        <ContractLinkButton onClick={contractModal.openModal} />
       </div>
-    </div>
+
+      <ContractPdfModal open={contractModal.open} onClose={contractModal.closeModal} />
+    </>
   );
 });
 
@@ -253,22 +271,22 @@ function CoupleOrderHeader({ data }: { data: TrackingData }) {
 
   return (
     <header className="pb-2 pt-2 text-center sm:pt-4">
-      <h1 className="font-couple text-4xl italic leading-none text-white sm:text-5xl md:text-6xl">
+      <h1 className="font-couple text-3xl italic leading-none text-white sm:text-4xl md:text-5xl">
         {coupleTitle}
       </h1>
 
-      <div className="mt-8 w-full space-y-3">
-        <ContactPersonBar
-          iconSrc="/groom.svg"
-          name={formatPersonDisplayName(data.groomName)}
-          phone={formatTurkishPhone(data.groomPhone)}
-          tc={data.groomTc}
-        />
+      <div className="mt-5 w-full space-y-2">
         <ContactPersonBar
           iconSrc="/bride.svg"
           name={formatPersonDisplayName(data.brideName)}
           phone={formatTurkishPhone(data.bridePhone)}
           tc={data.brideTc}
+        />
+        <ContactPersonBar
+          iconSrc="/groom.svg"
+          name={formatPersonDisplayName(data.groomName)}
+          phone={formatTurkishPhone(data.groomPhone)}
+          tc={data.groomTc}
         />
       </div>
     </header>
@@ -287,29 +305,31 @@ function ContactPersonBar({
   tc: string;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-2xl border border-white/15 bg-[#0a0a0a] px-5 py-4 text-sm sm:gap-x-8 sm:px-6">
-      <span className="inline-flex min-w-0 items-center gap-2.5">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1.5">
-          <img
-            src={iconSrc}
-            alt=""
-            className="h-full w-full object-contain brightness-0 invert"
-          />
+    <div className="overflow-x-auto rounded-xl border border-white/15 bg-[#0a0a0a] px-3 py-2.5">
+      <div className="flex min-w-max items-center justify-center gap-4 text-xs text-zinc-400 sm:gap-6">
+        <span className="inline-flex shrink-0 items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 p-1">
+            <img
+              src={iconSrc}
+              alt=""
+              className="h-full w-full object-contain brightness-0 invert"
+            />
+          </span>
+          <span className="max-w-[8rem] truncate font-medium text-zinc-300 sm:max-w-none">
+            {name}
+          </span>
         </span>
-        <span className="truncate font-medium tracking-wide text-zinc-200">
-          {name}
+        <span className="inline-flex shrink-0 items-center gap-1.5">
+          <Phone className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="whitespace-nowrap">{phone}</span>
         </span>
-      </span>
-      <span className="inline-flex items-center gap-1.5 text-zinc-400">
-        <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        <span>{phone}</span>
-      </span>
-      {tc ? (
-        <span className="inline-flex items-center gap-1.5 text-zinc-400">
-          <ShieldCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span className="tracking-wide">{tc}</span>
-        </span>
-      ) : null}
+        {tc ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5">
+            <ShieldCheck className="h-3 w-3 shrink-0" aria-hidden />
+            <span className="whitespace-nowrap tracking-wide">{tc}</span>
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -338,42 +358,35 @@ function SectionHeading({
 }
 
 function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
-  const shootDayLabel = format(new Date(item.shootDate), "d MMMM", {
+  const shootDateLabel = format(new Date(item.shootDate), "d MMMM yyyy", {
     locale: tr,
   });
   const shootContentLabel =
     item.shootContent.trim() || item.shootTypeLabel || "—";
   const locationLabel = item.location.trim() || "Belirlenecek";
-  const readyTimeLabel = item.readyTime.trim() || "Belirlenecek";
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
-      <div className="relative flex items-center justify-center gap-3">
+      <div className="relative flex flex-col items-center gap-2">
         <h3
-          className="text-center text-2xl font-semibold leading-none sm:text-3xl md:text-4xl"
+          className="text-center text-3xl font-bold leading-tight sm:text-4xl"
           style={{ color: item.accentColor }}
         >
           {item.categoryTitle}
         </h3>
+        <p className="text-sm font-medium text-zinc-400">{shootDateLabel}</p>
         {item.workflowFlags.deliveredAt ? (
-          <span className="absolute right-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 sm:static sm:px-3 sm:text-xs">
+          <span className="absolute right-0 top-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 sm:static sm:px-3 sm:text-xs">
             <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
             Teslim Edildi
           </span>
         ) : null}
       </div>
 
-      <div className="mt-6 space-y-4 border-t border-white/10 pt-6">
-        <div className="-mx-1 rounded-xl bg-white/[0.04] px-4 py-5 sm:px-5">
+      <div className="mt-5 space-y-3 border-t border-white/10 pt-5">
+        <div className="-mx-1 rounded-xl bg-white/[0.04] px-3 py-4 sm:px-4">
           {item.isOutdoor ? (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
-              <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
-              <ShootMetaBlock
-                label="Çekim İçeriği"
-                value={shootContentLabel}
-                size="lg"
-                nowrap
-              />
+            <div className="grid grid-cols-3 gap-x-2 gap-y-3 sm:gap-x-4">
               <ShootMetaBlock
                 label="Rize'den Çıkış"
                 value={item.departureTime || "—"}
@@ -384,42 +397,39 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
                 value={item.arrivalTime || "—"}
                 size="lg"
               />
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:gap-x-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.55fr)_minmax(0,0.75fr)_minmax(0,0.75fr)] md:gap-x-10 md:gap-y-0">
-              <ShootMetaBlock label="Çekim Günü" value={shootDayLabel} size="lg" />
               <ShootMetaBlock
                 label="Çekim İçeriği"
                 value={shootContentLabel}
                 size="lg"
                 nowrap
               />
-              <ShootMetaBlock label="Başlangıç" value={item.startTime || "—"} size="lg" />
-              <ShootMetaBlock label="Bitiş" value={item.endTime || "—"} size="lg" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-x-2 gap-y-3 sm:gap-x-4">
+              <ShootMetaBlock
+                label="Başlangıç"
+                value={item.startTime || "—"}
+                size="lg"
+              />
+              <ShootMetaBlock
+                label="Bitiş"
+                value={item.endTime || "—"}
+                size="lg"
+              />
+              <ShootMetaBlock
+                label="Çekim İçeriği"
+                value={shootContentLabel}
+                size="lg"
+                nowrap
+              />
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:gap-x-8 md:grid-cols-3 md:gap-x-10">
-          <ShootMetaBlock
-            label="Hazır Olma Saati"
-            value={readyTimeLabel}
-            size="sm"
-            valueClassName="text-xs font-medium text-zinc-500 sm:text-sm md:text-base"
-          />
-          <ShootMetaBlock
-            label="Çekim Yeri"
-            value={locationLabel}
-            size="sm"
-            valueClassName="text-xs font-medium text-zinc-500 sm:text-sm md:text-base"
-          />
-          <ShootMetaBlock
-            label="B. Fiyat"
-            value={formatPrice(item.agreedUnitPrice)}
-            size="sm"
-            valueClassName="text-xs font-medium text-zinc-500 sm:text-sm md:text-base"
-          />
-        </div>
+        <p className="text-sm text-zinc-400">
+          <span className="text-zinc-500">Çekim Yeri:</span>{" "}
+          <span className="font-medium text-zinc-300">{locationLabel}</span>
+        </p>
       </div>
 
       {item.workflow ? (
@@ -454,22 +464,22 @@ function ShootMetaBlock({
   const labelSize =
     size === "sm"
       ? "text-[9px] sm:text-[10px] md:text-xs"
-      : "text-[10px] sm:text-xs md:text-sm";
+      : "text-[9px] sm:text-[10px] md:text-xs";
   const defaultValueSize =
     size === "sm"
       ? "text-xs sm:text-sm md:text-base"
-      : "text-sm sm:text-xl md:text-2xl";
+      : "text-xs sm:text-sm md:text-base";
 
   return (
-    <div className="min-w-0 pr-1 last:pr-0">
+    <div className="min-w-0">
       <p
         className={`font-medium uppercase leading-snug tracking-wide text-zinc-500 ${labelSize}`}
       >
         {label}
       </p>
       <p
-        className={`mt-1.5 font-semibold leading-snug text-white sm:mt-2 ${valueClassName ?? defaultValueSize} ${
-          nowrap ? "whitespace-nowrap" : ""
+        className={`mt-1 font-semibold leading-snug text-white sm:mt-1.5 ${valueClassName ?? defaultValueSize} ${
+          nowrap ? "truncate" : "break-words"
         }`}
       >
         {value}
@@ -481,14 +491,33 @@ function ShootMetaBlock({
 function PaymentSummaryCell({
   label,
   value,
+  sublabel,
+  sublabelMuted = false,
+  className = "",
 }: {
   label: string;
   value: string;
+  sublabel?: string;
+  sublabelMuted?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="border-b border-white/10 px-5 py-4 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0">
+    <div
+      className={`border-b border-white/10 px-4 py-4 last:border-b-0 sm:px-5 md:border-b-0 md:border-r md:last:border-r-0 ${className}`}
+    >
       <p className="text-xs text-zinc-500">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-white sm:text-2xl">{value}</p>
+      <p className="mt-2 text-lg font-semibold text-white sm:text-xl">{value}</p>
+      {sublabel ? (
+        <p
+          className={`mt-1 ${
+            sublabelMuted
+              ? "text-[10px] text-zinc-500"
+              : "text-xs text-zinc-400"
+          }`}
+        >
+          {sublabel}
+        </p>
+      ) : null}
     </div>
   );
 }

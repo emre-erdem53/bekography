@@ -42,6 +42,7 @@ import {
 } from "@/lib/reservation-utils";
 
 const TIME_STEP_SECONDS = 900;
+const DEFAULT_READY_TIME = "12:30";
 
 function snapTimeToQuarterHour(value: string): string {
   if (!value) return value;
@@ -335,7 +336,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               accentColor: item.packageOption.category.accentColor,
               shootDate: toDateInputValue(item.shootDate),
               shootContent: item.shootContent,
-              readyTime: item.readyTime,
+              readyTime: item.readyTime?.trim() || DEFAULT_READY_TIME,
               location: item.location,
               agreedUnitPrice: item.agreedUnitPrice,
               departureTime:
@@ -416,7 +417,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               accentColor: item.packageOption.category.accentColor,
               shootDate: defaultDate,
               shootContent: item.packageOption.label,
-              readyTime: "",
+              readyTime: DEFAULT_READY_TIME,
               location: request.city ?? "",
               agreedUnitPrice: item.unitPrice,
               departureTime: outdoor ? OUTDOOR_DEFAULT_DEPARTURE_TIME : "",
@@ -564,7 +565,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       accentColor: category.accentColor,
       shootDate: defaultShootDate,
       shootContent: option.label,
-      readyTime: "",
+      readyTime: DEFAULT_READY_TIME,
       location: "",
       agreedUnitPrice: option.cashPrice,
       departureTime: outdoor ? OUTDOOR_DEFAULT_DEPARTURE_TIME : "",
@@ -655,7 +656,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           unitPrice: item.unitPrice,
           shootDate: item.shootDate,
           shootContent: item.label,
-          readyTime: item.readyTime,
+          readyTime: item.readyTime?.trim() || DEFAULT_READY_TIME,
           location: item.location,
           agreedUnitPrice: item.agreedUnitPrice,
           departureTime: outdoor ? item.departureTime || null : null,

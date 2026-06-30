@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { Download, ArrowLeft, Pencil } from "lucide-react";
-import { toPng } from "html-to-image";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { TrackingOrderView } from "@/components/tracking/tracking-order-view";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import type { TrackingData } from "@/lib/tracking-types";
@@ -30,7 +31,7 @@ export function ReservationSummaryClient({
 
   const trackingData = normalizeTrackingData(data);
 
-  async function handleDownloadPng() {
+  async function handleDownloadPdf() {
     if (!exportRef.current) return;
 
     setDownloading(true);
@@ -39,18 +40,26 @@ export function ReservationSummaryClient({
     try {
       await document.fonts.ready;
 
-      const dataUrl = await toPng(exportRef.current, {
+      const canvas = await html2canvas(exportRef.current, {
         backgroundColor: "#000000",
-        pixelRatio: 2,
-        cacheBust: true,
+        scale: 2,
+        useCORS: true,
+        logging: false,
       });
 
-      const link = document.createElement("a");
-      link.download = `${slugifyFileName(data.coupleName) || "rezervasyon"}-siparis-formu.png`;
-      link.href = dataUrl;
-      link.click();
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      pdf.save(
+        `${slugifyFileName(data.coupleName) || "rezervasyon"}-siparis-formu.pdf`,
+      );
     } catch {
-      setError("PNG oluşturulamadı. Lütfen tekrar deneyin.");
+      setError("PDF oluşturulamadı. Lütfen tekrar deneyin.");
     } finally {
       setDownloading(false);
     }
@@ -75,12 +84,12 @@ export function ReservationSummaryClient({
         </Link>
         <button
           type="button"
-          onClick={handleDownloadPng}
+          onClick={handleDownloadPdf}
           disabled={downloading}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-50"
         >
           <Download className="h-4 w-4" />
-          {downloading ? "İndiriliyor..." : "PNG İndir"}
+          {downloading ? "İndiriliyor..." : "PDF İndir"}
         </button>
       </div>
 

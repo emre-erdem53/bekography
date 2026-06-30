@@ -144,10 +144,18 @@ function buildPayloadFromReservation(
     postShoot,
     reservation.items[0]?.id ?? "",
   );
+  const reservationCreatedAt = reservation.createdAt;
+  const paymentTypeLabel = reservation.items.some(
+    (item) => item.paymentType === "taksitli",
+  )
+    ? paymentLabels.taksitli
+    : paymentLabels.pesin;
+
   const workflow = buildTrackingWorkflowView({
     shootDate: earliestShoot,
     postShoot,
     workflow: workflowFlags,
+    reservationCreatedAt,
     hasPrinting: reservationHasPrintingPackage(
       reservation.items.map((item) => {
         const categoryContent =
@@ -179,6 +187,8 @@ function buildPayloadFromReservation(
     formYear: new Date(earliestShoot).getFullYear(),
     city: reservation.items[0]?.location ?? "",
     shootDate: earliestShoot.toISOString(),
+    createdAt: reservationCreatedAt.toISOString(),
+    paymentTypeLabel,
     status: reservation.status,
     statusLabel: RESERVATION_STATUS_LABELS[reservation.status],
     timeline,
@@ -224,6 +234,7 @@ function buildPayloadFromReservation(
         workflow: itemWorkflowFlags,
         hasPrinting,
         stageDefinitions,
+        reservationCreatedAt,
       });
       const categoryContentForTags = categoryContent;
       const workflowStageTags = buildWorkflowStageTags(
