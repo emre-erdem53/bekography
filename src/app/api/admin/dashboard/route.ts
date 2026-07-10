@@ -19,14 +19,17 @@ export async function GET() {
       todayItems,
       upcomingItems,
     ] = await Promise.all([
-      prisma.request.count({ where: { status: "yeni" } }),
+      prisma.request.count({ where: { status: "yeni", deletedAt: null } }),
       prisma.reservation.count({
-        where: { status: { notIn: ["iptal", "teslim_edildi"] } },
+        where: {
+          status: { notIn: ["iptal", "teslim_edildi"] },
+          deletedAt: null,
+        },
       }),
       prisma.reservationItem.findMany({
         where: {
           shootDate: { gte: todayStart, lte: todayEnd },
-          reservation: { status: { not: "iptal" } },
+          reservation: { status: { not: "iptal" }, deletedAt: null },
         },
         orderBy: { shootDate: "asc" },
         include: {
@@ -37,7 +40,10 @@ export async function GET() {
       prisma.reservationItem.findMany({
         where: {
           shootDate: { gt: todayEnd },
-          reservation: { status: { notIn: ["iptal", "teslim_edildi"] } },
+          reservation: {
+            status: { notIn: ["iptal", "teslim_edildi"] },
+            deletedAt: null,
+          },
         },
         orderBy: { shootDate: "asc" },
         take: 5,

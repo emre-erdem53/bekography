@@ -14,6 +14,7 @@ import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import {
   emptyPostShootSnapshot,
   isOutdoorCategory,
+  normalizePostShootSnapshotForSubmit,
   parsePostShootSnapshot,
   syncPostShootWithItems,
   type PostShootSnapshot,
@@ -680,8 +681,24 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       if (!confirmed) return;
     }
 
+    if (installments.some((row) => !row.dueDate)) {
+      setError("Tüm ödeme vadeleri için vade tarihi seçin.");
+      return;
+    }
+
+    if (installments.some((row) => row.amount <= 0)) {
+      setError("Ödeme vadelerinde geçerli tutarlar girin.");
+      return;
+    }
+
     setSaving(true);
     setError("");
+
+    const normalizedPostShoot = normalizePostShootSnapshotForSubmit(postShoot);
+    const normalizedInstallments = installments.map((row) => ({
+      amount: Math.round(row.amount),
+      dueDate: row.dueDate,
+    }));
 
     const payload = {
       brideFirstName,
@@ -696,17 +713,19 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       cancellationFeeMax,
       discountAmount: discountEnabled ? discountAmount : 0,
       discountEnabled,
-      postShoot,
+      postShoot: normalizedPostShoot,
       notes: notes || undefined,
       items: items.map((item) => {
         const outdoor = isOutdoorCategory(
           item.categorySlug,
           findCategoryForOption(item.packageOptionId)?.content ?? {},
         );
+        const workflowStageTags =
+          normalizedPostShoot.itemStageTags?.[item.itemKey];
         return {
           packageOptionId: item.packageOptionId,
           itemKey: item.itemKey,
-          workflowStageTags: postShoot.itemStageTags?.[item.itemKey],
+          ...(workflowStageTags ? { workflowStageTags } : {}),
           paymentType: item.paymentType,
           unitPrice: item.unitPrice,
           shootDate: item.shootDate,
@@ -720,7 +739,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           endTime: outdoor ? null : item.endTime || null,
         };
       }),
-      installments,
+      installments: normalizedInstallments,
       ...(requestId && !isEditing ? { requestId } : {}),
     };
 

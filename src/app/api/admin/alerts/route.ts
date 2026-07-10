@@ -10,6 +10,7 @@ export async function GET() {
     const approvedWithoutReservation = await prisma.request.findMany({
       where: {
         status: "onaylandi",
+        deletedAt: null,
         reservation: null,
       },
       orderBy: { createdAt: "desc" },

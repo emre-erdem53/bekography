@@ -11,6 +11,7 @@ import {
   getTrackingUrl,
 } from "@/lib/reservations";
 import { reservationNameFieldsFromInput } from "@/lib/reservation-utils";
+import { formatZodError } from "@/lib/validation-errors";
 import { createReservationSchema } from "@/lib/validations";
 import {
   loadProductSnapshotsForItems,
@@ -38,6 +39,7 @@ type ReservationYearRow = {
   id: string;
   year: number;
   status: ReservationStatus;
+  deletedAt: Date | null;
 };
 
 async function loadReservationYearRows(): Promise<ReservationYearRow[]> {
@@ -45,10 +47,11 @@ async function loadReservationYearRows(): Promise<ReservationYearRow[]> {
     SELECT
       r.id,
       EXTRACT(YEAR FROM MIN(ri."shootDate"))::int AS year,
-      r.status
+      r.status,
+      r."deletedAt"
     FROM "Reservation" r
     INNER JOIN "ReservationItem" ri ON ri."reservationId" = r.id
-    GROUP BY r.id, r.status
+    GROUP BY r.id, r.status, r."deletedAt"
   `;
 }
 
@@ -72,17 +75,24 @@ export async function GET(request: Request) {
     const currentYear = getCurrentReservationYear();
     const selectedYear =
       parseReservationYearParam(searchParams.get("year")) ?? currentYear;
+    const showDeleted = searchParams.get("view") === "silinenler";
 
     const yearRows = await loadReservationYearRows();
-    const yearOptions = buildYearOptions(yearRows, currentYear);
+    const rowsForView = yearRows.filter((row) =>
+      showDeleted ? row.deletedAt !== null : row.deletedAt === null,
+    );
+    const yearOptions = buildYearOptions(rowsForView, currentYear);
     const reservationIds = await loadReservationIdsForYear(selectedYear);
 
     const reservations = reservationIds.length
       ? await prisma.reservation.findMany({
           where: {
             id: { in: reservationIds },
+            deletedAt: showDeleted ? { not: null } : null,
           },
-          orderBy: { createdAt: "desc" },
+          orderBy: showDeleted
+            ? { deletedAt: "desc" }
+            : { createdAt: "desc" },
           include: reservationListInclude,
         })
       : [];
@@ -91,6 +101,7 @@ export async function GET(request: Request) {
       reservations,
       yearOptions,
       selectedYear,
+      view: showDeleted ? "silinenler" : "active",
     });
   } catch (error) {
     console.error("GET /api/admin/reservations", error);
@@ -111,7 +122,7 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message ?? "Geçersiz veri" },
+        { error: formatZodError(parsed.error) },
         { status: 400 },
       );
     }

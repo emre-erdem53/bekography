@@ -16,11 +16,15 @@ export async function GET(request: Request) {
     const currentYear = getCurrentReservationYear();
     const selectedYear =
       parseReservationYearParam(searchParams.get("year")) ?? currentYear;
+    const showDeleted = searchParams.get("view") === "silinenler";
 
     const yearRows = await prisma.request.findMany({
-      select: { shootDate: true },
+      select: { shootDate: true, deletedAt: true },
     });
-    const yearOptions = buildRequestYearOptions(yearRows, currentYear);
+    const rowsForView = yearRows.filter((row) =>
+      showDeleted ? row.deletedAt !== null : row.deletedAt === null,
+    );
+    const yearOptions = buildRequestYearOptions(rowsForView, currentYear);
 
     const requests = await prisma.request.findMany({
       where: {
@@ -28,8 +32,9 @@ export async function GET(request: Request) {
           gte: new Date(Date.UTC(selectedYear, 0, 1)),
           lt: new Date(Date.UTC(selectedYear + 1, 0, 1)),
         },
+        deletedAt: showDeleted ? { not: null } : null,
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: showDeleted ? { deletedAt: "desc" } : { createdAt: "desc" },
       include: {
         items: {
           include: {
@@ -44,6 +49,7 @@ export async function GET(request: Request) {
       requests,
       yearOptions,
       selectedYear,
+      view: showDeleted ? "silinenler" : "active",
     });
   } catch (error) {
     console.error("GET /api/admin/requests", error);

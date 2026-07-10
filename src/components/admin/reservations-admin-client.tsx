@@ -13,6 +13,7 @@ import {
   restoreReservation,
 } from "@/components/admin/reservation-status-actions";
 import { matchesReservationNameQuery } from "@/lib/reservation-admin-filters";
+import { buildAdminListHref } from "@/lib/admin-list-navigation";
 import {
   formatReservationListLocation,
   formatReservationListShootDate,
@@ -72,6 +73,7 @@ export function ReservationsAdminClient() {
   const searchParams = useSearchParams();
   const currentYear = getCurrentReservationYear();
   const selectedYear = Number(searchParams.get("year")) || currentYear;
+  const showDeletedView = searchParams.get("view") === "silinenler";
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [yearOptions, setYearOptions] = useState<YearOption[]>([
     { year: currentYear, count: 0 },
@@ -85,6 +87,7 @@ export function ReservationsAdminClient() {
   const filteredReservations = useMemo(() => {
     return reservations.filter((reservation) => {
       if (
+        !showDeletedView &&
         stageFilter &&
         !reservationMatchesWorkflowStage(reservation, stageFilter)
       ) {
@@ -100,13 +103,16 @@ export function ReservationsAdminClient() {
         nameQuery,
       );
     });
-  }, [reservations, stageFilter, nameQuery]);
+  }, [reservations, stageFilter, nameQuery, showDeletedView]);
 
   useEffect(() => {
     setLoading(true);
     setStageFilter(null);
     setNameQuery("");
     const params = new URLSearchParams({ year: String(selectedYear) });
+    if (showDeletedView) {
+      params.set("view", "silinenler");
+    }
     fetch(`/api/admin/reservations?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
@@ -130,18 +136,26 @@ export function ReservationsAdminClient() {
         }
       })
       .finally(() => setLoading(false));
-  }, [selectedYear]);
+  }, [selectedYear, showDeletedView]);
 
   function handleYearChange(year: number) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (year === currentYear) {
-      params.delete("year");
-    } else {
-      params.set("year", String(year));
-    }
-    const query = params.toString();
-    router.push(query ? `/admin/rezervasyonlar?${query}` : "/admin/rezervasyonlar");
+    const href = buildAdminListHref("/admin/rezervasyonlar", {
+      year,
+      view: showDeletedView ? "silinenler" : undefined,
+      currentYear,
+    });
+    router.push(href);
   }
+
+  const deletedViewHref = buildAdminListHref("/admin/rezervasyonlar", {
+    year: selectedYear,
+    view: "silinenler",
+    currentYear,
+  });
+  const activeViewHref = buildAdminListHref("/admin/rezervasyonlar", {
+    year: selectedYear,
+    currentYear,
+  });
 
   const selectedYearCount =
     yearOptions.find((option) => option.year === selectedYear)?.count ??
@@ -150,23 +164,13 @@ export function ReservationsAdminClient() {
   async function handleDelete(id: string) {
     const deleted = await deleteReservation(id);
     if (!deleted) return;
-    setReservations((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? { ...item, deletedAt: new Date().toISOString() }
-          : item,
-      ),
-    );
+    setReservations((prev) => prev.filter((item) => item.id !== id));
   }
 
   async function handleRestore(id: string) {
     const restored = await restoreReservation(id);
     if (!restored) return;
-    setReservations((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, deletedAt: null } : item,
-      ),
-    );
+    setReservations((prev) => prev.filter((item) => item.id !== id));
   }
 
   const detailHref = (id: string) => `/admin/rezervasyonlar/${id}`;
@@ -177,7 +181,7 @@ export function ReservationsAdminClient() {
         <div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="text-xl font-semibold text-white sm:text-2xl">
-              Rezervasyonlar
+              {showDeletedView ? "Silinen Rezervasyonlar" : "Rezervasyonlar"}
             </h1>
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -201,25 +205,47 @@ export function ReservationsAdminClient() {
                 />
               </div>
               <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium tabular-nums text-zinc-300">
-                {selectedYearCount} rezervasyon
+                {selectedYearCount}{" "}
+                {showDeletedView ? "silinen rezervasyon" : "rezervasyon"}
               </span>
             </div>
           </div>
           <p className="mt-1 text-sm text-zinc-400">
-            {selectedYear < currentYear
-              ? `${selectedYear} yılına ait tüm rezervasyonlar`
-              : "Aktif, tamamlanan ve silinen rezervasyonları yönetin"}
+            {showDeletedView
+              ? "Silinen rezervasyonları görüntüleyin ve geri getirin"
+              : selectedYear < currentYear
+                ? `${selectedYear} yılına ait aktif rezervasyonlar`
+                : "Aktif ve tamamlanan rezervasyonları yönetin"}
           </p>
         </div>
-        <Link
-          href="/admin/rezervasyonlar/yeni"
-          className="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
-        >
-          Yeni Rezervasyon
-        </Link>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          {showDeletedView ? (
+            <Link
+              href={activeViewHref}
+              className="inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-black/40 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10 sm:w-auto"
+            >
+              Aktif Liste
+            </Link>
+          ) : (
+            <>
+              <Link
+                href={deletedViewHref}
+                className="inline-flex w-full items-center justify-center rounded-xl border border-white/15 bg-black/40 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10 sm:w-auto"
+              >
+                Silinenler
+              </Link>
+              <Link
+                href="/admin/rezervasyonlar/yeni"
+                className="inline-flex w-full items-center justify-center rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black sm:w-auto"
+              >
+                Yeni Rezervasyon
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
-      {!loading && reservations.length > 0 ? (
+      {!loading && reservations.length > 0 && !showDeletedView ? (
         <ReservationStatusFilters
           reservations={reservations}
           stageFilter={stageFilter}
@@ -233,13 +259,30 @@ export function ReservationsAdminClient() {
         />
       ) : null}
 
+      {!loading && reservations.length > 0 && showDeletedView ? (
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-zinc-400">
+            Gelin veya damat adı
+          </span>
+          <input
+            type="search"
+            value={nameQuery}
+            onChange={(event) => setNameQuery(event.target.value)}
+            placeholder="Ad veya soyad yazın..."
+            className="w-full rounded-xl border border-white/10 bg-black px-4 py-3 text-sm text-white outline-none placeholder:text-zinc-600 focus:border-white/30"
+          />
+        </label>
+      ) : null}
+
       {loading ? (
         <p className="text-zinc-400">Yükleniyor...</p>
       ) : reservations.length === 0 ? (
         <p className="text-zinc-400">
-          {selectedYear < currentYear
-            ? `${selectedYear} yılı için rezervasyon bulunmuyor.`
-            : "Rezervasyon bulunmuyor."}
+          {showDeletedView
+            ? "Silinen rezervasyon bulunmuyor."
+            : selectedYear < currentYear
+              ? `${selectedYear} yılı için rezervasyon bulunmuyor.`
+              : "Rezervasyon bulunmuyor."}
         </p>
       ) : filteredReservations.length === 0 ? (
         <p className="text-zinc-400">

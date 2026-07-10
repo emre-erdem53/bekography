@@ -15,9 +15,14 @@ const hexColorSchema = z
   .transform((value) => normalizeHexColor(value)!);
 
 const postShootSectionSchema = z.object({
-  pills: z.array(z.string()),
-  description: z.string(),
+  pills: z.array(z.string()).default([]),
+  description: z.string().default(""),
 });
+
+const workflowStageTagsSchema = z.record(
+  z.string(),
+  z.array(z.string()).default([]),
+);
 
 const tcSchema = z
   .string()
@@ -134,15 +139,6 @@ export const packageCategorySchema = z.object({
     .optional(),
 });
 
-const workflowStageTagsSchema = z.object({
-  rezervasyon: z.array(z.string()),
-  cekim: z.array(z.string()),
-  dijital: z.array(z.string()),
-  secim: z.array(z.string()),
-  duzenleme: z.array(z.string()),
-  baski: z.array(z.string()),
-});
-
 const reservationItemSchema = z.object({
   packageOptionId: z.string().min(1),
   paymentType: z.enum(["pesin", "taksitli"]),
@@ -173,6 +169,7 @@ const trackingWorkflowFlagsSchema = z.object({
   deliveredAt: z.string().nullable().optional(),
   shootCompletedAt: z.string().nullable().optional(),
   adminStage: z.string().nullable().optional(),
+  customCompletedAt: z.record(z.string(), z.string()).optional(),
 });
 
 const postShootSnapshotSchema = z.object({

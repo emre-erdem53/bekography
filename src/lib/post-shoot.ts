@@ -48,6 +48,37 @@ export function emptyPostShootSnapshot(): PostShootSnapshot {
   };
 }
 
+export function normalizePostShootSnapshotForSubmit(
+  snapshot: PostShootSnapshot,
+): PostShootSnapshot {
+  const normalizeSection = (section: PostShootSection): PostShootSection => ({
+    pills: Array.isArray(section.pills) ? section.pills : [],
+    description: typeof section.description === "string" ? section.description : "",
+  });
+
+  const itemStageTags = snapshot.itemStageTags
+    ? Object.fromEntries(
+        Object.entries(snapshot.itemStageTags).map(([key, tags]) => [
+          key,
+          Object.fromEntries(
+            Object.entries(tags).map(([stageId, pills]) => [
+              stageId,
+              Array.isArray(pills) ? pills : [],
+            ]),
+          ),
+        ]),
+      )
+    : undefined;
+
+  return {
+    ...snapshot,
+    digital: normalizeSection(snapshot.digital),
+    editing: normalizeSection(snapshot.editing),
+    printing: normalizeSection(snapshot.printing),
+    itemStageTags,
+  };
+}
+
 type LegacyPostShootPackageBlock = {
   categoryId: string;
   pills: string[];

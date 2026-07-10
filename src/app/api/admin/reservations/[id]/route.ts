@@ -8,6 +8,7 @@ import {
   findShootDateConflicts,
   getTrackingUrl,
 } from "@/lib/reservations";
+import { formatZodError } from "@/lib/validation-errors";
 import {
   updateReservationSchema,
   updateReservationStatusSchema,
@@ -114,7 +115,7 @@ export async function PATCH(
     const parsed = updateReservationSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message ?? "Geçersiz veri" },
+        { error: formatZodError(parsed.error) },
         { status: 400 },
       );
     }
