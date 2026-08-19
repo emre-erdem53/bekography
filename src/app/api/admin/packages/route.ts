@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getAllPackages } from "@/lib/packages";
 import { prisma } from "@/lib/prisma";
+import { prismaWriteErrorResponse } from "@/lib/prisma-errors";
+import { formatZodError } from "@/lib/validation-errors";
 import { packageCategorySchema } from "@/lib/validations";
 import { slugify } from "@/lib/constants";
 
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message ?? "Geçersiz veri" },
+        { error: formatZodError(parsed.error) },
         { status: 400 },
       );
     }
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
         heroImageUrl: data.heroImageUrl ?? null,
         sortOrder: data.sortOrder ?? 0,
         isActive: data.isActive ?? true,
-        content: (data.content ?? {}) as Prisma.InputJsonValue,
+        content: JSON.parse(JSON.stringify(data.content ?? {})) as Prisma.InputJsonValue,
         options: data.options
           ? {
               create: data.options.map((option, index) => ({
@@ -73,9 +75,7 @@ export async function POST(request: Request) {
     return NextResponse.json(category, { status: 201 });
   } catch (error) {
     console.error("POST /api/admin/packages", error);
-    return NextResponse.json(
-      { error: "Paket oluşturulamadı" },
-      { status: 500 },
-    );
+    const mapped = prismaWriteErrorResponse(error, "Paket oluşturulamadı");
+    return NextResponse.json({ error: mapped.error }, { status: mapped.status });
   }
 }

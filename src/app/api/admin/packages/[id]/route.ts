@@ -3,8 +3,13 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
+import { prismaWriteErrorResponse } from "@/lib/prisma-errors";
+import { formatZodError } from "@/lib/validation-errors";
 import { packageCategorySchema } from "@/lib/validations";
-import { slugify } from "@/lib/constants";
+
+function jsonContent(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+}
 
 export async function GET(
   _request: Request,
@@ -48,56 +53,67 @@ export async function PATCH(
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.issues[0]?.message ?? "Geçersiz veri" },
+        { error: formatZodError(parsed.error) },
         { status: 400 },
       );
     }
 
     const data = parsed.data;
-
-    const category = await prisma.packageCategory.update({
+    const existing = await prisma.packageCategory.findUnique({
       where: { id },
-      data: {
-        title: data.title,
-        slug: data.slug ?? (data.title ? slugify(data.title) : undefined),
-        accentColor: data.accentColor,
-        iconKey: data.iconKey,
-        highlight: data.highlight,
-        backgroundImageUrl: data.backgroundImageUrl,
-        heroImageUrl: data.heroImageUrl,
-        sortOrder: data.sortOrder,
-        isActive: data.isActive,
-        content: data.content as Prisma.InputJsonValue | undefined,
-      },
+      include: { options: { select: { id: true } } },
     });
 
-    if (data.options) {
-      for (const [index, option] of data.options.entries()) {
-        if (option.id) {
-          await prisma.packageOption.update({
-            where: { id: option.id },
-            data: {
-              label: option.label,
-              cashPrice: option.cashPrice,
-              installmentPrice: option.installmentPrice,
-              sortOrder: option.sortOrder ?? index,
-              isActive: option.isActive ?? true,
-            },
-          });
-        } else {
-          await prisma.packageOption.create({
-            data: {
-              categoryId: id,
-              label: option.label,
-              cashPrice: option.cashPrice,
-              installmentPrice: option.installmentPrice,
-              sortOrder: option.sortOrder ?? index,
-              isActive: option.isActive ?? true,
-            },
-          });
-        }
-      }
+    if (!existing) {
+      return NextResponse.json({ error: "Paket bulunamadı" }, { status: 404 });
     }
+
+    const existingOptionIds = new Set(existing.options.map((option) => option.id));
+
+    await prisma.$transaction(async (tx) => {
+      await tx.packageCategory.update({
+        where: { id },
+        data: {
+          title: data.title,
+          ...(data.slug ? { slug: data.slug } : {}),
+          accentColor: data.accentColor,
+          iconKey: data.iconKey,
+          highlight: data.highlight,
+          backgroundImageUrl: data.backgroundImageUrl,
+          heroImageUrl: data.heroImageUrl,
+          sortOrder: data.sortOrder,
+          isActive: data.isActive,
+          content: data.content ? jsonContent(data.content) : undefined,
+        },
+      });
+
+      if (!data.options) return;
+
+      for (const [index, option] of data.options.entries()) {
+        const optionData = {
+          label: option.label,
+          cashPrice: option.cashPrice,
+          installmentPrice: option.installmentPrice,
+          sortOrder: option.sortOrder ?? index,
+          isActive: option.isActive ?? true,
+        };
+
+        if (option.id && existingOptionIds.has(option.id)) {
+          await tx.packageOption.update({
+            where: { id: option.id },
+            data: optionData,
+          });
+          continue;
+        }
+
+        await tx.packageOption.create({
+          data: {
+            categoryId: id,
+            ...optionData,
+          },
+        });
+      }
+    });
 
     const updated = await prisma.packageCategory.findUnique({
       where: { id },
@@ -109,10 +125,8 @@ export async function PATCH(
     return NextResponse.json(updated);
   } catch (error) {
     console.error("PATCH /api/admin/packages/[id]", error);
-    return NextResponse.json(
-      { error: "Paket güncellenemedi" },
-      { status: 500 },
-    );
+    const mapped = prismaWriteErrorResponse(error, "Paket güncellenemedi");
+    return NextResponse.json({ error: mapped.error }, { status: mapped.status });
   }
 }
 

@@ -447,6 +447,40 @@ export function PackageForm({
     setSaving(true);
     setError("");
 
+    if (!title.trim()) {
+      setError("Paket başlığı girin.");
+      setSaving(false);
+      return;
+    }
+
+    if (!iconKey.trim()) {
+      setError("Paket ikonu seçin veya yükleyin.");
+      setSaving(false);
+      return;
+    }
+
+    const emptyOption = options.find((option) => !option.label.trim());
+    if (emptyOption) {
+      setError("Tüm çekim türlerine bir ad girin.");
+      setSaving(false);
+      return;
+    }
+
+    const invalidPrice = options.find(
+      (option) =>
+        !Number.isInteger(option.cashPrice) ||
+        option.cashPrice <= 0 ||
+        !Number.isInteger(option.installmentPrice) ||
+        option.installmentPrice <= 0,
+    );
+    if (invalidPrice) {
+      setError(
+        `"${invalidPrice.label.trim()}" çekim türünde hemen ödeme ve parçalı ödeme tutarları 0'dan büyük tam sayı olmalıdır.`,
+      );
+      setSaving(false);
+      return;
+    }
+
     const normalizedAccent = normalizeHexColor(accentColor);
     if (!normalizedAccent) {
       setError("Accent renk geçerli bir hex kodu olmalı (örn. #ff9a5e)");
@@ -555,7 +589,13 @@ export function PackageForm({
     setSaving(false);
 
     if (!response.ok) {
-      const data = await response.json();
+      let data: { error?: string } = {};
+      try {
+        data = await response.json();
+      } catch {
+        setError("Sunucu yanıtı okunamadı. Lütfen tekrar deneyin.");
+        return;
+      }
       setError(data.error ?? "Kayıt başarısız");
       return;
     }

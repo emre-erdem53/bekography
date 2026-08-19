@@ -21,6 +21,14 @@ const PATH_LABELS: Record<string, string> = {
   digital: "Dijital teslimat",
   editing: "Düzenleme",
   printing: "Baskı",
+  title: "Paket başlığı",
+  options: "Çekim türleri",
+  cashPrice: "Hemen ödeme tutarı",
+  installmentPrice: "Parçalı ödeme tutarı",
+  label: "Çekim türü adı",
+  slug: "Paket bağlantısı",
+  content: "Paket içeriği",
+  accentColor: "Accent renk",
 };
 
 function labelForPath(path: PropertyKey[]): string {
@@ -59,7 +67,9 @@ export function formatZodError(error: ZodError): string {
   if (
     issue.message &&
     !issue.message.startsWith("Invalid input") &&
-    !issue.message.startsWith("Expected")
+    !issue.message.startsWith("Expected") &&
+    !issue.message.startsWith("Too small") &&
+    !issue.message.startsWith("Too big")
   ) {
     return issue.message;
   }

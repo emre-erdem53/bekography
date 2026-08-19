@@ -100,10 +100,10 @@ const packageServiceItemSchema = z.object({
 });
 
 export const packageCategorySchema = z.object({
-  title: z.string().min(1),
-  slug: z.string().min(1).optional(),
+  title: z.string().min(1, "Paket başlığı girin"),
+  slug: z.string().min(1, "Paket bağlantısı geçersiz").optional(),
   accentColor: hexColorSchema,
-  iconKey: z.string().min(1),
+  iconKey: z.string().min(1, "Paket ikonu seçin veya yükleyin"),
   highlight: z.boolean().optional(),
   backgroundImageUrl: z.string().nullable().optional(),
   heroImageUrl: z.string().nullable().optional(),
@@ -129,9 +129,15 @@ export const packageCategorySchema = z.object({
     .array(
       z.object({
         id: z.string().optional(),
-        label: z.string().min(1),
-        cashPrice: z.number().int().positive(),
-        installmentPrice: z.number().int().positive(),
+        label: z.string().min(1, "Çekim türü adı girin"),
+        cashPrice: z
+          .number()
+          .int({ message: "Hemen ödeme tutarı tam sayı olmalıdır" })
+          .positive({ message: "Hemen ödeme tutarı 0'dan büyük olmalıdır" }),
+        installmentPrice: z
+          .number()
+          .int({ message: "Parçalı ödeme tutarı tam sayı olmalıdır" })
+          .positive({ message: "Parçalı ödeme tutarı 0'dan büyük olmalıdır" }),
         sortOrder: z.number().int().optional(),
         isActive: z.boolean().optional(),
       }),
