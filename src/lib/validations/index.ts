@@ -202,6 +202,31 @@ export const updatePackageSchema = packageSchema.partial().extend({
   shootTypes: z.array(shootTypeSchema).optional(),
 });
 
+/**
+ * Bir hizmet alanının altındaki tek bir paket. `serviceAreaId` taşımaz çünkü
+ * hizmet alanı route parametresinden gelir.
+ */
+export const packageEntrySchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, "Paket başlığı girin"),
+  slug: z.string().min(1, "Paket bağlantısı geçersiz").optional(),
+  iconKey: z.string().nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  tags: hierarchyTagsSchema.optional(),
+  shootTypes: z
+    .array(shootTypeSchema)
+    .min(1, "En az bir çekim türü ekleyin"),
+});
+
+/**
+ * Hizmet alanının paket listesinin tamamı. Gönderilmeyen paketler silinir,
+ * bu yüzden liste her zaman eksiksiz gönderilmeli.
+ */
+export const serviceAreaPackagesSchema = z.object({
+  packages: z.array(packageEntrySchema),
+});
+
 const reservationItemSchema = z.object({
   shootTypeId: z.string().min(1),
   paymentType: z.enum(["pesin", "taksitli"]),

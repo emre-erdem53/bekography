@@ -79,7 +79,8 @@ export function PackagesAdminClient() {
             Paketler
           </h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Paketler hizmet alanlarına göre gruplanır
+            Hizmet alanının altında birden fazla paket (Sade Prime, Süper
+            Prime) ve her paketin çekim türleri yer alır
           </p>
         </div>
         <Link
@@ -123,11 +124,24 @@ export function PackagesAdminClient() {
                     Pasif hizmet alanı
                   </span>
                 ) : null}
+                <Link
+                  href={`/admin/paketler/yeni?serviceAreaId=${area.id}`}
+                  className="ml-auto text-sm text-zinc-400 hover:text-white"
+                >
+                  Paket ekle / düzenle
+                </Link>
               </div>
 
               {area.packages.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-white/10 p-5 text-sm text-zinc-500">
-                  Bu hizmet alanının altında henüz paket yok.
+                  Bu hizmet alanının altında henüz paket yok.{" "}
+                  <Link
+                    href={`/admin/paketler/yeni?serviceAreaId=${area.id}`}
+                    className="underline hover:text-white"
+                  >
+                    İlk paketi ekleyin
+                  </Link>
+                  , örneğin Sade Prime.
                 </p>
               ) : (
                 <div className="space-y-3">

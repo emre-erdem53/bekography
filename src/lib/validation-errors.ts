@@ -22,6 +22,7 @@ const PATH_LABELS: Record<string, string> = {
   editing: "Düzenleme",
   printing: "Baskı",
   title: "Paket başlığı",
+  packages: "Paketler",
   shootTypes: "Çekim türleri",
   shootTypeId: "Çekim türü",
   serviceAreaId: "Hizmet alanı",

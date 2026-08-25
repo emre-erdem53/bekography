@@ -41,8 +41,8 @@ export function getAdminPageTitle(pathname: string) {
   if (pathname.match(/^\/admin\/hizmet-alanlari\/[^/]+$/))
     return "Hizmet Alanı Düzenle";
   if (pathname.startsWith("/admin/hizmet-alanlari")) return "Hizmet Alanları";
-  if (pathname.startsWith("/admin/paketler/yeni")) return "Yeni Paket";
-  if (pathname.match(/^\/admin\/paketler\/[^/]+$/)) return "Paket Düzenle";
+  if (pathname.startsWith("/admin/paketler/yeni")) return "Paketler";
+  if (pathname.match(/^\/admin\/paketler\/[^/]+$/)) return "Paketler";
   if (pathname.startsWith("/admin/paketler")) return "Paketler";
   if (pathname.match(/^\/admin\/talepler\/[^/]+$/)) return "Talep Detayı";
   if (pathname.startsWith("/admin/talepler")) return "Talepler";
