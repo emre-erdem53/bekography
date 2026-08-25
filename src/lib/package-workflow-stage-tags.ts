@@ -1,34 +1,10 @@
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
-import {
-  emptyItemWorkflowStageTags,
-  type ItemWorkflowStageTags,
-} from "@/lib/item-workflow-stage-tags";
-import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
+import type { ShootTypeData } from "@/lib/package-types";
 
-function pickOptionRecord<T>(
-  source: Record<string, T> | undefined,
-  optionId: string,
-  optionLabel?: string,
-): T | undefined {
-  if (!source) return undefined;
-  const labelKey = optionLabel?.trim();
-  return (
-    source[optionId] ??
-    (labelKey ? source[labelKey] : undefined)
-  );
-}
-
-export function resolvePackageWorkflowStageTags(
-  content: Partial<PackageCategoryContent> | undefined,
-  packageOptionId: string,
-  optionLabel?: string,
+/** Çekim türünün takip ekranı süreç etiketleri — aşama id veya built-in key ile anahtarlı. */
+export function resolveShootTypeWorkflowStageTags(
+  shootType: Pick<ShootTypeData, "content"> | undefined,
 ): Record<string, string[]> {
-  const stored = pickOptionRecord(
-    content?.workflowStageTagsByOption,
-    packageOptionId,
-    optionLabel,
-  );
-
+  const stored = shootType?.content?.workflowStageTags;
   if (!stored) return {};
 
   const tags: Record<string, string[]> = {};

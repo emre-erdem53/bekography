@@ -5,10 +5,36 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { prismaWriteErrorResponse } from "@/lib/prisma-errors";
 import { formatZodError } from "@/lib/validation-errors";
-import { packageCategorySchema } from "@/lib/validations";
+import { updatePackageSchema } from "@/lib/validations";
 
 function jsonContent(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+}
+
+const packageInclude = {
+  serviceArea: true,
+  shootTypes: { orderBy: { sortOrder: "asc" } },
+} satisfies Prisma.PackageInclude;
+
+/** Talep/rezervasyonlarda kullanılan çekim türleri silinemez (FK RESTRICT). */
+async function findLockedShootTypeIds(shootTypeIds: string[]) {
+  if (shootTypeIds.length === 0) return new Set<string>();
+
+  const [requestItems, reservationItems] = await Promise.all([
+    prisma.requestItem.findMany({
+      where: { shootTypeId: { in: shootTypeIds } },
+      select: { shootTypeId: true },
+    }),
+    prisma.reservationItem.findMany({
+      where: { shootTypeId: { in: shootTypeIds } },
+      select: { shootTypeId: true },
+    }),
+  ]);
+
+  return new Set([
+    ...requestItems.map((item) => item.shootTypeId),
+    ...reservationItems.map((item) => item.shootTypeId),
+  ]);
 }
 
 export async function GET(
@@ -20,22 +46,19 @@ export async function GET(
 
   try {
     const { id } = await params;
-    const category = await prisma.packageCategory.findUnique({
+    const pkg = await prisma.package.findUnique({
       where: { id },
-      include: { options: { orderBy: { sortOrder: "asc" } } },
+      include: packageInclude,
     });
 
-    if (!category) {
+    if (!pkg) {
       return NextResponse.json({ error: "Paket bulunamadı" }, { status: 404 });
     }
 
-    return NextResponse.json(category);
+    return NextResponse.json(pkg);
   } catch (error) {
     console.error("GET /api/admin/packages/[id]", error);
-    return NextResponse.json(
-      { error: "Paket yüklenemedi" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Paket yüklenemedi" }, { status: 500 });
   }
 }
 
@@ -49,7 +72,7 @@ export async function PATCH(
   try {
     const { id } = await params;
     const body = await request.json();
-    const parsed = packageCategorySchema.safeParse(body);
+    const parsed = updatePackageSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -59,68 +82,119 @@ export async function PATCH(
     }
 
     const data = parsed.data;
-    const existing = await prisma.packageCategory.findUnique({
+    const existing = await prisma.package.findUnique({
       where: { id },
-      include: { options: { select: { id: true } } },
+      include: { shootTypes: { select: { id: true } }, serviceArea: true },
     });
 
     if (!existing) {
       return NextResponse.json({ error: "Paket bulunamadı" }, { status: 404 });
     }
 
-    const existingOptionIds = new Set(existing.options.map((option) => option.id));
+    if (data.serviceAreaId && data.serviceAreaId !== existing.serviceAreaId) {
+      const target = await prisma.serviceArea.findUnique({
+        where: { id: data.serviceAreaId },
+        select: { id: true },
+      });
+      if (!target) {
+        return NextResponse.json(
+          { error: "Seçilen hizmet alanı bulunamadı." },
+          { status: 400 },
+        );
+      }
+    }
+
+    const existingIds = new Set(existing.shootTypes.map((row) => row.id));
+
+    // Formdan kaldırılan çekim türleri artık gerçekten siliniyor.
+    let removedIds: string[] = [];
+    if (data.shootTypes) {
+      const keptIds = new Set(
+        data.shootTypes
+          .map((shootType) => shootType.id)
+          .filter((shootTypeId): shootTypeId is string =>
+            Boolean(shootTypeId && existingIds.has(shootTypeId)),
+          ),
+      );
+      removedIds = [...existingIds].filter(
+        (shootTypeId) => !keptIds.has(shootTypeId),
+      );
+
+      const locked = await findLockedShootTypeIds(removedIds);
+      if (locked.size > 0) {
+        const lockedLabels = await prisma.shootType.findMany({
+          where: { id: { in: [...locked] } },
+          select: { label: true },
+        });
+        return NextResponse.json(
+          {
+            error: `${lockedLabels
+              .map((row) => row.label)
+              .join(", ")} çekim türü talep veya rezervasyonlarda kullanıldığı için kaldırılamaz. Kaldırmak yerine pasife alabilirsiniz.`,
+          },
+          { status: 409 },
+        );
+      }
+    }
 
     await prisma.$transaction(async (tx) => {
-      await tx.packageCategory.update({
+      await tx.package.update({
         where: { id },
         data: {
+          ...(data.serviceAreaId ? { serviceAreaId: data.serviceAreaId } : {}),
           title: data.title,
           ...(data.slug ? { slug: data.slug } : {}),
-          accentColor: data.accentColor,
           iconKey: data.iconKey,
-          highlight: data.highlight,
-          backgroundImageUrl: data.backgroundImageUrl,
-          heroImageUrl: data.heroImageUrl,
           sortOrder: data.sortOrder,
           isActive: data.isActive,
-          content: data.content ? jsonContent(data.content) : undefined,
+          tags: data.tags,
         },
       });
 
-      if (!data.options) return;
+      if (!data.shootTypes) return;
 
-      for (const [index, option] of data.options.entries()) {
-        const optionData = {
-          label: option.label,
-          cashPrice: option.cashPrice,
-          installmentPrice: option.installmentPrice,
-          sortOrder: option.sortOrder ?? index,
-          isActive: option.isActive ?? true,
+      if (removedIds.length > 0) {
+        await tx.shootType.deleteMany({ where: { id: { in: removedIds } } });
+      }
+
+      for (const [index, shootType] of data.shootTypes.entries()) {
+        const shootTypeData = {
+          label: shootType.label,
+          cashPrice: shootType.cashPrice,
+          installmentPrice: shootType.installmentPrice,
+          iconKey: shootType.iconKey ?? null,
+          sortOrder: shootType.sortOrder ?? index,
+          isActive: shootType.isActive ?? true,
+          tags: shootType.tags ?? [],
+          ...(shootType.content
+            ? { content: jsonContent(shootType.content) }
+            : {}),
         };
 
-        if (option.id && existingOptionIds.has(option.id)) {
-          await tx.packageOption.update({
-            where: { id: option.id },
-            data: optionData,
+        if (shootType.id && existingIds.has(shootType.id)) {
+          await tx.shootType.update({
+            where: { id: shootType.id },
+            data: shootTypeData,
           });
           continue;
         }
 
-        await tx.packageOption.create({
-          data: {
-            categoryId: id,
-            ...optionData,
-          },
+        await tx.shootType.create({
+          data: { packageId: id, ...shootTypeData },
         });
       }
     });
 
-    const updated = await prisma.packageCategory.findUnique({
+    const updated = await prisma.package.findUnique({
       where: { id },
-      include: { options: { orderBy: { sortOrder: "asc" } } },
+      include: packageInclude,
     });
 
     revalidatePath("/paketler");
+    if (updated) revalidatePath(`/paketler/${updated.serviceArea.slug}`);
+    if (existing.serviceArea.slug !== updated?.serviceArea.slug) {
+      revalidatePath(`/paketler/${existing.serviceArea.slug}`);
+    }
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -140,35 +214,32 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const options = await prisma.packageOption.findMany({
-      where: { categoryId: id },
+    const shootTypes = await prisma.shootType.findMany({
+      where: { packageId: id },
       select: { id: true },
     });
-    const optionIds = options.map((option) => option.id);
 
-    if (optionIds.length > 0) {
-      const [requestItemCount, reservationItemCount] = await Promise.all([
-        prisma.requestItem.count({
-          where: { packageOptionId: { in: optionIds } },
-        }),
-        prisma.reservationItem.count({
-          where: { packageOptionId: { in: optionIds } },
-        }),
-      ]);
+    const locked = await findLockedShootTypeIds(
+      shootTypes.map((shootType) => shootType.id),
+    );
 
-      if (requestItemCount + reservationItemCount > 0) {
-        return NextResponse.json(
-          {
-            error:
-              "Bu paket talep veya rezervasyonlarda kullanıldığı için silinemez.",
-          },
-          { status: 409 },
-        );
-      }
+    if (locked.size > 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Bu paket talep veya rezervasyonlarda kullanıldığı için silinemez.",
+        },
+        { status: 409 },
+      );
     }
 
-    await prisma.packageCategory.delete({ where: { id } });
+    const deleted = await prisma.package.delete({
+      where: { id },
+      include: { serviceArea: { select: { slug: true } } },
+    });
+
     revalidatePath("/paketler");
+    revalidatePath(`/paketler/${deleted.serviceArea.slug}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     if (
@@ -179,9 +250,6 @@ export async function DELETE(
     }
 
     console.error("DELETE /api/admin/packages/[id]", error);
-    return NextResponse.json(
-      { error: "Paket silinemedi" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Paket silinemedi" }, { status: 500 });
   }
 }

@@ -2,47 +2,71 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
+import type {
+  PackageData,
+  ServiceAreaData,
+  ShootTypeData,
+} from "@/lib/package-types";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
-import { PackagesCategoryAccordion } from "@/components/packages/packages-category-accordion";
+import { PackageAccordion } from "@/components/packages/package-accordion";
+import { ServiceAreasGrid } from "@/components/packages/service-areas-grid";
 
 const pageMainClass = "flex-1 bg-black pt-24 pb-10 text-white";
 const sectionClass = "scroll-mt-24 bg-black pb-6 text-white";
 
-export function PackagesHero({
-  categories,
-  variant = "page",
-  visible = true,
-}: {
-  categories: PackageCategoryData[];
+type PackagesHeroProps = {
+  /** Hizmet alanı listesi modu: kartlar gösterilir. */
+  serviceAreas?: ServiceAreaData[];
+  /** Tek hizmet alanı modu: o alanın paket accordion'u gösterilir. */
+  serviceArea?: ServiceAreaData;
   variant?: "page" | "section";
   visible?: boolean;
-}) {
-  const [expandedCategoryId, setExpandedCategoryId] = useState<string | null>(
+};
+
+export function PackagesHero({
+  serviceAreas,
+  serviceArea,
+  variant = "page",
+  visible = true,
+}: PackagesHeroProps) {
+  const [expandedPackageId, setExpandedPackageId] = useState<string | null>(
     null,
   );
-  const [detailCategory, setDetailCategory] =
-    useState<PackageCategoryData | null>(null);
-  const [detailOptionId, setDetailOptionId] = useState<string | null>(null);
+  const [detailPackage, setDetailPackage] = useState<PackageData | null>(null);
+  const [detailShootType, setDetailShootType] = useState<ShootTypeData | null>(
+    null,
+  );
 
-  function handleToggleCategory(categoryId: string) {
-    setExpandedCategoryId((current) =>
-      current === categoryId ? null : categoryId,
+  const isSingleServiceArea = Boolean(serviceArea);
+
+  function handleTogglePackage(packageId: string) {
+    setExpandedPackageId((current) =>
+      current === packageId ? null : packageId,
     );
   }
 
-  function handleSelectOption(
-    category: PackageCategoryData,
-    option: PackageOptionData,
-  ) {
-    setDetailCategory(category);
-    setDetailOptionId(option.id);
+  function handleSelectShootType(pkg: PackageData, shootType: ShootTypeData) {
+    setDetailPackage(pkg);
+    setDetailShootType(shootType);
   }
 
   function handleCloseDetail() {
-    setDetailCategory(null);
-    setDetailOptionId(null);
+    setDetailPackage(null);
+    setDetailShootType(null);
   }
+
+  const heading = isSingleServiceArea
+    ? {
+        eyebrow: "Paketler",
+        title: serviceArea!.title,
+        description:
+          "Pakete tıklayın, çekim türünü seçin ve detayları inceleyin.",
+      }
+    : {
+        eyebrow: "Paketler",
+        title: "Paket Oluştur",
+        description: "Bir hizmet alanı seçin, ardından paketleri inceleyin.",
+      };
 
   const inner = (
     <>
@@ -62,27 +86,32 @@ export function PackagesHero({
       >
         <div className="text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            Paketler
+            {heading.eyebrow}
           </p>
           <h1 className="mt-3 text-3xl font-semibold md:text-4xl lg:text-5xl">
-            Paket Oluştur
+            {heading.title}
           </h1>
           <p className="mx-auto mt-3 max-w-md text-sm text-zinc-400">
-            Çekim paketine tıklayın, türünü seçin ve detayları inceleyin.
+            {heading.description}
           </p>
         </div>
 
-        <PackagesCategoryAccordion
-          categories={categories}
-          expandedCategoryId={expandedCategoryId}
-          onToggleCategory={handleToggleCategory}
-          onSelectOption={handleSelectOption}
-        />
+        {isSingleServiceArea ? (
+          <PackageAccordion
+            serviceArea={serviceArea!}
+            expandedPackageId={expandedPackageId}
+            onTogglePackage={handleTogglePackage}
+            onSelectShootType={handleSelectShootType}
+          />
+        ) : (
+          <ServiceAreasGrid serviceAreas={serviceAreas ?? []} />
+        )}
       </motion.div>
 
       <PackageDetailSheet
-        category={detailCategory}
-        initialOptionId={detailOptionId}
+        serviceArea={serviceArea ?? null}
+        pkg={detailPackage}
+        shootType={detailShootType}
         onClose={handleCloseDetail}
       />
     </>

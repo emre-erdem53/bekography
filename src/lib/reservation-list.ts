@@ -14,14 +14,17 @@ import {
 } from "@/lib/tracking-workflow";
 import { formatDateOnlyDisplay, toDateInputValue } from "@/lib/date-only";
 
-type ReservationListItem = {
+export type ReservationListItem = {
   id: string;
   shootDate: string | Date;
   location: string;
   productSnapshot: unknown;
-  packageOption: {
+  shootType: {
     label: string;
-    category: { title: string; accentColor?: string };
+    package: {
+      title: string;
+      serviceArea: { title: string; accentColor?: string };
+    };
   };
 };
 
@@ -30,7 +33,7 @@ export type ReservationListColoredSegment = {
   color: string;
 };
 
-type ReservationListRow = {
+export type ReservationListRow = {
   brideName: string;
   groomName: string;
   postShoot: unknown;
@@ -41,9 +44,23 @@ function getItemAccentColor(item: ReservationListItem): string {
   const snapshot = parseProductSnapshot(item.productSnapshot);
   return (
     snapshot.accentColor ||
-    item.packageOption.category.accentColor ||
+    item.shootType.package.serviceArea.accentColor ||
     "#ffffff"
   );
+}
+
+/** `{hizmet alanı} · {paket} · {çekim türü}` — v2 snapshot'larda paket adı canlı veriden gelir. */
+function formatItemPath(item: ReservationListItem): string {
+  const snapshot = parseProductSnapshot(item.productSnapshot);
+  const serviceAreaTitle =
+    snapshot.serviceAreaTitle || item.shootType.package.serviceArea.title;
+  const packageTitle = snapshot.packageTitle || item.shootType.package.title;
+  const shootTypeLabel =
+    snapshot.shootTypeLabel || getShootTypeLabel(item.shootType.label);
+
+  return [serviceAreaTitle, packageTitle, shootTypeLabel]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function buildItemWorkflowView(
@@ -85,17 +102,10 @@ export function getReservationListPackageSegments(
 ): ReservationListColoredSegment[] {
   if (items.length === 0) return [];
 
-  return items.map((item) => {
-    const snapshot = parseProductSnapshot(item.productSnapshot);
-    const title =
-      snapshot.categoryTitle || item.packageOption.category.title;
-    const type =
-      snapshot.shootTypeLabel || getShootTypeLabel(item.packageOption.label);
-    return {
-      text: `${title} · ${type}`,
-      color: getItemAccentColor(item),
-    };
-  });
+  return items.map((item) => ({
+    text: formatItemPath(item),
+    color: getItemAccentColor(item),
+  }));
 }
 
 export function getReservationListStageSegments(
@@ -106,7 +116,7 @@ export function getReservationListStageSegments(
   return reservation.items.map((item) => {
     const snapshot = parseProductSnapshot(item.productSnapshot);
     const title =
-      snapshot.categoryTitle || item.packageOption.category.title;
+      snapshot.serviceAreaTitle || item.shootType.package.serviceArea.title;
     const workflow = buildItemWorkflowView(reservation, item);
     return {
       text: `${title}: ${workflow.primaryTitle}`,

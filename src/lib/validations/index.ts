@@ -56,7 +56,7 @@ export const createRequestSchema = z.object({
   items: z
     .array(
       z.object({
-        packageOptionId: z.string().min(1),
+        shootTypeId: z.string().min(1),
         paymentType: z.enum(["pesin", "taksitli"]),
         shootDate: z.string().min(1, "Çekim tarihi seçin"),
         city: z.string().min(2, "Şehir girin"),
@@ -67,11 +67,6 @@ export const createRequestSchema = z.object({
 
 export const updateRequestStatusSchema = z.object({
   status: z.enum(["yeni", "teklif_verildi", "onaylandi", "iptal"]),
-});
-
-const packageGalleryImageSchema = z.object({
-  url: z.string().min(1),
-  alt: z.string().optional(),
 });
 
 const packageGalleryMediaSchema = z.object({
@@ -99,54 +94,116 @@ const packageServiceItemSchema = z.object({
   iconKey: z.string().min(1),
 });
 
-export const packageCategorySchema = z.object({
-  title: z.string().min(1, "Paket başlığı girin"),
-  slug: z.string().min(1, "Paket bağlantısı geçersiz").optional(),
+export const MAX_HIERARCHY_TAGS = 5;
+
+/** Hiyerarşinin üç seviyesinde de ortak: opsiyonel, en fazla 5 etiket. */
+export const hierarchyTagsSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .min(1, "Etiket boş bırakılamaz")
+      .max(40, "Etiket en fazla 40 karakter olabilir"),
+  )
+  .max(MAX_HIERARCHY_TAGS, `En fazla ${MAX_HIERARCHY_TAGS} etiket girebilirsiniz`)
+  .default([]);
+
+/** `/paketler/[slug]` route'u ile çakışan yollar hizmet alanı slug'ı olamaz. */
+export const RESERVED_SERVICE_AREA_SLUGS = ["sepet"] as const;
+
+const serviceAreaSlugSchema = z
+  .string()
+  .min(1, "Hizmet alanı bağlantısı geçersiz")
+  .refine(
+    (value) =>
+      !RESERVED_SERVICE_AREA_SLUGS.includes(
+        value as (typeof RESERVED_SERVICE_AREA_SLUGS)[number],
+      ),
+    { message: "Bu bağlantı adı sistem tarafından kullanılıyor" },
+  );
+
+const packageWorkflowStageSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  kind: z.enum(["builtin", "custom"]),
+  builtinKey: z
+    .enum(["rezervasyon", "cekim", "dijital", "secim", "duzenleme", "baski"])
+    .optional(),
+  daysAfterPrevious: z.number().int().optional(),
+});
+
+/** Çekim türü içeriği artık açıkça doğrulanıyor (eskiden passthrough'du). */
+export const shootTypeContentSchema = z
+  .object({
+    galleryMedia: z.array(packageGalleryMediaSchema).default([]),
+    detailSections: z.array(packageDetailSectionSchema).default([]),
+    inspectEnabled: z.boolean().default(true),
+    workflowStages: z.array(packageWorkflowStageSchema).optional(),
+    workflowStageTags: workflowStageTagsSchema.optional(),
+  })
+  .strict();
+
+export const serviceAreaContentSchema = z
+  .object({
+    services: z.array(packageServiceItemSchema).default([]),
+    requestFieldLabels: packageRequestFieldLabelsSchema.optional(),
+  })
+  .strict();
+
+export const serviceAreaSchema = z.object({
+  title: z.string().min(1, "Hizmet alanı başlığı girin"),
+  slug: serviceAreaSlugSchema.optional(),
   accentColor: hexColorSchema,
-  iconKey: z.string().min(1, "Paket ikonu seçin veya yükleyin"),
+  iconKey: z.string().min(1, "Hizmet alanı ikonu seçin veya yükleyin"),
   highlight: z.boolean().optional(),
   backgroundImageUrl: z.string().nullable().optional(),
   heroImageUrl: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
-  content: z
-    .object({
-      scheduleType: z.enum(["outdoor", "indoor"]).optional(),
-      highlightTags: z.array(z.string()).optional(),
-      highlightTagsByOption: z.record(z.string(), z.array(z.string())).optional(),
-      galleryImages: z.array(packageGalleryImageSchema).optional(),
-      galleryMediaByOption: z
-        .record(z.string(), z.array(packageGalleryMediaSchema))
-        .optional(),
-      detailSections: z.array(packageDetailSectionSchema).optional(),
-      requestFieldLabels: packageRequestFieldLabelsSchema.optional(),
-      services: z.array(packageServiceItemSchema).optional(),
-    })
-    .catchall(z.unknown())
-    .passthrough()
-    .optional(),
-  options: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        label: z.string().min(1, "Çekim türü adı girin"),
-        cashPrice: z
-          .number()
-          .int({ message: "Hemen ödeme tutarı tam sayı olmalıdır" })
-          .positive({ message: "Hemen ödeme tutarı 0'dan büyük olmalıdır" }),
-        installmentPrice: z
-          .number()
-          .int({ message: "Parçalı ödeme tutarı tam sayı olmalıdır" })
-          .positive({ message: "Parçalı ödeme tutarı 0'dan büyük olmalıdır" }),
-        sortOrder: z.number().int().optional(),
-        isActive: z.boolean().optional(),
-      }),
-    )
-    .optional(),
+  scheduleType: z.enum(["outdoor", "indoor"]).optional(),
+  isCompanionOnly: z.boolean().optional(),
+  tags: hierarchyTagsSchema.optional(),
+  content: serviceAreaContentSchema.optional(),
+});
+
+export const shootTypeSchema = z.object({
+  id: z.string().optional(),
+  label: z.string().min(1, "Çekim türü adı girin"),
+  cashPrice: z
+    .number()
+    .int({ message: "Hemen ödeme tutarı tam sayı olmalıdır" })
+    .positive({ message: "Hemen ödeme tutarı 0'dan büyük olmalıdır" }),
+  installmentPrice: z
+    .number()
+    .int({ message: "Parçalı ödeme tutarı tam sayı olmalıdır" })
+    .positive({ message: "Parçalı ödeme tutarı 0'dan büyük olmalıdır" }),
+  iconKey: z.string().nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  tags: hierarchyTagsSchema.optional(),
+  content: shootTypeContentSchema.optional(),
+});
+
+export const packageSchema = z.object({
+  serviceAreaId: z.string().min(1, "Hizmet alanı seçin"),
+  title: z.string().min(1, "Paket başlığı girin"),
+  slug: z.string().min(1, "Paket bağlantısı geçersiz").optional(),
+  iconKey: z.string().nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  isActive: z.boolean().optional(),
+  tags: hierarchyTagsSchema.optional(),
+  shootTypes: z
+    .array(shootTypeSchema)
+    .min(1, "En az bir çekim türü ekleyin"),
+});
+
+/** PATCH gövdesi: hizmet alanı ve çekim türleri opsiyonel olarak gelebilir. */
+export const updatePackageSchema = packageSchema.partial().extend({
+  shootTypes: z.array(shootTypeSchema).optional(),
 });
 
 const reservationItemSchema = z.object({
-  packageOptionId: z.string().min(1),
+  shootTypeId: z.string().min(1),
   paymentType: z.enum(["pesin", "taksitli"]),
   unitPrice: z.number().int().positive(),
   shootDate: z.string().min(1, "Çekim günü seçin"),

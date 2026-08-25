@@ -1,7 +1,5 @@
-import type {
-  PackageCategoryContent,
-  PackageDetailSection,
-} from "@/lib/package-seed-data";
+import type { PackageDetailSection } from "@/lib/package-seed-data";
+import type { ScheduleType } from "@/lib/package-types";
 
 export const STANDARD_INSPECT_SECTION_TITLES = [
   "Dijital",
@@ -30,10 +28,9 @@ const DEFAULT_PRINTING = {
 };
 
 export function buildDefaultInspectSections(
-  slug: string,
-  scheduleType: PackageCategoryContent["scheduleType"] = "indoor",
+  scheduleType: ScheduleType = "indoor",
 ): PackageDetailSection[] {
-  const isOutdoor = scheduleType === "outdoor" || slug === "dis-cekim";
+  const isOutdoor = scheduleType === "outdoor";
   const sections: PackageDetailSection[] = [
     {
       id: "dijital",
@@ -66,10 +63,9 @@ export function buildDefaultInspectSections(
 
 export function mergeDefaultPostShootSections(
   existing: PackageDetailSection[],
-  slug: string,
-  scheduleType: PackageCategoryContent["scheduleType"] = "indoor",
+  scheduleType: ScheduleType = "indoor",
 ): PackageDetailSection[] {
-  const defaults = buildDefaultInspectSections(slug, scheduleType);
+  const defaults = buildDefaultInspectSections(scheduleType);
   const result = [...existing];
 
   for (const def of defaults) {
@@ -86,23 +82,4 @@ export function mergeDefaultPostShootSections(
   }
 
   return result;
-}
-
-export function ensureDefaultInspectSectionsForOption(
-  content: Partial<PackageCategoryContent>,
-  optionKey: string,
-  slug: string,
-): Partial<PackageCategoryContent> {
-  const existing = content.detailSectionsByOption?.[optionKey] ?? [];
-  if (existing.length > 0) {
-    return content;
-  }
-
-  return {
-    ...content,
-    detailSectionsByOption: {
-      ...(content.detailSectionsByOption ?? {}),
-      [optionKey]: buildDefaultInspectSections(slug, content.scheduleType),
-    },
-  };
 }

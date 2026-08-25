@@ -6,16 +6,20 @@ import { getAllPackages } from "@/lib/packages";
 import { prisma } from "@/lib/prisma";
 import { prismaWriteErrorResponse } from "@/lib/prisma-errors";
 import { formatZodError } from "@/lib/validation-errors";
-import { packageCategorySchema } from "@/lib/validations";
+import { packageSchema } from "@/lib/validations";
 import { slugify } from "@/lib/constants";
+
+function jsonContent(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
+}
 
 export async function GET() {
   const authResult = await requireAdmin();
   if (authResult.error) return authResult.error;
 
   try {
-    const categories = await getAllPackages();
-    return NextResponse.json(categories);
+    const serviceAreas = await getAllPackages();
+    return NextResponse.json(serviceAreas);
   } catch (error) {
     console.error("GET /api/admin/packages", error);
     return NextResponse.json(
@@ -31,7 +35,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const parsed = packageCategorySchema.safeParse(body);
+    const parsed = packageSchema.safeParse(body);
 
     if (!parsed.success) {
       return NextResponse.json(
@@ -41,38 +45,53 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
+
+    const serviceArea = await prisma.serviceArea.findUnique({
+      where: { id: data.serviceAreaId },
+      select: { id: true, slug: true },
+    });
+
+    if (!serviceArea) {
+      return NextResponse.json(
+        { error: "Seçilen hizmet alanı bulunamadı. Sayfayı yenileyip tekrar deneyin." },
+        { status: 400 },
+      );
+    }
+
     const slug = data.slug ?? slugify(data.title);
 
-    const category = await prisma.packageCategory.create({
+    const created = await prisma.package.create({
       data: {
+        serviceAreaId: serviceArea.id,
         title: data.title,
         slug,
-        accentColor: data.accentColor,
-        iconKey: data.iconKey,
-        highlight: data.highlight ?? false,
-        backgroundImageUrl: data.backgroundImageUrl ?? null,
-        heroImageUrl: data.heroImageUrl ?? null,
+        iconKey: data.iconKey ?? null,
         sortOrder: data.sortOrder ?? 0,
         isActive: data.isActive ?? true,
-        content: JSON.parse(JSON.stringify(data.content ?? {})) as Prisma.InputJsonValue,
-        options: data.options
-          ? {
-              create: data.options.map((option, index) => ({
-                label: option.label,
-                cashPrice: option.cashPrice,
-                installmentPrice: option.installmentPrice,
-                sortOrder: option.sortOrder ?? index,
-                isActive: option.isActive ?? true,
-              })),
-            }
-          : undefined,
+        tags: data.tags ?? [],
+        shootTypes: {
+          create: data.shootTypes.map((shootType, index) => ({
+            label: shootType.label,
+            cashPrice: shootType.cashPrice,
+            installmentPrice: shootType.installmentPrice,
+            iconKey: shootType.iconKey ?? null,
+            sortOrder: shootType.sortOrder ?? index,
+            isActive: shootType.isActive ?? true,
+            tags: shootType.tags ?? [],
+            content: jsonContent(shootType.content ?? {}),
+          })),
+        },
       },
-      include: { options: true },
+      include: {
+        serviceArea: true,
+        shootTypes: { orderBy: { sortOrder: "asc" } },
+      },
     });
 
     revalidatePath("/paketler");
+    revalidatePath(`/paketler/${serviceArea.slug}`);
 
-    return NextResponse.json(category, { status: 201 });
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
     console.error("POST /api/admin/packages", error);
     const mapped = prismaWriteErrorResponse(error, "Paket oluşturulamadı");

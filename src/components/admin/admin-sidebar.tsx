@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   ClipboardList,
   Images,
+  Layers,
   LayoutDashboard,
   LogOut,
   Package,
@@ -24,6 +25,7 @@ export type AdminNavItem = {
 
 export const adminNavItems: AdminNavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/hizmet-alanlari", label: "Hizmet Alanları", icon: Layers },
   { href: "/admin/paketler", label: "Paketler", icon: Package },
   { href: "/admin/talepler", label: "Talepler", icon: ClipboardList },
   { href: "/admin/takvim", label: "Takvimim", icon: CalendarDays },
@@ -34,6 +36,11 @@ export const adminNavItems: AdminNavItem[] = [
 
 export function getAdminPageTitle(pathname: string) {
   if (pathname === "/admin") return "Dashboard";
+  if (pathname.startsWith("/admin/hizmet-alanlari/yeni"))
+    return "Yeni Hizmet Alanı";
+  if (pathname.match(/^\/admin\/hizmet-alanlari\/[^/]+$/))
+    return "Hizmet Alanı Düzenle";
+  if (pathname.startsWith("/admin/hizmet-alanlari")) return "Hizmet Alanları";
   if (pathname.startsWith("/admin/paketler/yeni")) return "Yeni Paket";
   if (pathname.match(/^\/admin\/paketler\/[^/]+$/)) return "Paket Düzenle";
   if (pathname.startsWith("/admin/paketler")) return "Paketler";

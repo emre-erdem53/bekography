@@ -44,18 +44,39 @@ async function listAllMediaBlobs() {
     );
 }
 
+/**
+ * Galeri medyası artık ShootType.content içinde yaşıyor; hizmet alanı içeriği
+ * hâlâ hero/arka plan görselleri barındırabildiği için ikisi de taranıyor.
+ */
 async function findPackageUsageCount(url: string) {
-  const categories = await prisma.packageCategory.findMany({
-    select: { content: true },
-  });
+  const [serviceAreas, shootTypes] = await Promise.all([
+    prisma.serviceArea.findMany({
+      select: { content: true, backgroundImageUrl: true, heroImageUrl: true },
+    }),
+    prisma.shootType.findMany({ select: { content: true } }),
+  ]);
 
   let count = 0;
-  for (const category of categories) {
-    const content = category.content;
+
+  for (const serviceArea of serviceAreas) {
+    if (
+      serviceArea.backgroundImageUrl === url ||
+      serviceArea.heroImageUrl === url
+    ) {
+      count += 1;
+      continue;
+    }
+    const content = serviceArea.content;
     if (!content || typeof content !== "object") continue;
-    const json = JSON.stringify(content);
-    if (json.includes(url)) count += 1;
+    if (JSON.stringify(content).includes(url)) count += 1;
   }
+
+  for (const shootType of shootTypes) {
+    const content = shootType.content;
+    if (!content || typeof content !== "object") continue;
+    if (JSON.stringify(content).includes(url)) count += 1;
+  }
+
   return count;
 }
 

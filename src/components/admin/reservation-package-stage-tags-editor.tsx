@@ -1,35 +1,38 @@
 "use client";
 
 import {
-  getEditableStagesForPackage,
+  getEditableStagesForShootType,
   type ItemWorkflowStageTags,
 } from "@/lib/item-workflow-stage-tags";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type { ServiceAreaData } from "@/lib/package-types";
+import { findShootTypeContext } from "@/lib/shoot-type-context";
 import { PostShootTagsEditor } from "@/components/admin/post-shoot-section-editor";
 
 type ReservationPackageStageTagsEditorProps = {
-  categoryTitle: string;
-  optionLabel: string;
-  packageOptionId: string;
-  categoryContent?: Partial<PackageCategoryContent>;
+  serviceAreaTitle: string;
+  packageTitle?: string;
+  shootTypeLabel: string;
+  shootTypeId: string;
+  serviceAreas: ServiceAreaData[];
   accentColor?: string;
   stageTags: ItemWorkflowStageTags;
   onChange: (stageTags: ItemWorkflowStageTags) => void;
 };
 
 export function ReservationPackageStageTagsEditor({
-  categoryTitle,
-  optionLabel,
-  packageOptionId,
-  categoryContent,
+  serviceAreaTitle,
+  packageTitle,
+  shootTypeLabel,
+  shootTypeId,
+  serviceAreas,
   accentColor,
   stageTags,
   onChange,
 }: ReservationPackageStageTagsEditorProps) {
-  const stages = getEditableStagesForPackage(
-    categoryContent,
-    packageOptionId,
-    optionLabel,
+  const context = findShootTypeContext(serviceAreas, shootTypeId);
+  const stages = getEditableStagesForShootType(
+    context?.shootType,
+    context?.serviceArea.scheduleType,
   );
 
   function updateStageTags(stageId: string, tags: string[]) {
@@ -51,7 +54,8 @@ export function ReservationPackageStageTagsEditor({
         className="text-sm font-semibold"
         style={{ color: accentColor ?? "#ffffff" }}
       >
-        {categoryTitle} · {optionLabel}
+        {serviceAreaTitle}
+        {packageTitle ? ` · ${packageTitle}` : ""} · {shootTypeLabel}
       </h3>
       <div className="mt-4 space-y-4">
         {stages.map((stage) => (

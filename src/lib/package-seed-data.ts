@@ -1,5 +1,3 @@
-import { buildDefaultInspectSections } from "@/lib/default-inspect-sections";
-
 export type PackageServiceItem = {
   title: string;
   subLines: string[];
@@ -44,30 +42,20 @@ export type PackageWorkflowStageDefinition = {
   daysAfterPrevious?: number;
 };
 
-export type PackageCategoryContent = {
-  serviceGridColor: string;
-  serviceTextColor: string;
-  serviceSubTextColor: string;
+/** Hizmet alanı düzeyinde kalan içerik. Çekim türüne ait olan her şey ShootTypeContent'e taşındı. */
+export type ServiceAreaContent = {
   services: PackageServiceItem[];
-  scheduleType?: "outdoor" | "indoor";
-  highlightTags?: string[];
-  highlightTagsByOption?: Record<string, string[]>;
-  optionIconKeys?: Record<string, string>;
-  galleryImages?: PackageGalleryImage[];
-  galleryMediaByOption?: Record<string, PackageGalleryMedia[]>;
-  detailSections?: PackageDetailSection[];
-  detailSectionsByOption?: Record<string, PackageDetailSection[]>;
-  inspectEnabledByOption?: Record<string, boolean>;
-  /** Takip ekranı süreç etiketleri — aşama id veya built-in key. */
-  workflowStageTagsByOption?: Record<
-    string,
-    Partial<Record<string, string[]>>
-  >;
-  /** Paket varsayılan süreç aşamaları. */
-  workflowStages?: PackageWorkflowStageDefinition[];
-  /** Çekim türüne göre süreç aşamaları (option id veya label anahtarı). */
-  workflowStagesByOption?: Record<string, PackageWorkflowStageDefinition[]>;
   requestFieldLabels?: PackageRequestFieldLabels;
+};
+
+/** Bir çekim türünün kendi satırında yaşayan içeriği. */
+export type ShootTypeContent = {
+  galleryMedia?: PackageGalleryMedia[];
+  detailSections?: PackageDetailSection[];
+  inspectEnabled?: boolean;
+  workflowStages?: PackageWorkflowStageDefinition[];
+  /** Takip ekranı süreç etiketleri — aşama id veya built-in key. */
+  workflowStageTags?: Record<string, string[]>;
 };
 
 export function defaultRequestFieldLabels(
@@ -86,29 +74,22 @@ export function defaultRequestFieldLabels(
   };
 }
 
-export function enrichSeedCategoryContent(
-  slug: string,
-  content: PackageCategoryContent,
-  optionLabels: string[],
-): PackageCategoryContent {
-  const detailSectionsByOption = { ...(content.detailSectionsByOption ?? {}) };
+export type SeedShootType = {
+  label: string;
+  cash: number;
+  installment: number;
+  tags?: string[];
+};
 
-  for (const label of optionLabels) {
-    if (!detailSectionsByOption[label]?.length) {
-      detailSectionsByOption[label] = buildDefaultInspectSections(
-        slug,
-        content.scheduleType,
-      );
-    }
-  }
+export type SeedPackage = {
+  slug: string;
+  title: string;
+  sortOrder: number;
+  tags?: string[];
+  shootTypes: SeedShootType[];
+};
 
-  return {
-    ...content,
-    detailSectionsByOption,
-  };
-}
-
-export type SeedPackageCategory = {
+export type SeedServiceArea = {
   slug: string;
   title: string;
   accentColor: string;
@@ -117,8 +98,11 @@ export type SeedPackageCategory = {
   backgroundImage?: string;
   heroImage?: string;
   sortOrder: number;
-  content: PackageCategoryContent;
-  options: { label: string; cash: number; installment: number }[];
+  scheduleType: "outdoor" | "indoor";
+  isCompanionOnly?: boolean;
+  tags?: string[];
+  content: ServiceAreaContent;
+  packages: SeedPackage[];
 };
 
 const defaultServices = (
@@ -138,7 +122,12 @@ const defaultServices = (
   },
 ];
 
-export const seedPackageCategories: SeedPackageCategory[] = [
+/** Varsayılan paket adı: her hizmet alanı en az bir paketle gelmeli. */
+const standardPackage = (shootTypes: SeedShootType[]): SeedPackage[] => [
+  { slug: "standart", title: "Standart", sortOrder: 0, shootTypes },
+];
+
+export const seedServiceAreas: SeedServiceArea[] = [
   {
     slug: "dis-cekim",
     title: "Dış Çekim",
@@ -147,10 +136,8 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     backgroundImage: "dis-cekim.png",
     heroImage: "dis-cekim.png",
     sortOrder: 0,
+    scheduleType: "outdoor",
     content: {
-      serviceGridColor: "#ff8a45",
-      serviceTextColor: "#111",
-      serviceSubTextColor: "#3a2314",
       services: [
         {
           title: "Fotoğraf Çekimi",
@@ -173,12 +160,11 @@ export const seedPackageCategories: SeedPackageCategory[] = [
           iconKey: "Download",
         },
       ],
-      scheduleType: "outdoor",
     },
-    options: [
+    packages: standardPackage([
       { label: "Fotoğraf", cash: 26000, installment: 32000 },
       { label: "Fotoğraf + Video Film", cash: 37000, installment: 45000 },
-    ],
+    ]),
   },
   {
     slug: "dugun",
@@ -188,17 +174,12 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     backgroundImage: "dugun.png",
     heroImage: "dugun.png",
     sortOrder: 1,
-    content: {
-      serviceGridColor: "#93f8b6",
-      serviceTextColor: "#0d2d17",
-      serviceSubTextColor: "#234c30",
-      services: defaultServices(),
-      scheduleType: "indoor",
-    },
-    options: [
+    scheduleType: "indoor",
+    content: { services: defaultServices() },
+    packages: standardPackage([
       { label: "Video Film", cash: 26000, installment: 32000 },
       { label: "Fotoğraf + Video Film", cash: 35000, installment: 43000 },
-    ],
+    ]),
   },
   {
     slug: "gelin-cikisi",
@@ -208,17 +189,13 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     backgroundImage: "gelin-cikisi.png",
     heroImage: "gelin-cikisi.png",
     sortOrder: 2,
-    content: {
-      serviceGridColor: "#f3d46b",
-      serviceTextColor: "#2e2510",
-      serviceSubTextColor: "#574829",
-      services: defaultServices(),
-      scheduleType: "indoor",
-    },
-    options: [
+    scheduleType: "indoor",
+    isCompanionOnly: true,
+    content: { services: defaultServices() },
+    packages: standardPackage([
       { label: "Video Film", cash: 20000, installment: 26000 },
       { label: "Fotoğraf + Video Film", cash: 27000, installment: 35000 },
-    ],
+    ]),
   },
   {
     slug: "kuafor",
@@ -227,10 +204,9 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     iconKey: "UserRound",
     heroImage: "2.jpg",
     sortOrder: 3,
+    scheduleType: "indoor",
+    isCompanionOnly: true,
     content: {
-      serviceGridColor: "#f6b8c2",
-      serviceTextColor: "#2d1a1f",
-      serviceSubTextColor: "#5a3640",
       services: [
         {
           title: "Fotoğraf Çekimi",
@@ -253,12 +229,11 @@ export const seedPackageCategories: SeedPackageCategory[] = [
           iconKey: "Download",
         },
       ],
-      scheduleType: "indoor",
     },
-    options: [
+    packages: standardPackage([
       { label: "Video Film", cash: 17000, installment: 23000 },
       { label: "Fotoğraf + Video Film", cash: 25000, installment: 32000 },
-    ],
+    ]),
   },
   {
     slug: "full-hikaye",
@@ -269,10 +244,8 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     backgroundImage: "full-hikaye.png",
     heroImage: "full-hikaye.png",
     sortOrder: 4,
+    scheduleType: "indoor",
     content: {
-      serviceGridColor: "#ffb200",
-      serviceTextColor: "#231604",
-      serviceSubTextColor: "#5a3a0b",
       services: [
         {
           title: "Fotoğraf Çekimi",
@@ -295,9 +268,10 @@ export const seedPackageCategories: SeedPackageCategory[] = [
           iconKey: "Download",
         },
       ],
-      scheduleType: "indoor",
     },
-    options: [{ label: "Full Hikaye", cash: 95000, installment: 135000 }],
+    packages: standardPackage([
+      { label: "Full Hikaye", cash: 95000, installment: 135000 },
+    ]),
   },
   {
     slug: "soz-isteme",
@@ -307,17 +281,12 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     backgroundImage: "soz-isteme.png",
     heroImage: "soz-isteme.png",
     sortOrder: 5,
-    content: {
-      serviceGridColor: "#c8b5f0",
-      serviceTextColor: "#2b1f44",
-      serviceSubTextColor: "#4b3f66",
-      services: defaultServices(),
-      scheduleType: "indoor",
-    },
-    options: [
+    scheduleType: "indoor",
+    content: { services: defaultServices() },
+    packages: standardPackage([
       { label: "Video Film", cash: 24000, installment: 29000 },
       { label: "Fotoğraf + Video Film", cash: 32000, installment: 39000 },
-    ],
+    ]),
   },
   {
     slug: "kina",
@@ -327,17 +296,12 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     backgroundImage: "kina.png",
     heroImage: "kina.png",
     sortOrder: 6,
-    content: {
-      serviceGridColor: "#ff2b47",
-      serviceTextColor: "#24070b",
-      serviceSubTextColor: "#4c151d",
-      services: defaultServices(["Ağıt", "Eğlence"]),
-      scheduleType: "indoor",
-    },
-    options: [
+    scheduleType: "indoor",
+    content: { services: defaultServices(["Ağıt", "Eğlence"]) },
+    packages: standardPackage([
       { label: "Video Film", cash: 26000, installment: 32000 },
       { label: "Fotoğraf + Video Film", cash: 35000, installment: 43000 },
-    ],
+    ]),
   },
   {
     slug: "nisan",
@@ -347,16 +311,11 @@ export const seedPackageCategories: SeedPackageCategory[] = [
     backgroundImage: "nisan.png",
     heroImage: "nisan.png",
     sortOrder: 7,
-    content: {
-      serviceGridColor: "#9beefe",
-      serviceTextColor: "#0b2630",
-      serviceSubTextColor: "#2d5060",
-      services: defaultServices(),
-      scheduleType: "indoor",
-    },
-    options: [
+    scheduleType: "indoor",
+    content: { services: defaultServices() },
+    packages: standardPackage([
       { label: "Video Film", cash: 25000, installment: 35000 },
       { label: "Fotoğraf + Video Film", cash: 34000, installment: 41000 },
-    ],
+    ]),
   },
 ];

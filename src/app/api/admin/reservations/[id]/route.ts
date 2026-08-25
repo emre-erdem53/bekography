@@ -31,7 +31,7 @@ export async function GET(
       include: {
         items: {
           include: {
-            packageOption: { include: { category: true } },
+            shootType: { include: { package: { include: { serviceArea: true } } } },
           },
           orderBy: { shootDate: "asc" },
         },
@@ -40,7 +40,7 @@ export async function GET(
           include: {
             items: {
               include: {
-                packageOption: { include: { category: true } },
+                shootType: { include: { package: { include: { serviceArea: true } } } },
               },
             },
           },
@@ -202,10 +202,10 @@ export async function PATCH(
     if (data.items) {
       const existingItems = await prisma.reservationItem.findMany({
         where: { reservationId: id },
-        select: { packageOptionId: true, productSnapshot: true },
+        select: { shootTypeId: true, productSnapshot: true },
       });
       const preservedSnapshots = new Map(
-        existingItems.map((item) => [item.packageOptionId, item.productSnapshot]),
+        existingItems.map((item) => [item.shootTypeId, item.productSnapshot]),
       );
 
       await prisma.reservationItem.deleteMany({ where: { reservationId: id } });
@@ -226,7 +226,7 @@ export async function PATCH(
         const keyToId = new Map(
           data.items
             .map((item, index) => [
-              item.itemKey ?? `${item.packageOptionId}:${index}`,
+              item.itemKey ?? `${item.shootTypeId}:${index}`,
               recreatedItems[index]?.id ?? "",
             ] as const)
             .filter(([, itemId]) => Boolean(itemId)),
@@ -268,7 +268,7 @@ export async function PATCH(
       include: {
         items: {
           include: {
-            packageOption: { include: { category: true } },
+            shootType: { include: { package: { include: { serviceArea: true } } } },
           },
           orderBy: { shootDate: "asc" },
         },

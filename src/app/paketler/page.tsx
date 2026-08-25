@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { PackagesHero } from "@/components/packages/packages-hero";
-import {
-  getActivePackages,
-  serializePackageCategories,
-} from "@/lib/packages";
-import type { PackageCategoryData } from "@/lib/package-types";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import { getActivePackages, serializeServiceAreas } from "@/lib/packages";
+import type { ServiceAreaData } from "@/lib/package-types";
 import { createPageMetadata } from "@/lib/seo";
 
 export const metadata: Metadata = createPageMetadata({
@@ -18,17 +14,13 @@ export const metadata: Metadata = createPageMetadata({
 export const dynamic = "force-dynamic";
 
 export default async function PaketlerPage() {
-  let categories: PackageCategoryData[] = [];
+  let serviceAreas: ServiceAreaData[] = [];
 
   try {
-    const data = await getActivePackages();
-    categories = serializePackageCategories(data).map((category) => ({
-      ...category,
-      content: category.content as PackageCategoryContent,
-    }));
+    serviceAreas = serializeServiceAreas(await getActivePackages());
   } catch (error) {
     console.error("Failed to load packages:", error);
   }
 
-  return <PackagesHero categories={categories} />;
+  return <PackagesHero serviceAreas={serviceAreas} />;
 }

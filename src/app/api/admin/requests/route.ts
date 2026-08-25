@@ -38,7 +38,7 @@ export async function GET(request: Request) {
       include: {
         items: {
           include: {
-            packageOption: { include: { category: true } },
+            shootType: { include: { package: { include: { serviceArea: true } } } },
           },
         },
         reservation: true,

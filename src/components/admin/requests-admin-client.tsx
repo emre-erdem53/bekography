@@ -35,9 +35,12 @@ type RequestItem = {
   createdAt: string;
   items: {
     paymentType: "pesin" | "taksitli";
-    packageOption: {
+    shootType: {
       label: string;
-      category: { title: string };
+      package: {
+        title: string;
+        serviceArea: { title: string };
+      };
     };
   }[];
   reservation: { id: string } | null;
@@ -149,7 +152,7 @@ export function RequestsAdminClient() {
     return request.items
       .map(
         (item) =>
-          `${item.packageOption.category.title} - ${item.packageOption.label} (${paymentLabels[item.paymentType]})`,
+          `${item.shootType.package.serviceArea.title} · ${item.shootType.package.title} - ${item.shootType.label} (${paymentLabels[item.paymentType]})`,
       )
       .join(", ");
   }

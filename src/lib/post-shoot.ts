@@ -1,13 +1,14 @@
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type { ScheduleType, ServiceAreaData } from "@/lib/package-types";
 import {
   packageHasPrintingStage,
-  resolveWorkflowStagesForOption,
+  resolveWorkflowStages,
 } from "@/lib/package-workflow-stages";
 import {
   buildPostShootFromInspect,
   syncPostShootWithInspectItems,
-  type InspectCategory,
+  type InspectPackageItem,
 } from "@/lib/post-shoot-from-inspect";
+import { findShootTypeContext } from "@/lib/shoot-type-context";
 import {
   emptyTrackingWorkflowFlags,
   parseTrackingWorkflowFlags,
@@ -247,44 +248,20 @@ export function ensureItemWorkflows(
   return { ...postShoot, itemWorkflows };
 }
 
-export function isOutdoorCategory(
-  slug: string,
-  content: Partial<PackageCategoryContent>,
-): boolean {
-  return content.scheduleType === "outdoor" || slug === "dis-cekim";
+export function isOutdoorScheduleType(scheduleType?: ScheduleType): boolean {
+  return scheduleType === "outdoor";
 }
-
-type ReservationItemInput = {
-  packageOptionId: string;
-  categoryTitle?: string;
-};
-
-type CategoryInput = {
-  slug: string;
-  title: string;
-  content: Partial<PackageCategoryContent>;
-  options?: { id: string; label: string }[];
-};
 
 export function syncPostShootWithItems(
   current: PostShootSnapshot,
-  items: ReservationItemInput[],
-  categories: CategoryInput[],
+  items: InspectPackageItem[],
+  serviceAreas: ServiceAreaData[],
   options?: { forceReset?: boolean },
 ): PostShootSnapshot {
-  return syncPostShootWithInspectItems(
-    current,
-    items,
-    categories as InspectCategory[],
-    options,
-  );
+  return syncPostShootWithInspectItems(current, items, serviceAreas, options);
 }
 
 export { buildPostShootFromInspect };
-
-export function hasPrintingPackages(categories: { slug: string }[]): boolean {
-  return categories.some((category) => category.slug === "dis-cekim");
-}
 
 export function hasPrintingProducts(postShoot: PostShootSnapshot): boolean {
   return (
@@ -293,54 +270,38 @@ export function hasPrintingProducts(postShoot: PostShootSnapshot): boolean {
   );
 }
 
-export function itemHasPrintingStage(
-  categorySlug: string,
-  content?: Partial<PackageCategoryContent>,
-  packageOptionId?: string,
-  optionLabel?: string,
+/** Baskı aşaması, çekim türünün süreç tanımından okunur; slug tahmini yok. */
+export function shootTypeHasPrintingStage(
+  shootType: Parameters<typeof resolveWorkflowStages>[0],
+  scheduleType?: ScheduleType,
 ): boolean {
-  if (content) {
-    const stages = resolveWorkflowStagesForOption(
-      content,
-      packageOptionId ?? "",
-      optionLabel,
-    );
-    return packageHasPrintingStage(stages);
-  }
-  return categorySlug === "dis-cekim";
+  return packageHasPrintingStage(
+    resolveWorkflowStages(shootType, scheduleType),
+  );
 }
 
 export function reservationHasPrintingPackage(
-  items: {
-    categorySlug?: string;
-    hasPrinting?: boolean;
-    categoryContent?: Partial<PackageCategoryContent>;
-    packageOptionId?: string;
-    optionLabel?: string;
-  }[],
+  items: Array<{ hasPrinting?: boolean; shootTypeId?: string }>,
+  serviceAreas: ServiceAreaData[] = [],
 ): boolean {
   return items.some((item) => {
     if (item.hasPrinting !== undefined) return item.hasPrinting;
-    if (item.categoryContent) {
-      return itemHasPrintingStage(
-        item.categorySlug ?? "",
-        item.categoryContent,
-        item.packageOptionId,
-        item.optionLabel,
-      );
-    }
-    return itemHasPrintingStage(item.categorySlug ?? "");
+    if (!item.shootTypeId) return false;
+    const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+    if (!context) return false;
+    return shootTypeHasPrintingStage(
+      context.shootType,
+      context.serviceArea.scheduleType,
+    );
   });
 }
 
 export function hasOutdoorPackageInItems(
-  items: ReservationItemInput[],
-  categories: CategoryInput[],
+  items: Array<{ shootTypeId: string }>,
+  serviceAreas: ServiceAreaData[],
 ): boolean {
   return items.some((item) => {
-    const category = categories.find((entry) =>
-      entry.options?.some((option) => option.id === item.packageOptionId),
-    );
-    return category?.slug === "dis-cekim";
+    const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+    return context?.serviceArea.scheduleType === "outdoor";
   });
 }

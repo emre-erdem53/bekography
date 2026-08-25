@@ -10,15 +10,16 @@ import { nanoid } from "nanoid";
 import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/date-only";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type { ServiceAreaData } from "@/lib/package-types";
 import {
   emptyPostShootSnapshot,
-  isOutdoorCategory,
+  isOutdoorScheduleType,
   normalizePostShootSnapshotForSubmit,
   parsePostShootSnapshot,
   syncPostShootWithItems,
   type PostShootSnapshot,
 } from "@/lib/post-shoot";
+import { findShootTypeContext } from "@/lib/shoot-type-context";
 import { ReservationPackageStageTagsEditor } from "@/components/admin/reservation-package-stage-tags-editor";
 import { PhoneInput } from "@/components/forms/phone-input";
 import { PersonNameInput } from "@/components/forms/person-name-input";
@@ -63,31 +64,17 @@ function snapTimeToQuarterHour(value: string): string {
   return `${String(hours).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`;
 }
 
-type PackageOption = {
-  id: string;
-  label: string;
-  cashPrice: number;
-  installmentPrice: number;
-};
-
-type PackageCategory = {
-  id: string;
-  slug: string;
-  title: string;
-  accentColor: string;
-  content: PackageCategoryContent;
-  options: PackageOption[];
-};
-
 type SelectedItem = {
   itemKey: string;
-  packageOptionId: string;
-  categoryId: string;
+  shootTypeId: string;
+  packageId: string;
+  packageTitle: string;
+  serviceAreaId: string;
+  serviceAreaSlug: string;
+  serviceAreaTitle: string;
   paymentType: "pesin" | "taksitli";
   unitPrice: number;
   label: string;
-  categoryTitle: string;
-  categorySlug: string;
   accentColor: string;
   shootDate: string;
   shootContent: string;
@@ -191,7 +178,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [postShoot, setPostShoot] = useState<PostShootSnapshot>(
     emptyPostShootSnapshot(),
   );
-  const [categories, setCategories] = useState<PackageCategory[]>([]);
+  const [serviceAreas, setServiceAreas] = useState<ServiceAreaData[]>([]);
   const [dateConflicts, setDateConflicts] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -272,7 +259,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   }
 
   function applyPostShootSync(nextItems: SelectedItem[], forceReset = false) {
-    if (categories.length === 0) return;
+    if (serviceAreas.length === 0) return;
     if (
       forceReset &&
       postShoot.source === "manual" &&
@@ -286,11 +273,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       syncPostShootWithItems(
         prev,
         nextItems.map((item) => ({
-          packageOptionId: item.packageOptionId,
-          categoryTitle: item.categoryTitle,
+          shootTypeId: item.shootTypeId,
+          serviceAreaTitle: item.serviceAreaTitle,
           itemKey: item.itemKey,
         })),
-        categories,
+        serviceAreas,
         { forceReset },
       ),
     );
@@ -299,8 +286,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   useEffect(() => {
     async function load() {
       const packagesRes = await fetch("/api/admin/packages");
-      const packages: PackageCategory[] = await packagesRes.json();
-      setCategories(packages);
+      const loadedServiceAreas =
+        (await packagesRes.json()) as ServiceAreaData[];
+      setServiceAreas(
+        Array.isArray(loadedServiceAreas) ? loadedServiceAreas : [],
+      );
 
       if (reservationId) {
         const reservationRes = await fetch(
@@ -345,14 +335,19 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           reservation.items.map(
             (item: {
               id: string;
-              packageOption: {
+              shootType: {
                 id: string;
                 label: string;
-                category: {
+                package: {
                   id: string;
                   title: string;
-                  slug: string;
-                  accentColor: string;
+                  serviceArea: {
+                    id: string;
+                    title: string;
+                    slug: string;
+                    accentColor: string;
+                    scheduleType: "indoor" | "outdoor";
+                  };
                 };
               };
               paymentType: "pesin" | "taksitli";
@@ -367,20 +362,20 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               startTime: string | null;
               endTime: string | null;
             }) => {
-              const outdoor = isOutdoorCategory(
-                item.packageOption.category.slug,
-                {},
-              );
+              const serviceArea = item.shootType.package.serviceArea;
+              const outdoor = isOutdoorScheduleType(serviceArea.scheduleType);
               return {
               itemKey: item.id,
-              packageOptionId: item.packageOption.id,
-              categoryId: item.packageOption.category.id,
+              shootTypeId: item.shootType.id,
+              packageId: item.shootType.package.id,
+              packageTitle: item.shootType.package.title,
+              serviceAreaId: serviceArea.id,
+              serviceAreaSlug: serviceArea.slug,
+              serviceAreaTitle: serviceArea.title,
               paymentType: item.paymentType,
               unitPrice: item.unitPrice,
-              label: item.packageOption.label,
-              categoryTitle: item.packageOption.category.title,
-              categorySlug: item.packageOption.category.slug,
-              accentColor: item.packageOption.category.accentColor,
+              label: item.shootType.label,
+              accentColor: serviceArea.accentColor,
               shootDate: toDateInputValue(item.shootDate),
               shootContent: item.shootContent,
               readyTime: item.readyTime?.trim() || DEFAULT_READY_TIME,
@@ -434,36 +429,40 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         const defaultDate = toDateInputValue(request.shootDate);
         const mapped: SelectedItem[] = request.items.map(
           (item: {
-            packageOption: {
+            shootType: {
               id: string;
               label: string;
-              category: {
+              package: {
                 id: string;
                 title: string;
-                slug: string;
-                accentColor: string;
-                content: PackageCategoryContent;
+                serviceArea: {
+                  id: string;
+                  title: string;
+                  slug: string;
+                  accentColor: string;
+                  scheduleType: "indoor" | "outdoor";
+                };
               };
             };
             paymentType: "pesin" | "taksitli";
             unitPrice: number;
           }) => {
-            const outdoor = isOutdoorCategory(
-              item.packageOption.category.slug,
-              item.packageOption.category.content ?? {},
-            );
+            const serviceArea = item.shootType.package.serviceArea;
+            const outdoor = isOutdoorScheduleType(serviceArea.scheduleType);
             return {
               itemKey: nanoid(10),
-              packageOptionId: item.packageOption.id,
-              categoryId: item.packageOption.category.id,
+              shootTypeId: item.shootType.id,
+              packageId: item.shootType.package.id,
+              packageTitle: item.shootType.package.title,
+              serviceAreaId: serviceArea.id,
+              serviceAreaSlug: serviceArea.slug,
+              serviceAreaTitle: serviceArea.title,
               paymentType: item.paymentType,
               unitPrice: item.unitPrice,
-              label: item.packageOption.label,
-              categoryTitle: item.packageOption.category.title,
-              categorySlug: item.packageOption.category.slug,
-              accentColor: item.packageOption.category.accentColor,
+              label: item.shootType.label,
+              accentColor: serviceArea.accentColor,
               shootDate: defaultDate,
-              shootContent: item.packageOption.label,
+              shootContent: item.shootType.label,
               readyTime: DEFAULT_READY_TIME,
               location: request.city ?? "",
               agreedUnitPrice: item.unitPrice,
@@ -492,7 +491,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   }, [requestId, reservationId, prefillDateParam]);
 
   useEffect(() => {
-    if (categories.length === 0 || items.length === 0) {
+    if (serviceAreas.length === 0 || items.length === 0) {
       return;
     }
     if (reservationId) return;
@@ -500,30 +499,36 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     setPostShoot(
       syncPostShootWithItems(
         emptyPostShootSnapshot(),
-        items,
-        categories,
+        items.map((item) => ({
+          shootTypeId: item.shootTypeId,
+          serviceAreaTitle: item.serviceAreaTitle,
+          itemKey: item.itemKey,
+        })),
+        serviceAreas,
       ),
     );
-  }, [categories, requestId, reservationId, items]);
+  }, [serviceAreas, requestId, reservationId, items]);
 
   useEffect(() => {
-    if (loading || categories.length === 0 || items.length === 0) return;
+    if (loading || serviceAreas.length === 0 || items.length === 0) return;
 
     setPostShoot((prev) => {
-      const allKeysPresent = items.every((item) => prev.itemStageTags?.[item.itemKey]);
+      const allKeysPresent = items.every(
+        (item) => prev.itemStageTags?.[item.itemKey],
+      );
       if (allKeysPresent) return prev;
 
       return syncPostShootWithItems(
         prev,
         items.map((item) => ({
-          packageOptionId: item.packageOptionId,
-          categoryTitle: item.categoryTitle,
+          shootTypeId: item.shootTypeId,
+          serviceAreaTitle: item.serviceAreaTitle,
           itemKey: item.itemKey,
         })),
-        categories,
+        serviceAreas,
       );
     });
-  }, [loading, categories, itemKeysSignature, items]);
+  }, [loading, serviceAreas, itemKeysSignature, items]);
 
   useEffect(() => {
     if (loading || items.length === 0) return;
@@ -591,39 +596,30 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     });
   }, [items, reservationId]);
 
-  function findCategoryForOption(optionId: string) {
-    return categories.find((category) =>
-      category.options.some((option) => option.id === optionId),
-    );
-  }
+  function addItem(shootTypeId: string) {
+    const context = findShootTypeContext(serviceAreas, shootTypeId);
+    if (!context) return;
 
-  function addItem(optionId: string) {
-    const category = findCategoryForOption(optionId);
-    const option = category?.options.find((o) => o.id === optionId);
-    if (!category || !option) return;
-
-    const packageContent = category.content as PackageCategoryContent | undefined;
-
-    const outdoor = isOutdoorCategory(
-      category.slug,
-      packageContent ?? {},
-    );
+    const { serviceArea, package: pkg, shootType } = context;
+    const outdoor = isOutdoorScheduleType(serviceArea.scheduleType);
 
     const newItem: SelectedItem = {
       itemKey: nanoid(10),
-      packageOptionId: option.id,
-      categoryId: category.id,
+      shootTypeId: shootType.id,
+      packageId: pkg.id,
+      packageTitle: pkg.title,
+      serviceAreaId: serviceArea.id,
+      serviceAreaSlug: serviceArea.slug,
+      serviceAreaTitle: serviceArea.title,
       paymentType: "pesin",
-      unitPrice: option.cashPrice,
-      label: option.label,
-      categoryTitle: category.title,
-      categorySlug: category.slug,
-      accentColor: category.accentColor,
+      unitPrice: shootType.cashPrice,
+      label: shootType.label,
+      accentColor: serviceArea.accentColor,
       shootDate: defaultShootDate,
-      shootContent: option.label,
+      shootContent: shootType.label,
       readyTime: DEFAULT_READY_TIME,
       location: "",
-      agreedUnitPrice: option.cashPrice,
+      agreedUnitPrice: shootType.cashPrice,
       departureTime: outdoor ? OUTDOOR_DEFAULT_DEPARTURE_TIME : "",
       arrivalTime: outdoor ? OUTDOOR_DEFAULT_ARRIVAL_TIME : "",
       startTime: "",
@@ -716,14 +712,14 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       postShoot: normalizedPostShoot,
       notes: notes || undefined,
       items: items.map((item) => {
-        const outdoor = isOutdoorCategory(
-          item.categorySlug,
-          findCategoryForOption(item.packageOptionId)?.content ?? {},
+        const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+        const outdoor = isOutdoorScheduleType(
+          context?.serviceArea.scheduleType,
         );
         const workflowStageTags =
           normalizedPostShoot.itemStageTags?.[item.itemKey];
         return {
-          packageOptionId: item.packageOptionId,
+          shootTypeId: item.shootTypeId,
           itemKey: item.itemKey,
           ...(workflowStageTags ? { workflowStageTags } : {}),
           paymentType: item.paymentType,
@@ -927,37 +923,43 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             defaultValue=""
           >
             <option value="">Paket ekle...</option>
-            {categories.flatMap((category) =>
-              category.options.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {category.title} — {option.label}
-                </option>
-              )),
+            {serviceAreas.flatMap((serviceArea) =>
+              serviceArea.packages.flatMap((pkg) =>
+                pkg.shootTypes.map((shootType) => (
+                  <option key={shootType.id} value={shootType.id}>
+                    {serviceArea.title} › {pkg.title} — {shootType.label}
+                  </option>
+                )),
+              ),
             )}
           </select>
         </div>
 
         <div className="space-y-4">
           {items.map((item, index) => {
-            const category = findCategoryForOption(item.packageOptionId);
-            const outdoor = isOutdoorCategory(
-              item.categorySlug,
-              category?.content ?? {},
+            const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+            const outdoor = isOutdoorScheduleType(
+              context?.serviceArea.scheduleType,
             );
 
             return (
               <div
-                key={`${item.packageOptionId}-${index}`}
+                key={`${item.shootTypeId}-${index}`}
                 className="rounded-xl border border-white/10 p-4"
                 style={{ borderColor: `${item.accentColor}55` }}
               >
-                <div className="mb-4 flex items-center justify-between">
-                  <h3
-                    className="text-lg font-semibold"
-                    style={{ color: item.accentColor }}
-                  >
-                    {item.categoryTitle}
-                  </h3>
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3
+                      className="text-lg font-semibold"
+                      style={{ color: item.accentColor }}
+                    >
+                      {item.serviceAreaTitle}
+                    </h3>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {item.packageTitle} · {item.label}
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeItem(index)}
@@ -1021,13 +1023,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                       value={item.paymentType}
                       onChange={(e) => {
                         const paymentType = e.target.value as "pesin" | "taksitli";
-                        const option = category?.options.find(
-                          (o) => o.id === item.packageOptionId,
-                        );
+                        const shootType = context?.shootType;
+                        if (!shootType) return;
                         const unitPrice =
                           paymentType === "pesin"
-                            ? option!.cashPrice
-                            : option!.installmentPrice;
+                            ? shootType.cashPrice
+                            : shootType.installmentPrice;
                         updateItem(index, {
                           paymentType,
                           unitPrice,
@@ -1135,10 +1136,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             {items.map((item) => (
               <ReservationPackageStageTagsEditor
                 key={item.itemKey}
-                categoryTitle={item.categoryTitle}
-                optionLabel={item.label}
-                packageOptionId={item.packageOptionId}
-                categoryContent={findCategoryForOption(item.packageOptionId)?.content}
+                serviceAreaTitle={item.serviceAreaTitle}
+                packageTitle={item.packageTitle}
+                shootTypeLabel={item.label}
+                shootTypeId={item.shootTypeId}
+                serviceAreas={serviceAreas}
                 accentColor={item.accentColor}
                 stageTags={
                   postShoot.itemStageTags?.[item.itemKey] ??

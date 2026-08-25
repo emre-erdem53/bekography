@@ -33,7 +33,9 @@ export async function GET() {
         },
         orderBy: { shootDate: "asc" },
         include: {
-          packageOption: { include: { category: true } },
+          shootType: {
+            include: { package: { include: { serviceArea: true } } },
+          },
           reservation: true,
         },
       }),
@@ -48,7 +50,9 @@ export async function GET() {
         orderBy: { shootDate: "asc" },
         take: 5,
         include: {
-          packageOption: { include: { category: true } },
+          shootType: {
+            include: { package: { include: { serviceArea: true } } },
+          },
           reservation: true,
         },
       }),
@@ -62,7 +66,7 @@ export async function GET() {
         item.reservation.groomName,
       ),
       shootDate: item.shootDate,
-      packageTitle: item.packageOption.category.title,
+      packageTitle: `${item.shootType.package.serviceArea.title} · ${item.shootType.package.title}`,
     });
 
     return NextResponse.json({

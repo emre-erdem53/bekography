@@ -1,27 +1,33 @@
 "use client";
 
 import { Minus, Plus } from "lucide-react";
-import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
+import type {
+  PackageData,
+  ServiceAreaData,
+  ShootTypeData,
+} from "@/lib/package-types";
 import {
-  buildCartItemFromCategory,
+  buildCartItemFromShootType,
   useCartStore,
 } from "@/stores/cart-store";
 import { isCompanionOnlyAddBlocked } from "@/lib/cart-companion-rules";
 import { useCartUiStore } from "@/stores/cart-ui-store";
 
 type PackageCartToggleButtonProps = {
-  category: PackageCategoryData;
-  option: PackageOptionData;
+  serviceArea: ServiceAreaData;
+  pkg: PackageData;
+  shootType: ShootTypeData;
   variant?: "full" | "compact" | "icon";
 };
 
 export function PackageCartToggleButton({
-  category,
-  option,
+  serviceArea,
+  pkg,
+  shootType,
   variant = "full",
 }: PackageCartToggleButtonProps) {
   const inCart = useCartStore((state) =>
-    state.items.some((item) => item.packageOptionId === option.id),
+    state.items.some((item) => item.shootTypeId === shootType.id),
   );
   const cartItems = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
@@ -32,14 +38,14 @@ export function PackageCartToggleButton({
 
   function handleClick() {
     if (inCart) {
-      removeItem(option.id);
+      removeItem(shootType.id);
       return;
     }
-    if (isCompanionOnlyAddBlocked(cartItems, category.slug)) {
+    if (isCompanionOnlyAddBlocked(cartItems, serviceArea.isCompanionOnly)) {
       showCompanionWarning();
       return;
     }
-    addItem(buildCartItemFromCategory(category, option));
+    addItem(buildCartItemFromShootType(serviceArea, pkg, shootType));
   }
 
   if (variant === "icon") {
@@ -57,8 +63,8 @@ export function PackageCartToggleButton({
           inCart
             ? undefined
             : {
-                borderColor: `${category.accentColor}66`,
-                color: category.accentColor,
+                borderColor: `${serviceArea.accentColor}66`,
+                color: serviceArea.accentColor,
               }
         }
       >

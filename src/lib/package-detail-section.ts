@@ -1,7 +1,5 @@
-import type {
-  PackageCategoryContent,
-  PackageDetailSection,
-} from "@/lib/package-seed-data";
+import type { PackageDetailSection } from "@/lib/package-seed-data";
+import type { ShootTypeData } from "@/lib/package-types";
 
 export function parseDetailSectionTitle(title: string): {
   title: string;
@@ -51,51 +49,17 @@ export function normalizeDetailSections(
   return (sections ?? []).map(normalizeDetailSection);
 }
 
-/** Paket detay / İncele: option id ve etiket anahtarlarından en zengin listeyi seçer. */
-export function resolveDetailSectionsForOption(
-  content: Partial<PackageCategoryContent>,
-  packageOptionId: string,
-  optionLabel?: string,
+/** Çekim türünün İncele bölümleri — içerik artık kendi satırında. */
+export function getShootTypeDetailSections(
+  shootType: Pick<ShootTypeData, "content">,
 ): PackageDetailSection[] {
-  const byOption = content.detailSectionsByOption ?? {};
-  const trimmedLabel = optionLabel?.trim() ?? "";
-  const candidateKeys = [
-    packageOptionId,
-    trimmedLabel,
-    optionLabel ?? "",
-  ].filter(Boolean);
-
-  const lists: PackageDetailSection[][] = [];
-  for (const key of candidateKeys) {
-    if (byOption[key]?.length) {
-      lists.push(byOption[key]);
-    }
-  }
-
-  if (lists.length === 0) {
-    const lowerLabel = trimmedLabel.toLocaleLowerCase("tr");
-    for (const [key, sections] of Object.entries(byOption)) {
-      if (!sections.length) continue;
-      if (
-        key === packageOptionId ||
-        key.trim().toLocaleLowerCase("tr") === lowerLabel
-      ) {
-        lists.push(sections);
-      }
-    }
-  }
-
-  if (lists.length === 0) {
-    return normalizeDetailSections(content.detailSections).sort(
-      (a, b) => a.sortOrder - b.sortOrder,
-    );
-  }
-
-  const best = lists.reduce((longest, current) =>
-    current.length > longest.length ? current : longest,
-  );
-
-  return normalizeDetailSections(best).sort(
+  return normalizeDetailSections(shootType.content.detailSections).sort(
     (a, b) => a.sortOrder - b.sortOrder,
   );
+}
+
+export function isShootTypeInspectEnabled(
+  shootType: Pick<ShootTypeData, "content">,
+): boolean {
+  return shootType.content.inspectEnabled ?? true;
 }

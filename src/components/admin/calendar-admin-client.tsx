@@ -61,9 +61,10 @@ type ApiCalendarEvent = {
       startTime: string | null;
       endTime: string | null;
       isOutdoor: boolean;
-      packageOption: {
+      shootType: {
         label: string;
-        category: { title: string; slug: string; accentColor: string };
+        package: { title: string; slug: string };
+        serviceArea: { title: string; slug: string; accentColor: string };
       };
       reservation: {
         brideName: string;
@@ -102,7 +103,7 @@ function parseCalendarEvents(data: ApiCalendarEvent[]): CalendarReservationEvent
   return data.map((event) => {
     const item = event.resource.item;
     const reservation = item.reservation;
-    const category = item.packageOption.category;
+    const serviceArea = item.shootType.serviceArea;
     const coupleLabel = formatCoupleFirstNames(
       reservation.brideFirstName,
       reservation.brideName,
@@ -115,10 +116,10 @@ function parseCalendarEvents(data: ApiCalendarEvent[]): CalendarReservationEvent
       title: event.title,
       start: new Date(event.start),
       reservationId: event.resource.reservationId,
-      categoryTitle: category.title,
-      optionLabel: item.shootContent.trim() || item.packageOption.label,
+      categoryTitle: serviceArea.title,
+      optionLabel: item.shootContent.trim() || item.shootType.label,
       coupleLabel,
-      accentColor: category.accentColor || "#93f8b6",
+      accentColor: serviceArea.accentColor || "#93f8b6",
       startTime: item.isOutdoor
         ? item.departureTime?.trim() || OUTDOOR_DEFAULT_DEPARTURE_TIME
         : item.startTime?.trim() || INDOOR_DEFAULT_START,

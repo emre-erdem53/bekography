@@ -1,4 +1,4 @@
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type { ShootTypeData } from "@/lib/package-types";
 
 export const PACKAGE_OPTION_ICON_KEYS = [
   "Camera",
@@ -16,6 +16,23 @@ export const PACKAGE_OPTION_ICON_KEYS = [
 
 export type PackageOptionIconKey = (typeof PACKAGE_OPTION_ICON_KEYS)[number];
 
+/** Hizmet alanı "neler dahil" kartlarında kullanılabilecek ikonlar. */
+export const PACKAGE_SERVICE_ICON_KEYS = [
+  "Camera",
+  "Video",
+  "Compass",
+  "Download",
+  "Package",
+  "Gem",
+  "Sparkles",
+  "Leaf",
+  "Handshake",
+  "BadgeCheck",
+  "CalendarDays",
+  "Truck",
+  "UserRoundCheck",
+] as const;
+
 export function inferOptionIconKey(label: string): PackageOptionIconKey {
   const lower = label.toLowerCase();
 
@@ -31,14 +48,8 @@ export function inferOptionIconKey(label: string): PackageOptionIconKey {
   return "Package";
 }
 
-export function getOptionIconKey(
-  option: { id: string; label: string },
-  content?: PackageCategoryContent,
+export function getShootTypeIconKey(
+  shootType: Pick<ShootTypeData, "label" | "iconKey">,
 ): string {
-  const fromContent =
-    content?.optionIconKeys?.[option.id] ??
-    content?.optionIconKeys?.[option.label];
-
-  if (fromContent) return fromContent;
-  return inferOptionIconKey(option.label);
+  return shootType.iconKey || inferOptionIconKey(shootType.label);
 }

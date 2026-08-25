@@ -1,27 +1,37 @@
-import type { PackageCategoryData } from "@/lib/package-types";
 import type {
-  PackageCategoryContent,
   PackageDetailSection,
   PackageGalleryMedia,
   PackageServiceItem,
+  ServiceAreaContent,
+  ShootTypeContent,
 } from "@/lib/package-seed-data";
-import { normalizeDetailSections } from "@/lib/package-detail-section";
-import { getDetailSectionsForOption } from "@/lib/post-shoot-from-inspect";
-import { getOptionGalleryMedia, getOptionGalleryPreviewMedia } from "@/lib/package-media";
+import type { ScheduleType } from "@/lib/package-types";
+import {
+  getShootTypeDetailSections,
+  normalizeDetailSections,
+} from "@/lib/package-detail-section";
+import {
+  getShootTypeGalleryMedia,
+  getShootTypeGalleryPreviewMedia,
+} from "@/lib/package-media";
 
-export const PRODUCT_SNAPSHOT_VERSION = 2;
+export const PRODUCT_SNAPSHOT_VERSION = 3;
 
 export type ReservationProductSnapshot = {
-  packageOptionId: string;
-  categoryId: string;
-  categorySlug: string;
-  categoryTitle: string;
-  optionLabel: string;
+  shootTypeId: string;
+  shootTypeLabelRaw: string;
+  packageId: string;
+  packageTitle: string;
+  serviceAreaId: string;
+  serviceAreaSlug: string;
+  serviceAreaTitle: string;
+  scheduleType: ScheduleType;
   accentColor: string;
   cashPrice: number;
   installmentPrice: number;
   previewImageUrl: string | null;
   previewVideoUrl: string | null;
+  /** "Fotoğraf + Video" gibi normalize edilmiş kısa etiket. */
   shootTypeLabel: string;
   highlightTags: string[];
   detailSections: PackageDetailSection[];
@@ -32,11 +42,14 @@ export type ReservationProductSnapshot = {
 
 export function emptyProductSnapshot(): ReservationProductSnapshot {
   return {
-    packageOptionId: "",
-    categoryId: "",
-    categorySlug: "",
-    categoryTitle: "",
-    optionLabel: "",
+    shootTypeId: "",
+    shootTypeLabelRaw: "",
+    packageId: "",
+    packageTitle: "",
+    serviceAreaId: "",
+    serviceAreaSlug: "",
+    serviceAreaTitle: "",
+    scheduleType: "indoor",
     accentColor: "#ffffff",
     cashPrice: 0,
     installmentPrice: 0,
@@ -51,103 +64,76 @@ export function emptyProductSnapshot(): ReservationProductSnapshot {
   };
 }
 
-export function getShootTypeLabel(optionLabel: string): string {
-  const lower = optionLabel.toLowerCase();
+export function getShootTypeLabel(label: string): string {
+  const lower = label.toLowerCase();
   const hasPhoto = lower.includes("fotoğraf") || lower.includes("fotograf");
   const hasVideo = lower.includes("video") || lower.includes("film");
 
   if (hasPhoto && hasVideo) return "Fotoğraf + Video";
   if (hasVideo) return "Video";
   if (hasPhoto) return "Fotoğraf";
-  return optionLabel;
+  return label;
 }
 
-type PackageOptionWithCategory = {
+/** Prisma'dan `shootType.findMany({ include: { package: { include: { serviceArea: true } } } })` şekli. */
+export type ShootTypeWithParents = {
   id: string;
   label: string;
   cashPrice: number;
   installmentPrice: number;
-  category: {
+  tags: string[];
+  content: unknown;
+  package: {
     id: string;
-    slug: string;
     title: string;
-    accentColor: string;
-    content: unknown;
+    serviceArea: {
+      id: string;
+      slug: string;
+      title: string;
+      accentColor: string;
+      scheduleType: string;
+      content: unknown;
+    };
   };
 };
 
-function toCategoryData(
-  category: PackageOptionWithCategory["category"],
-  option: PackageOptionWithCategory,
-): PackageCategoryData {
-  return {
-    id: category.id,
-    slug: category.slug,
-    title: category.title,
-    accentColor: category.accentColor,
-    iconKey: "Camera",
-    highlight: false,
-    backgroundImageUrl: null,
-    heroImageUrl: null,
-    content: (category.content ?? {}) as PackageCategoryContent,
-    options: [
-      {
-        id: option.id,
-        label: option.label,
-        cashPrice: option.cashPrice,
-        installmentPrice: option.installmentPrice,
-      },
-    ],
-  };
-}
-
-function getSnapshotDetailSections(
-  content: PackageCategoryContent,
-  optionId: string,
-  optionLabel: string,
-): PackageDetailSection[] {
-  return getDetailSectionsForOption(content, optionId, optionLabel);
-}
-
-export function buildProductSnapshotFromOption(
-  option: PackageOptionWithCategory,
+export function buildProductSnapshotFromShootType(
+  shootType: ShootTypeWithParents,
 ): ReservationProductSnapshot {
-  const category = option.category;
-  const content = (category.content ?? {}) as PackageCategoryContent;
-  const categoryData = toCategoryData(category, option);
-  const preview = getOptionGalleryPreviewMedia(
-    categoryData,
-    option.id,
-    option.label,
-  );
-  const galleryMedia = getOptionGalleryMedia(categoryData, option.id, option.label);
-  const highlightTags =
-    content.highlightTagsByOption?.[option.id] ??
-    content.highlightTagsByOption?.[option.label] ??
-    content.highlightTags ??
-    [];
+  const pkg = shootType.package;
+  const serviceArea = pkg.serviceArea;
+  const shootTypeContent = (shootType.content ?? {}) as ShootTypeContent;
+  const serviceAreaContent = (serviceArea.content ?? {}) as ServiceAreaContent;
+  const shootTypeData = { content: shootTypeContent };
+
+  const preview = getShootTypeGalleryPreviewMedia(shootTypeData);
 
   return {
-    packageOptionId: option.id,
-    categoryId: category.id,
-    categorySlug: category.slug,
-    categoryTitle: category.title,
-    optionLabel: option.label,
-    accentColor: category.accentColor,
-    cashPrice: option.cashPrice,
-    installmentPrice: option.installmentPrice,
+    shootTypeId: shootType.id,
+    shootTypeLabelRaw: shootType.label,
+    packageId: pkg.id,
+    packageTitle: pkg.title,
+    serviceAreaId: serviceArea.id,
+    serviceAreaSlug: serviceArea.slug,
+    serviceAreaTitle: serviceArea.title,
+    scheduleType: serviceArea.scheduleType as ScheduleType,
+    accentColor: serviceArea.accentColor,
+    cashPrice: shootType.cashPrice,
+    installmentPrice: shootType.installmentPrice,
     previewImageUrl: preview?.type === "image" ? preview.url : null,
     previewVideoUrl: preview?.type === "video" ? preview.url : null,
-    shootTypeLabel: getShootTypeLabel(option.label),
-    highlightTags,
-    detailSections: getSnapshotDetailSections(content, option.id, option.label),
-    services: content.services ?? [],
-    galleryMedia,
+    shootTypeLabel: getShootTypeLabel(shootType.label),
+    highlightTags: shootType.tags,
+    detailSections: getShootTypeDetailSections(shootTypeData),
+    services: serviceAreaContent.services ?? [],
+    galleryMedia: getShootTypeGalleryMedia(shootTypeData),
     snapshotVersion: PRODUCT_SNAPSHOT_VERSION,
   };
 }
 
-function hasSnapshotDetailContent(snapshot: ReservationProductSnapshot): boolean {
+function hasSnapshotDetailContent(
+  snapshot: ReservationProductSnapshot,
+): boolean {
   return (
     snapshot.detailSections.length > 0 ||
     snapshot.services.length > 0 ||
@@ -159,7 +145,9 @@ export function snapshotNeedsDetailEnrichment(value: unknown): boolean {
   if (!value || typeof value !== "object") return true;
   const data = value as Record<string, unknown>;
   if (data.snapshotVersion !== PRODUCT_SNAPSHOT_VERSION) return true;
-  return !Array.isArray(data.detailSections) || !Array.isArray(data.galleryMedia);
+  return (
+    !Array.isArray(data.detailSections) || !Array.isArray(data.galleryMedia)
+  );
 }
 
 /** Satın alma anındaki alanları korur; eksik detay alanlarını kayıt anındaki tam snapshot ile tamamlar. */
@@ -167,7 +155,7 @@ export function mergeProductSnapshot(
   stored: ReservationProductSnapshot,
   fresh: ReservationProductSnapshot,
 ): ReservationProductSnapshot {
-  if (!stored.packageOptionId) return fresh;
+  if (!stored.shootTypeId) return fresh;
 
   const galleryMedia =
     stored.galleryMedia.length > 0
@@ -181,13 +169,21 @@ export function mergeProductSnapshot(
     cashPrice: stored.cashPrice || fresh.cashPrice,
     installmentPrice: stored.installmentPrice || fresh.installmentPrice,
     accentColor: stored.accentColor || fresh.accentColor,
-    categoryTitle: stored.categoryTitle || fresh.categoryTitle,
-    optionLabel: stored.optionLabel || fresh.optionLabel,
+    serviceAreaId: stored.serviceAreaId || fresh.serviceAreaId,
+    serviceAreaSlug: stored.serviceAreaSlug || fresh.serviceAreaSlug,
+    serviceAreaTitle: stored.serviceAreaTitle || fresh.serviceAreaTitle,
+    // v2 kayıtlarında paket seviyesi yok; canlı veriden doldurulur.
+    packageId: stored.packageId || fresh.packageId,
+    packageTitle: stored.packageTitle || fresh.packageTitle,
+    shootTypeLabelRaw: stored.shootTypeLabelRaw || fresh.shootTypeLabelRaw,
+    scheduleType: stored.scheduleType || fresh.scheduleType,
     previewImageUrl: stored.previewImageUrl ?? fresh.previewImageUrl,
     previewVideoUrl: stored.previewVideoUrl ?? fresh.previewVideoUrl,
     shootTypeLabel: stored.shootTypeLabel || fresh.shootTypeLabel,
     highlightTags:
-      stored.highlightTags.length > 0 ? stored.highlightTags : fresh.highlightTags,
+      stored.highlightTags.length > 0
+        ? stored.highlightTags
+        : fresh.highlightTags,
     detailSections:
       stored.detailSections.length > 0
         ? stored.detailSections
@@ -213,7 +209,7 @@ function buildGalleryFromPreview(
 
 export function resolveProductSnapshot(
   stored: ReservationProductSnapshot,
-  option?: PackageOptionWithCategory | null,
+  shootType?: ShootTypeWithParents | null,
   rawStored?: unknown,
 ): ReservationProductSnapshot {
   const withGallery =
@@ -221,10 +217,10 @@ export function resolveProductSnapshot(
       ? stored
       : { ...stored, galleryMedia: buildGalleryFromPreview(stored) };
 
-  if (!option) return withGallery;
+  if (!shootType) return withGallery;
 
-  const fresh = buildProductSnapshotFromOption(option);
-  if (!stored.packageOptionId) return fresh;
+  const fresh = buildProductSnapshotFromShootType(shootType);
+  if (!stored.shootTypeId) return fresh;
 
   if (rawStored !== undefined && !snapshotNeedsDetailEnrichment(rawStored)) {
     return withGallery;
@@ -237,22 +233,49 @@ export function resolveProductSnapshot(
   return mergeProductSnapshot(withGallery, fresh);
 }
 
-export function parseProductSnapshot(value: unknown): ReservationProductSnapshot {
+function readString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/**
+ * v3 ve v2 snapshot'larını okur. Geçmiş rezervasyonlar backfill edilmediği
+ * için v2 alan adları (`packageOptionId`, `category*`, `optionLabel`) v3
+ * karşılıklarına eşlenir; v2'de paket seviyesi olmadığından `packageTitle` boş
+ * kalır ve gerekirse canlı veriden tamamlanır.
+ */
+export function parseProductSnapshot(
+  value: unknown,
+): ReservationProductSnapshot {
   if (!value || typeof value !== "object") {
     return emptyProductSnapshot();
   }
 
-  const data = value as Partial<ReservationProductSnapshot>;
+  const data = value as Record<string, unknown>;
+
+  const shootTypeId =
+    readString(data.shootTypeId) || readString(data.packageOptionId);
+  const serviceAreaId =
+    readString(data.serviceAreaId) || readString(data.categoryId);
+  const serviceAreaSlug =
+    readString(data.serviceAreaSlug) || readString(data.categorySlug);
+  const serviceAreaTitle =
+    readString(data.serviceAreaTitle) || readString(data.categoryTitle);
+  const shootTypeLabelRaw =
+    readString(data.shootTypeLabelRaw) || readString(data.optionLabel);
+
+  const scheduleType =
+    data.scheduleType === "outdoor" ? "outdoor" : ("indoor" as ScheduleType);
+
   return {
-    packageOptionId:
-      typeof data.packageOptionId === "string" ? data.packageOptionId : "",
-    categoryId: typeof data.categoryId === "string" ? data.categoryId : "",
-    categorySlug: typeof data.categorySlug === "string" ? data.categorySlug : "",
-    categoryTitle:
-      typeof data.categoryTitle === "string" ? data.categoryTitle : "",
-    optionLabel: typeof data.optionLabel === "string" ? data.optionLabel : "",
-    accentColor:
-      typeof data.accentColor === "string" ? data.accentColor : "#ffffff",
+    shootTypeId,
+    shootTypeLabelRaw,
+    packageId: readString(data.packageId),
+    packageTitle: readString(data.packageTitle),
+    serviceAreaId,
+    serviceAreaSlug,
+    serviceAreaTitle,
+    scheduleType,
+    accentColor: readString(data.accentColor) || "#ffffff",
     cashPrice: typeof data.cashPrice === "number" ? data.cashPrice : 0,
     installmentPrice:
       typeof data.installmentPrice === "number" ? data.installmentPrice : 0,
@@ -261,9 +284,11 @@ export function parseProductSnapshot(value: unknown): ReservationProductSnapshot
     previewVideoUrl:
       typeof data.previewVideoUrl === "string" ? data.previewVideoUrl : null,
     shootTypeLabel:
-      typeof data.shootTypeLabel === "string" ? data.shootTypeLabel : "",
+      readString(data.shootTypeLabel) || getShootTypeLabel(shootTypeLabelRaw),
     highlightTags: Array.isArray(data.highlightTags)
-      ? data.highlightTags.filter((tag): tag is string => typeof tag === "string")
+      ? data.highlightTags.filter(
+          (tag): tag is string => typeof tag === "string",
+        )
       : [],
     detailSections: Array.isArray(data.detailSections)
       ? normalizeDetailSections(
@@ -290,16 +315,14 @@ export function parseProductSnapshot(value: unknown): ReservationProductSnapshot
         )
       : [],
     snapshotVersion:
-      typeof data.snapshotVersion === "number"
-        ? data.snapshotVersion
-        : 0,
+      typeof data.snapshotVersion === "number" ? data.snapshotVersion : 0,
   };
 }
 
 export function isProductSnapshotComplete(
   snapshot: ReservationProductSnapshot,
 ): boolean {
-  return Boolean(snapshot.packageOptionId && snapshot.categoryTitle);
+  return Boolean(snapshot.shootTypeId && snapshot.serviceAreaTitle);
 }
 
 export function isProductSnapshotDetailed(

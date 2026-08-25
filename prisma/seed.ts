@@ -1,119 +1,141 @@
 import { PrismaClient, Prisma } from "@prisma/client";
 import {
   defaultRequestFieldLabels,
-  enrichSeedCategoryContent,
-  seedPackageCategories,
-  type PackageCategoryContent,
+  seedServiceAreas,
+  type SeedServiceArea,
+  type ServiceAreaContent,
+  type ShootTypeContent,
 } from "../src/lib/package-seed-data";
+import { buildPackageInspectSections } from "../src/lib/package-inspect-templates";
 
 const prisma = new PrismaClient();
 
-function enrichContent(
-  category: (typeof seedPackageCategories)[number],
-): Prisma.InputJsonValue {
-  const scheduleType = category.content.scheduleType ?? "indoor";
-  const galleryImages = category.content.galleryImages ?? [];
-  const galleryMedia = galleryImages.map((image) => ({
-    url: image.url,
-    alt: image.alt,
-    type: "image" as const,
-  }));
-  const galleryMediaByOption = Object.fromEntries(
-    category.options.map((option) => [option.label, galleryMedia]),
-  );
+function jsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
 
-  return {
-    ...enrichSeedCategoryContent(
-      category.slug,
-      category.content,
-      category.options.map((option) => option.label),
-    ),
+function serviceAreaContent(area: SeedServiceArea): Prisma.InputJsonValue {
+  const content: ServiceAreaContent = {
+    services: area.content.services,
     requestFieldLabels:
-      category.content.requestFieldLabels ??
-      defaultRequestFieldLabels(category.title, scheduleType),
-    highlightTags: category.content.highlightTags ?? [],
-    galleryImages,
-    galleryMediaByOption:
-      category.content.galleryMediaByOption ?? galleryMediaByOption,
-    detailSections: category.content.detailSections ?? [],
-  } as Prisma.InputJsonValue;
+      area.content.requestFieldLabels ??
+      defaultRequestFieldLabels(area.title, area.scheduleType),
+  };
+  return jsonValue(content);
+}
+
+/** Yeni çekim türleri şablon Açıklama bölümleriyle gelir; mevcut içerik korunur. */
+function shootTypeContent(
+  area: SeedServiceArea,
+  label: string,
+): Prisma.InputJsonValue {
+  const content: ShootTypeContent = {
+    galleryMedia: [],
+    detailSections: buildPackageInspectSections({
+      slug: area.slug,
+      categoryTitle: area.title,
+      optionLabel: label,
+      scheduleType: area.scheduleType,
+    }),
+    inspectEnabled: true,
+  };
+  return jsonValue(content);
 }
 
 async function main() {
-  console.log("Seeding package categories...");
+  console.log("Seeding service areas, packages and shoot types...");
 
-  for (const category of seedPackageCategories) {
-    const existing = await prisma.packageCategory.findUnique({
-      where: { slug: category.slug },
-      include: { options: true },
-    });
-
-    const seedContent = enrichContent(category) as PackageCategoryContent;
-    const preservedGallery =
-      existing?.content &&
-      typeof existing.content === "object" &&
-      !Array.isArray(existing.content)
-        ? (existing.content as PackageCategoryContent).galleryMediaByOption
-        : undefined;
-
-    const content: Prisma.InputJsonValue =
-      preservedGallery &&
-      Object.values(preservedGallery).some(
-        (media) => Array.isArray(media) && media.length > 0,
-      )
-        ? {
-            ...seedContent,
-            galleryMediaByOption: preservedGallery,
-          }
-        : seedContent;
-
-    await prisma.packageCategory.upsert({
-      where: { slug: category.slug },
+  for (const area of seedServiceAreas) {
+    const serviceArea = await prisma.serviceArea.upsert({
+      where: { slug: area.slug },
       update: {
-        title: category.title,
-        accentColor: category.accentColor,
-        iconKey: category.iconKey,
-        highlight: category.highlight ?? false,
-        backgroundImageUrl: category.backgroundImage ?? null,
-        heroImageUrl: category.heroImage ?? null,
-        sortOrder: category.sortOrder,
-        content,
+        title: area.title,
+        accentColor: area.accentColor,
+        iconKey: area.iconKey,
+        highlight: area.highlight ?? false,
+        backgroundImageUrl: area.backgroundImage ?? null,
+        heroImageUrl: area.heroImage ?? null,
+        sortOrder: area.sortOrder,
+        scheduleType: area.scheduleType,
+        isCompanionOnly: area.isCompanionOnly ?? false,
+        tags: area.tags ?? [],
+        content: serviceAreaContent(area),
         isActive: true,
       },
       create: {
-        slug: category.slug,
-        title: category.title,
-        accentColor: category.accentColor,
-        iconKey: category.iconKey,
-        highlight: category.highlight ?? false,
-        backgroundImageUrl: category.backgroundImage ?? null,
-        heroImageUrl: category.heroImage ?? null,
-        sortOrder: category.sortOrder,
-        content,
+        slug: area.slug,
+        title: area.title,
+        accentColor: area.accentColor,
+        iconKey: area.iconKey,
+        highlight: area.highlight ?? false,
+        backgroundImageUrl: area.backgroundImage ?? null,
+        heroImageUrl: area.heroImage ?? null,
+        sortOrder: area.sortOrder,
+        scheduleType: area.scheduleType,
+        isCompanionOnly: area.isCompanionOnly ?? false,
+        tags: area.tags ?? [],
+        content: serviceAreaContent(area),
         isActive: true,
-        options: {
-          create: category.options.map((option, index) => ({
-            label: option.label,
-            cashPrice: option.cash,
-            installmentPrice: option.installment,
-            sortOrder: index,
-            isActive: true,
-          })),
-        },
       },
     });
 
-    if (existing && existing.options.length === 0) {
-      await prisma.packageOption.createMany({
-        data: category.options.map((option, index) => ({
-          categoryId: existing.id,
-          label: option.label,
-          cashPrice: option.cash,
-          installmentPrice: option.installment,
-          sortOrder: index,
+    for (const seedPackage of area.packages) {
+      const pkg = await prisma.package.upsert({
+        where: {
+          serviceAreaId_slug: {
+            serviceAreaId: serviceArea.id,
+            slug: seedPackage.slug,
+          },
+        },
+        update: {
+          title: seedPackage.title,
+          sortOrder: seedPackage.sortOrder,
+          tags: seedPackage.tags ?? [],
           isActive: true,
-        })),
+        },
+        create: {
+          serviceAreaId: serviceArea.id,
+          slug: seedPackage.slug,
+          title: seedPackage.title,
+          sortOrder: seedPackage.sortOrder,
+          tags: seedPackage.tags ?? [],
+          isActive: true,
+        },
+        include: { shootTypes: true },
       });
+
+      for (const [index, shootType] of seedPackage.shootTypes.entries()) {
+        const existing = pkg.shootTypes.find(
+          (row) => row.label === shootType.label,
+        );
+
+        if (existing) {
+          await prisma.shootType.update({
+            where: { id: existing.id },
+            data: {
+              cashPrice: shootType.cash,
+              installmentPrice: shootType.installment,
+              sortOrder: index,
+              tags: shootType.tags ?? existing.tags,
+              isActive: true,
+            },
+          });
+          continue;
+        }
+
+        await prisma.shootType.create({
+          data: {
+            packageId: pkg.id,
+            label: shootType.label,
+            cashPrice: shootType.cash,
+            installmentPrice: shootType.installment,
+            sortOrder: index,
+            tags: shootType.tags ?? [],
+            isActive: true,
+            content: shootTypeContent(area, shootType.label),
+          },
+        });
+      }
     }
   }
 

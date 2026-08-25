@@ -1,16 +1,22 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { PackageCategoryData } from "@/lib/package-types";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type {
+  PackageData,
+  ServiceAreaData,
+  ShootTypeData,
+} from "@/lib/package-types";
 import { defaultRequestFieldLabels } from "@/lib/package-seed-data";
-import { getOptionGalleryPreviewUrl } from "@/lib/package-media";
+import { getShootTypeGalleryPreviewUrl } from "@/lib/package-media";
 
 export type CartItem = {
-  packageOptionId: string;
-  categoryId: string;
-  categorySlug: string;
-  categoryTitle: string;
-  optionLabel: string;
+  shootTypeId: string;
+  shootTypeLabel: string;
+  packageId: string;
+  packageTitle: string;
+  serviceAreaId: string;
+  serviceAreaSlug: string;
+  serviceAreaTitle: string;
+  isCompanionOnly: boolean;
   cashPrice: number;
   installmentPrice: number;
   accentColor: string;
@@ -25,8 +31,8 @@ export type CartItemInput = Omit<CartItem, "selected"> & { selected?: boolean };
 type CartState = {
   items: CartItem[];
   addItem: (item: CartItemInput) => void;
-  removeItem: (packageOptionId: string) => void;
-  toggleSelected: (packageOptionId: string) => void;
+  removeItem: (shootTypeId: string) => void;
+  toggleSelected: (shootTypeId: string) => void;
   selectAll: (selected: boolean) => void;
   clearCart: () => void;
   getTotalCash: () => number;
@@ -34,28 +40,28 @@ type CartState = {
   getSelectedItems: () => CartItem[];
 };
 
-export function buildCartItemFromCategory(
-  category: PackageCategoryData,
-  option: PackageCategoryData["options"][number],
+export function buildCartItemFromShootType(
+  serviceArea: ServiceAreaData,
+  pkg: PackageData,
+  shootType: ShootTypeData,
 ): CartItemInput {
-  const content = category.content as PackageCategoryContent;
   const labels =
-    content.requestFieldLabels ??
-    defaultRequestFieldLabels(
-      category.title,
-      content.scheduleType ?? "indoor",
-    );
+    serviceArea.content.requestFieldLabels ??
+    defaultRequestFieldLabels(serviceArea.title, serviceArea.scheduleType);
 
   return {
-    packageOptionId: option.id,
-    categoryId: category.id,
-    categorySlug: category.slug,
-    categoryTitle: category.title,
-    optionLabel: option.label,
-    cashPrice: option.cashPrice,
-    installmentPrice: option.installmentPrice,
-    accentColor: category.accentColor,
-    imageUrl: getOptionGalleryPreviewUrl(category, option.id, option.label),
+    shootTypeId: shootType.id,
+    shootTypeLabel: shootType.label,
+    packageId: pkg.id,
+    packageTitle: pkg.title,
+    serviceAreaId: serviceArea.id,
+    serviceAreaSlug: serviceArea.slug,
+    serviceAreaTitle: serviceArea.title,
+    isCompanionOnly: serviceArea.isCompanionOnly,
+    cashPrice: shootType.cashPrice,
+    installmentPrice: shootType.installmentPrice,
+    accentColor: serviceArea.accentColor,
+    imageUrl: getShootTypeGalleryPreviewUrl(shootType),
     dateLabel: labels.dateLabel,
     cityLabel: labels.cityLabel,
   };
@@ -68,29 +74,28 @@ export const useCartStore = create<CartState>()(
       addItem: (item) =>
         set((state) => {
           const exists = state.items.some(
-            (existing) => existing.packageOptionId === item.packageOptionId,
+            (existing) => existing.shootTypeId === item.shootTypeId,
           );
           if (exists) return state;
-          const withoutSameCategory = state.items.filter(
-            (existing) => existing.categoryId !== item.categoryId,
+          // Bir hizmet alanından sepette yalnızca tek çekim türü tutulur.
+          const withoutSameServiceArea = state.items.filter(
+            (existing) => existing.serviceAreaId !== item.serviceAreaId,
           );
           return {
             items: [
-              ...withoutSameCategory,
+              ...withoutSameServiceArea,
               { ...item, selected: item.selected ?? true },
             ],
           };
         }),
-      removeItem: (packageOptionId) =>
+      removeItem: (shootTypeId) =>
         set((state) => ({
-          items: state.items.filter(
-            (item) => item.packageOptionId !== packageOptionId,
-          ),
+          items: state.items.filter((item) => item.shootTypeId !== shootTypeId),
         })),
-      toggleSelected: (packageOptionId) =>
+      toggleSelected: (shootTypeId) =>
         set((state) => ({
           items: state.items.map((item) =>
-            item.packageOptionId === packageOptionId
+            item.shootTypeId === shootTypeId
               ? { ...item, selected: !item.selected }
               : item,
           ),
@@ -111,7 +116,8 @@ export const useCartStore = create<CartState>()(
       getSelectedItems: () => get().items.filter((item) => item.selected),
     }),
     {
-      name: "bekography-cart-v3",
+      // v3 sepetleri farklı bir shape taşıdığı için key bump ile düşer.
+      name: "bekography-cart-v4",
       skipHydration: true,
     },
   ),

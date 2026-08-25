@@ -10,24 +10,25 @@ import { getPaymentTypeLabels } from "@/lib/site-settings";
 import { getSiteSettings } from "@/lib/site-settings-store";
 import { formatCoupleName } from "@/lib/reservation-utils";
 import {
-  isOutdoorCategory,
+  isOutdoorScheduleType,
   parsePostShootSnapshot,
   getItemWorkflowFlags,
   ensureItemWorkflows,
   reservationHasPrintingPackage,
 } from "@/lib/post-shoot";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type { ShootTypeContent } from "@/lib/package-seed-data";
+import type { ScheduleType } from "@/lib/package-types";
 import {
   packageHasPrintingStage,
-  resolveWorkflowStagesForOption,
-  type PackageWorkflowStageDefinition,
+  resolveWorkflowStages,
 } from "@/lib/package-workflow-stages";
 import {
-  buildProductSnapshotFromOption,
+  buildProductSnapshotFromShootType,
   getShootTypeLabel,
   parseProductSnapshot,
   resolveProductSnapshot,
   snapshotNeedsDetailEnrichment,
+  type ShootTypeWithParents,
 } from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
 import { buildTrackingWorkflowView } from "@/lib/tracking-workflow";
@@ -41,9 +42,13 @@ import { isReservationTrackingAccessible } from "@/lib/tracking-access";
 const reservationInclude = {
   items: {
     include: {
-      packageOption: {
+      shootType: {
         include: {
-          category: true,
+          package: {
+            include: {
+              serviceArea: true,
+            },
+          },
         },
       },
     },
@@ -57,29 +62,29 @@ type ReservationWithTracking = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
 }>;
 
-function resolveItemProductSnapshot(
-  item: {
-    productSnapshot: unknown;
-    packageOption: Parameters<typeof buildProductSnapshotFromOption>[0];
-  },
-) {
+function resolveItemProductSnapshot(item: {
+  productSnapshot: unknown;
+  shootType: ShootTypeWithParents;
+}) {
   return resolveProductSnapshot(
     parseProductSnapshot(item.productSnapshot),
-    item.packageOption,
+    item.shootType,
     item.productSnapshot,
   );
+}
+
+function shootTypeContentOf(
+  shootType: ShootTypeWithParents,
+): Pick<{ content: ShootTypeContent }, "content"> {
+  return { content: (shootType.content ?? {}) as ShootTypeContent };
 }
 
 function enrichPurchasedProductSnapshot(
   item: ReservationWithTracking["items"][number],
   snapshot: ReservationProductSnapshot,
 ): ReservationProductSnapshot {
-  const category = item.packageOption.category;
-  const categoryContent =
-    category.content && typeof category.content === "object"
-      ? (category.content as PackageCategoryContent)
-      : undefined;
-  const fresh = buildProductSnapshotFromOption(item.packageOption);
+  const serviceArea = item.shootType.package.serviceArea;
+  const fresh = buildProductSnapshotFromShootType(item.shootType);
 
   return {
     ...snapshot,
@@ -89,11 +94,11 @@ function enrichPurchasedProductSnapshot(
         : fresh.highlightTags,
     detailSections: resolveDetailSectionsForStageTags({
       detailSections: snapshot.detailSections,
-      categorySlug: snapshot.categorySlug || category.slug,
-      categoryTitle: snapshot.categoryTitle || category.title,
-      optionLabel: snapshot.optionLabel || item.packageOption.label,
-      packageOptionId: snapshot.packageOptionId || item.packageOption.id,
-      categoryContent,
+      serviceAreaSlug: snapshot.serviceAreaSlug || serviceArea.slug,
+      serviceAreaTitle: snapshot.serviceAreaTitle || serviceArea.title,
+      shootTypeLabel: snapshot.shootTypeLabelRaw || item.shootType.label,
+      scheduleType: serviceArea.scheduleType as ScheduleType,
+      shootType: shootTypeContentOf(item.shootType),
     }),
   };
 }
@@ -102,7 +107,7 @@ async function persistLegacyProductSnapshots(
   items: {
     id: string;
     productSnapshot: unknown;
-    packageOption: Parameters<typeof buildProductSnapshotFromOption>[0];
+    shootType: ShootTypeWithParents;
   }[],
 ) {
   await Promise.all(
@@ -157,19 +162,14 @@ function buildPayloadFromReservation(
     workflow: workflowFlags,
     reservationCreatedAt,
     hasPrinting: reservationHasPrintingPackage(
-      reservation.items.map((item) => {
-        const categoryContent =
-          item.packageOption.category.content &&
-          typeof item.packageOption.category.content === "object"
-            ? (item.packageOption.category.content as PackageCategoryContent)
-            : undefined;
-        return {
-          categorySlug: item.packageOption.category.slug,
-          categoryContent,
-          packageOptionId: item.packageOption.id,
-          optionLabel: item.packageOption.label,
-        };
-      }),
+      reservation.items.map((item) => ({
+        hasPrinting: packageHasPrintingStage(
+          resolveWorkflowStages(
+            shootTypeContentOf(item.shootType),
+            item.shootType.package.serviceArea.scheduleType as ScheduleType,
+          ),
+        ),
+      })),
     ),
   });
 
@@ -210,21 +210,15 @@ function buildPayloadFromReservation(
       paidAt: row.paidAt?.toISOString() ?? null,
     })),
     items: reservation.items.map((item) => {
-      const category = item.packageOption.category;
-      const content =
-        category.content && typeof category.content === "object"
-          ? (category.content as Record<string, unknown>)
-          : {};
-      const outdoor = isOutdoorCategory(category.slug, content);
+      const pkg = item.shootType.package;
+      const serviceArea = pkg.serviceArea;
+      const scheduleType = serviceArea.scheduleType as ScheduleType;
+      const outdoor = isOutdoorScheduleType(scheduleType);
       const snapshot = resolveItemProductSnapshot(item);
-      const categoryContent =
-        category.content && typeof category.content === "object"
-          ? (category.content as PackageCategoryContent)
-          : undefined;
-      const stageDefinitions = resolveWorkflowStagesForOption(
-        categoryContent,
-        item.packageOption.id,
-        item.packageOption.label,
+      const shootTypeForContent = shootTypeContentOf(item.shootType);
+      const stageDefinitions = resolveWorkflowStages(
+        shootTypeForContent,
+        scheduleType,
       );
       const hasPrinting = packageHasPrintingStage(stageDefinitions);
       const itemWorkflowFlags = getItemWorkflowFlags(postShoot, item.id);
@@ -236,28 +230,20 @@ function buildPayloadFromReservation(
         stageDefinitions,
         reservationCreatedAt,
       });
-      const categoryContentForTags = categoryContent;
       const workflowStageTags = buildWorkflowStageTags(
-        snapshot.detailSections ?? [],
         postShoot,
-        {
-          categorySlug: snapshot.categorySlug || category.slug,
-          categoryTitle: snapshot.categoryTitle || category.title,
-          optionLabel: snapshot.optionLabel || item.packageOption.label,
-          packageOptionId: snapshot.packageOptionId || item.packageOption.id,
-          categoryContent: categoryContentForTags,
-        },
+        shootTypeForContent,
         item.id,
       );
 
       return {
         id: item.id,
-        categoryTitle: snapshot.categoryTitle || category.title,
-        accentColor: snapshot.accentColor || category.accentColor,
-        optionLabel: snapshot.optionLabel || item.packageOption.label,
+        serviceAreaTitle: snapshot.serviceAreaTitle || serviceArea.title,
+        packageTitle: snapshot.packageTitle || pkg.title,
+        accentColor: snapshot.accentColor || serviceArea.accentColor,
+        optionLabel: snapshot.shootTypeLabelRaw || item.shootType.label,
         shootTypeLabel:
-          snapshot.shootTypeLabel ||
-          getShootTypeLabel(item.packageOption.label),
+          snapshot.shootTypeLabel || getShootTypeLabel(item.shootType.label),
         shootContent: item.shootContent,
         shootDate: item.shootDate.toISOString(),
         readyTime: item.readyTime,

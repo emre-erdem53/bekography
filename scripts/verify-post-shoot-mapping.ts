@@ -3,6 +3,8 @@ import {
   buildPostShootFromInspect,
   normalizePostShootSectionTitle,
 } from "../src/lib/post-shoot-from-inspect";
+import { serializeServiceAreas } from "../src/lib/packages";
+import { flattenShootTypes } from "../src/lib/shoot-type-context";
 
 const prisma = new PrismaClient();
 
@@ -26,42 +28,59 @@ async function main() {
     console.log(`${title} -> ${normalizePostShootSectionTitle(title) ?? "null"}`);
   }
 
-  const categories = await prisma.packageCategory.findMany({
-    include: { options: true },
+  const rows = await prisma.serviceArea.findMany({
+    orderBy: { sortOrder: "asc" },
+    include: {
+      packages: {
+        orderBy: { sortOrder: "asc" },
+        include: { shootTypes: { orderBy: { sortOrder: "asc" } } },
+      },
+    },
   });
-  const inspectCategories = categories.map((category) => ({
-    slug: category.slug,
-    title: category.title,
-    content: category.content as object,
-    options: category.options.map((option) => ({
-      id: option.id,
-      label: option.label,
-    })),
-  }));
+  const serviceAreas = serializeServiceAreas(rows);
+  const flattened = flattenShootTypes(serviceAreas);
 
-  const disCekim = categories.find((category) => category.slug === "dis-cekim");
-  const fotoOpt = disCekim?.options.find((option) => option.label === "Fotoğraf");
-  if (disCekim && fotoOpt) {
+  console.log(
+    `\n=== Hierarchy: ${serviceAreas.length} service areas, ${flattened.length} shoot types ===`,
+  );
+
+  const outdoor = flattened.find(
+    (entry) => entry.serviceArea.scheduleType === "outdoor",
+  );
+  if (outdoor) {
     const snapshot = buildPostShootFromInspect(
-      [{ packageOptionId: fotoOpt.id, categoryTitle: disCekim.title }],
-      inspectCategories,
+      [
+        {
+          shootTypeId: outdoor.shootType.id,
+          serviceAreaTitle: outdoor.serviceArea.title,
+        },
+      ],
+      serviceAreas,
     );
-    console.log("\n=== dis-cekim / Fotoğraf ===");
+    console.log(
+      `\n=== ${outdoor.serviceArea.title} / ${outdoor.package.title} / ${outdoor.shootType.label} (outdoor) ===`,
+    );
     console.log("digital:", snapshot.digital.pills.join(", "));
     console.log("editing:", snapshot.editing.pills.join(", "));
     console.log("printing:", snapshot.printing.pills.join(", "));
   }
 
-  const dugunSalon = categories.find((category) => category.slug === "dugun-salon");
-  const videoOpt = dugunSalon?.options.find(
-    (option) => option.label === "Video Film",
+  const indoor = flattened.find(
+    (entry) => entry.serviceArea.scheduleType === "indoor",
   );
-  if (dugunSalon && videoOpt) {
+  if (indoor) {
     const snapshot = buildPostShootFromInspect(
-      [{ packageOptionId: videoOpt.id, categoryTitle: dugunSalon.title }],
-      inspectCategories,
+      [
+        {
+          shootTypeId: indoor.shootType.id,
+          serviceAreaTitle: indoor.serviceArea.title,
+        },
+      ],
+      serviceAreas,
     );
-    console.log("\n=== dugun-salon / Video Film ===");
+    console.log(
+      `\n=== ${indoor.serviceArea.title} / ${indoor.package.title} / ${indoor.shootType.label} (indoor) ===`,
+    );
     console.log("digital:", snapshot.digital.pills.slice(0, 4).join(", "));
     console.log("editing:", snapshot.editing.pills.join(", "));
     console.log(
@@ -70,19 +89,37 @@ async function main() {
     );
   }
 
+  const missingSections = flattened.filter(
+    (entry) => (entry.shootType.content.detailSections ?? []).length === 0,
+  );
+  if (missingSections.length > 0) {
+    console.log("\n=== Shoot types without detail sections ===");
+    for (const entry of missingSections) {
+      console.log(
+        `- ${entry.serviceArea.slug} / ${entry.package.slug} / ${entry.shootType.label}`,
+      );
+    }
+  } else {
+    console.log("\nAll shoot types have detail sections.");
+  }
+
   const reservation = await prisma.reservation.findFirst({
     where: { deletedAt: null },
     include: {
-      items: { include: { packageOption: { include: { category: true } } } },
+      items: {
+        include: {
+          shootType: { include: { package: { include: { serviceArea: true } } } },
+        },
+      },
     },
   });
 
   if (reservation) {
     const items = reservation.items.map((item) => ({
-      packageOptionId: item.packageOptionId,
-      categoryTitle: item.packageOption.category.title,
+      shootTypeId: item.shootTypeId,
+      serviceAreaTitle: item.shootType.package.serviceArea.title,
     }));
-    const built = buildPostShootFromInspect(items, inspectCategories);
+    const built = buildPostShootFromInspect(items, serviceAreas);
     const stored = reservation.postShoot as {
       digital?: { pills?: string[]; description?: string };
       editing?: { pills?: string[]; description?: string };

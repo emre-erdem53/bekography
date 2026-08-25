@@ -51,7 +51,7 @@ function includesVideo(optionLabel: string): boolean {
 }
 
 function isOutdoor(ctx: PackageInspectContext): boolean {
-  return ctx.scheduleType === "outdoor" || ctx.slug === "dis-cekim";
+  return ctx.scheduleType === "outdoor";
 }
 
 function createSection(
@@ -427,11 +427,11 @@ const SALON_SLUGS = new Set([
   "soz-isteme",
 ]);
 
-/** Paket slug ve çekim türüne göre tam Açıklama bölümlerini üretir. */
+/** Hizmet alanı slug'ı ve çekim türüne göre tam Açıklama bölümlerini üretir. */
 export function buildPackageInspectSections(
   ctx: PackageInspectContext,
 ): PackageDetailSection[] {
-  if (ctx.slug === "dis-cekim" || isOutdoor(ctx)) {
+  if (isOutdoor(ctx)) {
     return buildOutdoorSections(ctx);
   }
   if (ctx.slug === "gelin-cikisi") {
@@ -461,58 +461,13 @@ export function hasRichInspectSections(sections: PackageDetailSection[]): boolea
   );
 }
 
-function pickBestExistingSections(
-  existingByOption: Record<string, PackageDetailSection[]>,
-  optionId: string,
-  optionLabel: string,
+/** Çekim türünde zengin içerik yoksa şablondan üretir. */
+export function ensureShootTypeInspectSections(
+  existing: PackageDetailSection[],
+  ctx: PackageInspectContext,
 ): PackageDetailSection[] {
-  const labelKey = optionLabel.trim();
-  const candidates = [
-    existingByOption[optionId],
-    labelKey ? existingByOption[labelKey] : undefined,
-  ].filter(
-    (sections): sections is PackageDetailSection[] =>
-      Array.isArray(sections) && sections.length > 0,
-  );
-
-  if (candidates.length === 0) return [];
-
-  return candidates
-    .reduce((best, current) => (current.length > best.length ? current : best))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-export function syncDetailSectionsByOptionForCategory(
-  slug: string,
-  title: string,
-  scheduleType: PackageInspectContext["scheduleType"],
-  options: Array<{ id: string; label: string }>,
-  existingByOption: Record<string, PackageDetailSection[]> = {},
-): Record<string, PackageDetailSection[]> {
-  const next: Record<string, PackageDetailSection[]> = { ...existingByOption };
-
-  for (const option of options) {
-    const existingForOption = pickBestExistingSections(
-      existingByOption,
-      option.id,
-      option.label,
-    );
-
-    const sections = hasRichInspectSections(existingForOption)
-      ? existingForOption
-      : buildPackageInspectSections({
-          slug,
-          categoryTitle: title,
-          optionLabel: option.label,
-          scheduleType,
-        });
-
-    next[option.id] = sections;
-    const labelKey = option.label.trim();
-    if (labelKey) {
-      next[labelKey] = sections;
-    }
+  if (hasRichInspectSections(existing)) {
+    return [...existing].sort((a, b) => a.sortOrder - b.sortOrder);
   }
-
-  return next;
+  return buildPackageInspectSections(ctx);
 }

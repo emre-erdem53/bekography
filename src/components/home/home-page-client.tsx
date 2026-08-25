@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { HomeExploreCarousel } from "@/components/home/home-explore-carousel";
 import { PackagesHero } from "@/components/packages/packages-hero";
-import type { PackageCategoryData } from "@/lib/package-types";
+import type { ServiceAreaData } from "@/lib/package-types";
 import type { ExploreMediaItem } from "@/lib/explore-media-types";
 
 type HomePageClientProps = {
   exploreItems: ExploreMediaItem[];
-  categories: PackageCategoryData[];
+  serviceAreas: ServiceAreaData[];
 };
 
 export function HomePageClient({
   exploreItems,
-  categories,
+  serviceAreas,
 }: HomePageClientProps) {
   const [exploreReady, setExploreReady] = useState(false);
 
@@ -27,7 +27,7 @@ export function HomePageClient({
         />
       </div>
       <PackagesHero
-        categories={categories}
+        serviceAreas={serviceAreas}
         variant="section"
         visible={exploreReady}
       />

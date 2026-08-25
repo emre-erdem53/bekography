@@ -4,13 +4,14 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
   ensureItemWorkflows,
-  itemHasPrintingStage,
   parsePostShootSnapshot,
   setItemWorkflowFlags,
 } from "@/lib/post-shoot";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type { ScheduleType } from "@/lib/package-types";
+import type { ShootTypeContent } from "@/lib/package-seed-data";
 import {
-  resolveWorkflowStagesForOption,
+  packageHasPrintingStage,
+  resolveWorkflowStages,
 } from "@/lib/package-workflow-stages";
 import {
   mergeWorkflowAction,
@@ -60,12 +61,13 @@ export async function POST(
         items: {
           select: {
             id: true,
-            packageOption: {
+            shootType: {
               select: {
                 id: true,
                 label: true,
-                category: {
-                  select: { slug: true, content: true },
+                content: true,
+                package: {
+                  select: { serviceArea: { select: { scheduleType: true } } },
                 },
               },
             },
@@ -97,23 +99,14 @@ export async function POST(
       reservation.items.map((entry) => entry.id),
     );
 
-    const categoryContent =
-      item.packageOption.category.content &&
-      typeof item.packageOption.category.content === "object"
-        ? (item.packageOption.category.content as PackageCategoryContent)
-        : undefined;
-    const stageDefinitions = resolveWorkflowStagesForOption(
-      categoryContent,
-      item.packageOption.id,
-      item.packageOption.label,
+    const scheduleType = item.shootType.package.serviceArea
+      .scheduleType as ScheduleType;
+    const stageDefinitions = resolveWorkflowStages(
+      { content: (item.shootType.content ?? {}) as ShootTypeContent },
+      scheduleType,
     );
     const validStageIds = new Set(stageDefinitions.map((def) => def.id));
-    const hasPrinting = itemHasPrintingStage(
-      item.packageOption.category.slug,
-      categoryContent,
-      item.packageOption.id,
-      item.packageOption.label,
-    );
+    const hasPrinting = packageHasPrintingStage(stageDefinitions);
 
     if (stageParsed.success && !validStageIds.has(stageParsed.data.stage)) {
       return NextResponse.json({ error: "Geçersiz aşama" }, { status: 400 });

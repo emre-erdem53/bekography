@@ -27,7 +27,7 @@ import {
 const reservationListInclude = {
   items: {
     include: {
-      packageOption: { include: { category: true } },
+      shootType: { include: { package: { include: { serviceArea: true } } } },
     },
     orderBy: { shootDate: "asc" as const },
   },
@@ -185,7 +185,7 @@ export async function POST(request: Request) {
       include: {
         items: {
           include: {
-            packageOption: { include: { category: true } },
+            shootType: { include: { package: { include: { serviceArea: true } } } },
           },
         },
         installments: { orderBy: { sortOrder: "asc" } },
@@ -195,7 +195,7 @@ export async function POST(request: Request) {
     const keyToId = new Map(
       data.items
         .map((item, index) => [
-          item.itemKey ?? `${item.packageOptionId}:${index}`,
+          item.itemKey ?? `${item.shootTypeId}:${index}`,
           reservation.items[index]?.id ?? "",
         ] as const)
         .filter(([, id]) => Boolean(id)),

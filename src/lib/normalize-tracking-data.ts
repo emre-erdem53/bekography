@@ -1,11 +1,10 @@
 import { RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import {
   getItemWorkflowFlags,
-  itemHasPrintingStage,
   parsePostShootSnapshot,
   ensureItemWorkflows,
-  reservationHasPrintingPackage,
 } from "@/lib/post-shoot";
+import { packageHasPrintingStage } from "@/lib/package-workflow-stages";
 import { emptyProductSnapshot, parseProductSnapshot } from "@/lib/reservation-product-snapshot";
 import type { TrackingData } from "@/lib/tracking-types";
 import {
@@ -36,11 +35,12 @@ export function normalizeTrackingData(
     const itemWorkflowFlags = itemId
       ? getItemWorkflowFlags(postShoot, itemId)
       : item.workflowFlags ?? emptyTrackingWorkflowFlags();
+    // Slug tahmini yerine snapshot'taki aşama tanımına bakılır.
     const hasPrinting =
       item.hasPrinting ??
-      itemHasPrintingStage(
-        item.productSnapshot?.categorySlug ?? "",
-      );
+      (item.stageDefinitions
+        ? packageHasPrintingStage(item.stageDefinitions)
+        : false);
     const workflow = buildTrackingWorkflowView({
       shootDate: new Date(itemShootDate),
       postShoot,
@@ -51,22 +51,17 @@ export function normalizeTrackingData(
     });
     const snapshot = item.productSnapshot ?? emptyProductSnapshot();
     const workflowStageTags = buildWorkflowStageTags(
-      snapshot.detailSections ?? [],
       postShoot,
-      {
-        categorySlug: snapshot.categorySlug,
-        categoryTitle: item.categoryTitle ?? snapshot.categoryTitle,
-        optionLabel: item.optionLabel ?? snapshot.optionLabel,
-        packageOptionId: snapshot.packageOptionId || undefined,
-      },
+      undefined,
       itemId,
     );
 
     return {
       id: itemId,
       shootTypeLabel: item.shootTypeLabel ?? item.optionLabel ?? "",
-      productSnapshot: item.productSnapshot ?? emptyProductSnapshot(),
-      categoryTitle: item.categoryTitle ?? "",
+      productSnapshot: snapshot,
+      serviceAreaTitle: item.serviceAreaTitle ?? snapshot.serviceAreaTitle,
+      packageTitle: item.packageTitle ?? snapshot.packageTitle,
       accentColor: item.accentColor ?? "#ffffff",
       optionLabel: item.optionLabel ?? "",
       shootContent: item.shootContent ?? "",
@@ -98,7 +93,7 @@ export function normalizeTrackingData(
         shootDate: new Date(shootDate),
         postShoot,
         workflow: workflowFlags,
-        hasPrinting: reservationHasPrintingPackage(items),
+        hasPrinting: items.some((item) => item.hasPrinting),
         reservationCreatedAt,
       });
 
