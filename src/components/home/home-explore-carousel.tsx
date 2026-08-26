@@ -511,13 +511,17 @@ export function HomeExploreCarousel({
       ? Math.max(0.35, 1 - dismissOffset / 420)
       : 1;
 
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
   const bootstrapMinHeightPx = useMemo(() => {
-    if (items.length === 0) return 0;
+    if (!hasMounted || items.length === 0) return 0;
     const target = getInitialExploreVisibleCount(items);
-    const viewportWidth =
-      typeof window !== "undefined" ? window.innerWidth : 440;
-    return exploreGridHeightPx(items, target, viewportWidth);
-  }, [items]);
+    return exploreGridHeightPx(items, target, window.innerWidth);
+  }, [hasMounted, items]);
 
   // ----------------------------- RENDER ----------------------------------
 

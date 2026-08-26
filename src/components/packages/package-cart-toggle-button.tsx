@@ -6,6 +6,7 @@ import type {
   ServiceAreaData,
   ShootTypeData,
 } from "@/lib/package-types";
+import { resolvePackageAccentColor } from "@/lib/package-types";
 import {
   buildCartItemFromShootType,
   useCartStore,
@@ -26,6 +27,7 @@ export function PackageCartToggleButton({
   shootType,
   variant = "full",
 }: PackageCartToggleButtonProps) {
+  const accentColor = resolvePackageAccentColor(pkg, serviceArea);
   const inCart = useCartStore((state) =>
     state.items.some((item) => item.shootTypeId === shootType.id),
   );
@@ -63,8 +65,8 @@ export function PackageCartToggleButton({
           inCart
             ? undefined
             : {
-                borderColor: `${serviceArea.accentColor}66`,
-                color: serviceArea.accentColor,
+                borderColor: `${accentColor}66`,
+                color: accentColor,
               }
         }
       >

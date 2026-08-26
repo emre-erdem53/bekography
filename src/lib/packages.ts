@@ -93,6 +93,9 @@ export function serializeServiceArea(
       id: pkg.id,
       slug: pkg.slug,
       title: pkg.title,
+      accentColor: pkg.accentColor
+        ? (normalizeHexColor(pkg.accentColor) ?? pkg.accentColor)
+        : null,
       iconKey: pkg.iconKey,
       tags: pkg.tags,
       shootTypes: pkg.shootTypes.map((shootType) => ({

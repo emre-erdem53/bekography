@@ -243,12 +243,6 @@ export function ReservationDetailClient({
             Süreç bilgisi yüklenemedi.
           </p>
         )}
-        <Link
-          href={`/admin/rezervasyonlar/${reservationId}/ozet`}
-          className="mt-4 inline-flex rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
-        >
-          Müşteri önizlemesini aç
-        </Link>
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">

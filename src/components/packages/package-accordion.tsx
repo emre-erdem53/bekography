@@ -7,6 +7,7 @@ import type {
   ServiceAreaData,
   ShootTypeData,
 } from "@/lib/package-types";
+import { resolvePackageAccentColor } from "@/lib/package-types";
 import { PackageIconDisplay } from "@/components/packages/package-icon";
 import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import { getShootTypeIconKey } from "@/lib/package-option-icon";
@@ -24,11 +25,13 @@ function ShootTypeRow({
   serviceArea,
   pkg,
   shootType,
+  accentColor,
   onSelect,
 }: {
   serviceArea: ServiceAreaData;
   pkg: PackageData;
   shootType: ShootTypeData;
+  accentColor: string;
   onSelect: () => void;
 }) {
   const { labels: paymentLabels } = usePaymentTypeCopy();
@@ -38,12 +41,12 @@ function ShootTypeRow({
     <div className="flex w-full items-center gap-2.5 rounded-xl border border-white/10 bg-[#0a0a0a] px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10"
-        style={{ backgroundColor: `${serviceArea.accentColor}18` }}
+        style={{ backgroundColor: `${accentColor}18` }}
       >
         <PackageIconDisplay
           iconKey={iconKey}
           className="h-4 w-4 sm:h-5 sm:w-5"
-          style={{ color: serviceArea.accentColor }}
+          style={{ color: accentColor }}
           imageSizes="20px"
         />
       </span>
@@ -51,7 +54,7 @@ function ShootTypeRow({
       <div className="min-w-0 flex-1">
         <p
           className="truncate text-sm font-semibold leading-tight sm:text-base"
-          style={{ color: serviceArea.accentColor }}
+          style={{ color: accentColor }}
         >
           {shootType.label}
         </p>
@@ -95,8 +98,8 @@ function ShootTypeRow({
             onClick={onSelect}
             className="rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors hover:bg-white/5 sm:px-3 sm:text-xs"
             style={{
-              borderColor: `${serviceArea.accentColor}66`,
-              color: serviceArea.accentColor,
+              borderColor: `${accentColor}66`,
+              color: accentColor,
             }}
           >
             İncele
@@ -123,6 +126,7 @@ export function PackageAccordion({
     <div className="mt-8 space-y-3">
       {serviceArea.packages.map((pkg) => {
         const isOpen = expandedPackageId === pkg.id;
+        const accentColor = resolvePackageAccentColor(pkg, serviceArea);
 
         return (
           <div
@@ -137,19 +141,19 @@ export function PackageAccordion({
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11"
-                style={{ backgroundColor: `${serviceArea.accentColor}22` }}
+                style={{ backgroundColor: `${accentColor}22` }}
               >
                 <PackageIconDisplay
                   iconKey={pkg.iconKey || serviceArea.iconKey}
                   className="h-5 w-5 sm:h-6 sm:w-6"
-                  style={{ color: serviceArea.accentColor }}
+                  style={{ color: accentColor }}
                   imageSizes="24px"
                 />
               </span>
               <span className="min-w-0 flex-1">
                 <span
                   className="block text-xl font-semibold leading-tight sm:text-2xl md:text-3xl"
-                  style={{ color: serviceArea.accentColor }}
+                  style={{ color: accentColor }}
                 >
                   {pkg.title}
                 </span>
@@ -189,6 +193,7 @@ export function PackageAccordion({
                         serviceArea={serviceArea}
                         pkg={pkg}
                         shootType={shootType}
+                        accentColor={accentColor}
                         onSelect={() => onSelectShootType(pkg, shootType)}
                       />
                     ))}

@@ -144,6 +144,7 @@ export async function PATCH(
           ...(data.serviceAreaId ? { serviceAreaId: data.serviceAreaId } : {}),
           title: data.title,
           ...(data.slug ? { slug: data.slug } : {}),
+          accentColor: data.accentColor,
           iconKey: data.iconKey,
           sortOrder: data.sortOrder,
           isActive: data.isActive,

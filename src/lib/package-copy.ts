@@ -18,6 +18,7 @@ export type PackageCopySource = {
   serviceAreaId: string;
   title: string;
   slug: string;
+  accentColor: string | null;
   iconKey: string | null;
   sortOrder: number;
   tags: string[];
@@ -41,6 +42,7 @@ export function applyPackageCopyTransform(source: PackageCopySource) {
     serviceAreaId: source.serviceAreaId,
     title: buildCopyTitle(source.title),
     slug: buildCopySlug(source.title),
+    accentColor: source.accentColor,
     iconKey: source.iconKey,
     sortOrder: source.sortOrder,
     isActive: false,

@@ -60,7 +60,7 @@ export function buildCartItemFromShootType(
     isCompanionOnly: serviceArea.isCompanionOnly,
     cashPrice: shootType.cashPrice,
     installmentPrice: shootType.installmentPrice,
-    accentColor: serviceArea.accentColor,
+    accentColor: pkg.accentColor || serviceArea.accentColor,
     imageUrl: getShootTypeGalleryPreviewUrl(shootType),
     dateLabel: labels.dateLabel,
     cityLabel: labels.cityLabel,

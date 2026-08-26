@@ -24,9 +24,14 @@ import {
 import { normalizeDetailSections } from "@/lib/package-detail-section";
 import type { ScheduleType } from "@/lib/package-types";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
+import { HexColorInput } from "@/components/admin/hex-color-input";
 import { BlobMediaPickerModal } from "@/components/admin/blob-media-picker-modal";
-import { PackageIconDisplay } from "@/components/packages/package-icon";
+import {
+  isCustomPackageIcon,
+  PackageIconDisplay,
+} from "@/components/packages/package-icon";
 import { packageMediaUrl } from "@/lib/package-media";
+import { normalizeHexColor } from "@/lib/color-utils";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import {
   inferOptionIconKey,
@@ -51,6 +56,7 @@ type ServiceAreaOption = {
   id: string;
   title: string;
   slug: string;
+  accentColor: string;
   scheduleType: ScheduleType;
   isActive: boolean;
 };
@@ -60,6 +66,7 @@ type PackageFormEntry = {
   key: string;
   title: string;
   slug: string;
+  accentColor: string;
   iconKey: string;
   sortOrder: number;
   isActive: boolean;
@@ -82,6 +89,7 @@ type ApiPackage = {
   id: string;
   title: string;
   slug: string;
+  accentColor: string | null;
   iconKey: string | null;
   sortOrder: number;
   isActive: boolean;
@@ -113,11 +121,12 @@ function emptyShootType(): ShootTypeForm {
   };
 }
 
-function emptyPackage(): PackageFormEntry {
+function emptyPackage(accentColor = "#ffffff"): PackageFormEntry {
   return {
     key: nextPackageKey(),
     title: "",
     slug: "",
+    accentColor,
     iconKey: "",
     sortOrder: 0,
     isActive: true,
@@ -126,12 +135,19 @@ function emptyPackage(): PackageFormEntry {
   };
 }
 
-function mapApiPackage(pkg: ApiPackage): PackageFormEntry {
+function mapApiPackage(
+  pkg: ApiPackage,
+  fallbackAccentColor = "#ffffff",
+): PackageFormEntry {
   return {
     id: pkg.id,
     key: pkg.id,
     title: pkg.title,
     slug: pkg.slug,
+    accentColor:
+      normalizeHexColor(pkg.accentColor ?? "") ??
+      pkg.accentColor ??
+      fallbackAccentColor,
     iconKey: pkg.iconKey ?? "",
     sortOrder: pkg.sortOrder,
     isActive: pkg.isActive,
@@ -229,6 +245,10 @@ export function PackageForm({
             id: area.id,
             title: area.title,
             slug: area.slug,
+            accentColor:
+              normalizeHexColor(area.accentColor) ??
+              area.accentColor ??
+              "#ffffff",
             scheduleType: area.scheduleType ?? "indoor",
             isActive: area.isActive,
           })),
@@ -261,6 +281,7 @@ export function PackageForm({
               serviceAreaId: areaId,
               title: data.title,
               slug: data.slug,
+              accentColor: data.accentColor ?? null,
               iconKey: data.iconKey ?? null,
               sortOrder: data.sortOrder,
               tags: data.tags ?? [],
@@ -280,6 +301,10 @@ export function PackageForm({
               key: nextPackageKey(),
               title: copied.title,
               slug: copied.slug,
+              accentColor:
+                normalizeHexColor(copied.accentColor ?? "") ??
+                copied.accentColor ??
+                "#ffffff",
               iconKey: copied.iconKey ?? "",
               sortOrder: copied.sortOrder,
               isActive: copied.isActive,
@@ -314,14 +339,24 @@ export function PackageForm({
           return;
         }
 
-        const loaded = ((areaData.packages ?? []) as ApiPackage[]).map(
-          mapApiPackage,
+        const areaAccent =
+          normalizeHexColor(areaData.accentColor) ??
+          areaData.accentColor ??
+          "#ffffff";
+        const loaded = ((areaData.packages ?? []) as ApiPackage[]).map((pkg) =>
+          mapApiPackage(pkg, areaAccent),
         );
         const nextPackages = copiedPackage
-          ? [...loaded, copiedPackage]
+          ? [
+              ...loaded,
+              {
+                ...copiedPackage,
+                accentColor: copiedPackage.accentColor || areaAccent,
+              },
+            ]
           : loaded.length > 0
             ? loaded
-            : [emptyPackage()];
+            : [emptyPackage(areaAccent)];
 
         if (cancelled) return;
         setServiceAreaId(areaId);
@@ -367,8 +402,12 @@ export function PackageForm({
         setError(data.error);
         return;
       }
-      const loaded = ((data.packages ?? []) as ApiPackage[]).map(mapApiPackage);
-      setPackages(loaded.length > 0 ? loaded : [emptyPackage()]);
+      const areaAccent =
+        normalizeHexColor(data.accentColor) ?? data.accentColor ?? "#ffffff";
+      const loaded = ((data.packages ?? []) as ApiPackage[]).map((pkg) =>
+        mapApiPackage(pkg, areaAccent),
+      );
+      setPackages(loaded.length > 0 ? loaded : [emptyPackage(areaAccent)]);
       setExpandedPackages({});
       setExpandedShootTypes({});
     } catch {
@@ -552,11 +591,23 @@ export function PackageForm({
       return;
     }
 
+    const invalidAccent = packages.find(
+      (pkg) => !normalizeHexColor(pkg.accentColor),
+    );
+    if (invalidAccent) {
+      setError(
+        `"${invalidAccent.title.trim() || "Paket"}" için geçerli bir accent renk girin (örn. #ff9a5e).`,
+      );
+      setSaving(false);
+      return;
+    }
+
     const payload = {
       packages: packages.map((pkg, index) => ({
         ...(pkg.id ? { id: pkg.id } : {}),
         title: pkg.title.trim(),
         ...(pkg.slug.trim() ? { slug: pkg.slug.trim() } : {}),
+        accentColor: normalizeHexColor(pkg.accentColor),
         iconKey: pkg.iconKey || null,
         sortOrder: pkg.sortOrder || index,
         isActive: pkg.isActive,
@@ -673,7 +724,9 @@ export function PackageForm({
             <button
               type="button"
               onClick={() => {
-                const next = emptyPackage();
+                const next = emptyPackage(
+                  selectedServiceArea?.accentColor ?? "#ffffff",
+                );
                 setPackages((prev) => [...prev, next]);
                 setExpandedPackages((prev) => ({ ...prev, [next.key]: true }));
               }}
@@ -752,29 +805,72 @@ export function PackageForm({
               className={inputClass}
             />
           </Field>
-          <Field label="Paket İkonu">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5">
+          <Field label="Accent Renk">
+            <HexColorInput
+              value={pkg.accentColor}
+              onChange={(value) =>
+                updatePackage(pkg.key, { accentColor: value })
+              }
+            />
+          </Field>
+          <Field label="Paket İkonu (SVG)">
+            <p className="mb-2 text-xs leading-relaxed text-zinc-500">
+              Kare oranlı, tek renkli veya siyah SVG yükleyin. İkon rengi
+              accent renginden gelir; SVG içine sabit renk kodu yazmayın.
+            </p>
+            {pkg.iconKey ? (
+              <div className="mb-3 flex min-w-0 items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-3">
                 <PackageIconDisplay
-                  iconKey={pkg.iconKey || "Package"}
-                  className="h-5 w-5 text-white"
+                  iconKey={pkg.iconKey}
+                  className="h-6 w-6 shrink-0"
+                  style={{ color: pkg.accentColor }}
+                  imageSizes="24px"
                 />
-              </span>
-              <select
-                value={pkg.iconKey}
-                onChange={(e) =>
-                  updatePackage(pkg.key, { iconKey: e.target.value })
+                <span className="min-w-0 flex-1 break-all text-xs text-zinc-400">
+                  {isCustomPackageIcon(pkg.iconKey)
+                    ? pkg.iconKey
+                    : `Sistem ikonu: ${pkg.iconKey}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => updatePackage(pkg.key, { iconKey: "" })}
+                  className="shrink-0 text-xs text-zinc-500 hover:text-white"
+                >
+                  Kaldır
+                </button>
+              </div>
+            ) : (
+              <p className="mb-3 text-xs text-zinc-500">
+                İkon yoksa hizmet alanının ikonu kullanılır.
+              </p>
+            )}
+            <AdminFileUpload
+              accept=".svg,image/svg+xml"
+              label="SVG İkon Yükle"
+              fileLabel={pkg.iconKey ? "İkonu Değiştir" : undefined}
+              hint="Yalnızca .svg dosyaları kabul edilir."
+              onFileSelect={async (file) => {
+                const isSvg =
+                  file.type === "image/svg+xml" ||
+                  file.name.toLowerCase().endsWith(".svg");
+                if (!isSvg) {
+                  setError("Paket ikonu yalnızca SVG formatında olabilir");
+                  return;
                 }
-                className={`${inputClass} min-w-0 flex-1`}
-              >
-                <option value="">İkon yok</option>
-                {PACKAGE_OPTION_ICON_KEYS.map((icon) => (
-                  <option key={icon} value={icon}>
-                    {icon}
-                  </option>
-                ))}
-              </select>
-            </div>
+                const formData = new FormData();
+                formData.append("file", file);
+                const response = await fetch("/api/upload", {
+                  method: "POST",
+                  body: formData,
+                });
+                if (!response.ok) {
+                  setError("Dosya yüklenemedi");
+                  return;
+                }
+                const data = await response.json();
+                updatePackage(pkg.key, { iconKey: data.url as string });
+              }}
+            />
           </Field>
           <Field label="Sıra">
             <input

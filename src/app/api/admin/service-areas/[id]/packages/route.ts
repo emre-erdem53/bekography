@@ -201,6 +201,7 @@ export async function PUT(
         const packageData = {
           title: pkg.title,
           slug: pkg.slug,
+          accentColor: pkg.accentColor ?? null,
           iconKey: pkg.iconKey ?? null,
           sortOrder: pkg.sortOrder ?? packageIndex,
           isActive: pkg.isActive ?? true,

@@ -19,10 +19,19 @@ export type PackageData = {
   id: string;
   slug: string;
   title: string;
+  accentColor: string | null;
   iconKey: string | null;
   tags: string[];
   shootTypes: ShootTypeData[];
 };
+
+/** Paket rengi yoksa hizmet alanı accent rengini kullanır. */
+export function resolvePackageAccentColor(
+  pkg: Pick<PackageData, "accentColor">,
+  serviceArea: Pick<ServiceAreaData, "accentColor">,
+) {
+  return pkg.accentColor || serviceArea.accentColor;
+}
 
 export type ServiceAreaData = {
   id: string;

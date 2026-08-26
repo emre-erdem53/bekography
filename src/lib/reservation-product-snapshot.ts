@@ -86,6 +86,7 @@ export type ShootTypeWithParents = {
   package: {
     id: string;
     title: string;
+    accentColor?: string | null;
     serviceArea: {
       id: string;
       slug: string;
@@ -117,7 +118,7 @@ export function buildProductSnapshotFromShootType(
     serviceAreaSlug: serviceArea.slug,
     serviceAreaTitle: serviceArea.title,
     scheduleType: serviceArea.scheduleType as ScheduleType,
-    accentColor: serviceArea.accentColor,
+    accentColor: pkg.accentColor || serviceArea.accentColor,
     cashPrice: shootType.cashPrice,
     installmentPrice: shootType.installmentPrice,
     previewImageUrl: preview?.type === "image" ? preview.url : null,

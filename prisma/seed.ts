@@ -89,6 +89,7 @@ async function main() {
         },
         update: {
           title: seedPackage.title,
+          accentColor: area.accentColor,
           sortOrder: seedPackage.sortOrder,
           tags: seedPackage.tags ?? [],
           isActive: true,
@@ -97,6 +98,7 @@ async function main() {
           serviceAreaId: serviceArea.id,
           slug: seedPackage.slug,
           title: seedPackage.title,
+          accentColor: area.accentColor,
           sortOrder: seedPackage.sortOrder,
           tags: seedPackage.tags ?? [],
           isActive: true,

@@ -122,10 +122,62 @@ const defaultServices = (
   },
 ];
 
-/** Varsayılan paket adı: her hizmet alanı en az bir paketle gelmeli. */
-const standardPackage = (shootTypes: SeedShootType[]): SeedPackage[] => [
-  { slug: "standart", title: "Standart", sortOrder: 0, shootTypes },
+/** Her hizmet alanında 3 paket; her pakette Fotoğraf + Fotoğraf/Video. */
+const photoAndVideoShootTypes = (
+  photoCash: number,
+  photoInstallment: number,
+  comboCash: number,
+  comboInstallment: number,
+): SeedShootType[] => [
+  { label: "Fotoğraf", cash: photoCash, installment: photoInstallment },
+  {
+    label: "Fotoğraf + Video",
+    cash: comboCash,
+    installment: comboInstallment,
+  },
 ];
+
+const primePackages = (
+  photoCash: number,
+  photoInstallment: number,
+  comboCash: number,
+  comboInstallment: number,
+): SeedPackage[] => {
+  const shootTypes = photoAndVideoShootTypes(
+    photoCash,
+    photoInstallment,
+    comboCash,
+    comboInstallment,
+  );
+  return [
+    {
+      slug: "sade-prime",
+      title: "Sade Prime",
+      sortOrder: 0,
+      shootTypes: shootTypes.map((shootType) => ({ ...shootType })),
+    },
+    {
+      slug: "super-prime",
+      title: "Süper Prime",
+      sortOrder: 1,
+      shootTypes: shootTypes.map((shootType) => ({
+        ...shootType,
+        cash: Math.round(shootType.cash * 1.2),
+        installment: Math.round(shootType.installment * 1.2),
+      })),
+    },
+    {
+      slug: "ultra-prime",
+      title: "Ultra Prime",
+      sortOrder: 2,
+      shootTypes: shootTypes.map((shootType) => ({
+        ...shootType,
+        cash: Math.round(shootType.cash * 1.45),
+        installment: Math.round(shootType.installment * 1.45),
+      })),
+    },
+  ];
+};
 
 export const seedServiceAreas: SeedServiceArea[] = [
   {
@@ -161,10 +213,7 @@ export const seedServiceAreas: SeedServiceArea[] = [
         },
       ],
     },
-    packages: standardPackage([
-      { label: "Fotoğraf", cash: 26000, installment: 32000 },
-      { label: "Fotoğraf + Video Film", cash: 37000, installment: 45000 },
-    ]),
+    packages: primePackages(26000, 32000, 37000, 45000),
   },
   {
     slug: "dugun",
@@ -176,10 +225,7 @@ export const seedServiceAreas: SeedServiceArea[] = [
     sortOrder: 1,
     scheduleType: "indoor",
     content: { services: defaultServices() },
-    packages: standardPackage([
-      { label: "Video Film", cash: 26000, installment: 32000 },
-      { label: "Fotoğraf + Video Film", cash: 35000, installment: 43000 },
-    ]),
+    packages: primePackages(26000, 32000, 35000, 43000),
   },
   {
     slug: "gelin-cikisi",
@@ -192,10 +238,7 @@ export const seedServiceAreas: SeedServiceArea[] = [
     scheduleType: "indoor",
     isCompanionOnly: true,
     content: { services: defaultServices() },
-    packages: standardPackage([
-      { label: "Video Film", cash: 20000, installment: 26000 },
-      { label: "Fotoğraf + Video Film", cash: 27000, installment: 35000 },
-    ]),
+    packages: primePackages(20000, 26000, 27000, 35000),
   },
   {
     slug: "kuafor",
@@ -230,10 +273,7 @@ export const seedServiceAreas: SeedServiceArea[] = [
         },
       ],
     },
-    packages: standardPackage([
-      { label: "Video Film", cash: 17000, installment: 23000 },
-      { label: "Fotoğraf + Video Film", cash: 25000, installment: 32000 },
-    ]),
+    packages: primePackages(17000, 23000, 25000, 32000),
   },
   {
     slug: "full-hikaye",
@@ -269,9 +309,7 @@ export const seedServiceAreas: SeedServiceArea[] = [
         },
       ],
     },
-    packages: standardPackage([
-      { label: "Full Hikaye", cash: 95000, installment: 135000 },
-    ]),
+    packages: primePackages(75000, 95000, 95000, 135000),
   },
   {
     slug: "soz-isteme",
@@ -283,10 +321,7 @@ export const seedServiceAreas: SeedServiceArea[] = [
     sortOrder: 5,
     scheduleType: "indoor",
     content: { services: defaultServices() },
-    packages: standardPackage([
-      { label: "Video Film", cash: 24000, installment: 29000 },
-      { label: "Fotoğraf + Video Film", cash: 32000, installment: 39000 },
-    ]),
+    packages: primePackages(24000, 29000, 32000, 39000),
   },
   {
     slug: "kina",
@@ -298,10 +333,7 @@ export const seedServiceAreas: SeedServiceArea[] = [
     sortOrder: 6,
     scheduleType: "indoor",
     content: { services: defaultServices(["Ağıt", "Eğlence"]) },
-    packages: standardPackage([
-      { label: "Video Film", cash: 26000, installment: 32000 },
-      { label: "Fotoğraf + Video Film", cash: 35000, installment: 43000 },
-    ]),
+    packages: primePackages(26000, 32000, 35000, 43000),
   },
   {
     slug: "nisan",
@@ -313,9 +345,6 @@ export const seedServiceAreas: SeedServiceArea[] = [
     sortOrder: 7,
     scheduleType: "indoor",
     content: { services: defaultServices() },
-    packages: standardPackage([
-      { label: "Video Film", cash: 25000, installment: 35000 },
-      { label: "Fotoğraf + Video Film", cash: 34000, installment: 41000 },
-    ]),
+    packages: primePackages(25000, 35000, 34000, 41000),
   },
 ];

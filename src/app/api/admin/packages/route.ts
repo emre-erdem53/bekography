@@ -65,6 +65,7 @@ export async function POST(request: Request) {
         serviceAreaId: serviceArea.id,
         title: data.title,
         slug,
+        accentColor: data.accentColor ?? null,
         iconKey: data.iconKey ?? null,
         sortOrder: data.sortOrder ?? 0,
         isActive: data.isActive ?? true,

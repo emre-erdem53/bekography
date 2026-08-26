@@ -74,8 +74,9 @@ const STYLE_PROPS = [
   "object-position",
   "vertical-align",
   "list-style",
-  "transform",
 ] as const;
+
+const PDF_PAGE_MARGIN_MM = 8;
 
 function inlineComputedStyles(source: Element, clone: Element) {
   if (!(source instanceof HTMLElement) || !(clone instanceof HTMLElement)) {
@@ -112,8 +113,26 @@ function stripStylesheets(clonedDocument: Document) {
     .forEach((node) => node.remove());
 }
 
+function resetCloneLayout(clonedElement: HTMLElement, width: number) {
+  // mx-auto / centered parents leave a computed margin-left that html2canvas
+  // treats as an extra offset, shifting the whole page to the right.
+  clonedElement.style.setProperty("margin", "0", "important");
+  clonedElement.style.setProperty("margin-left", "0", "important");
+  clonedElement.style.setProperty("margin-right", "0", "important");
+  clonedElement.style.setProperty("transform", "none", "important");
+  clonedElement.style.setProperty("position", "static", "important");
+  clonedElement.style.setProperty("left", "auto", "important");
+  clonedElement.style.setProperty("right", "auto", "important");
+  clonedElement.style.setProperty("top", "auto", "important");
+  clonedElement.style.setProperty("inset", "auto", "important");
+  clonedElement.style.setProperty("max-width", "none", "important");
+  clonedElement.style.setProperty("width", `${width}px`, "important");
+  clonedElement.style.background = "#000000";
+}
+
 async function renderCanvas(element: HTMLElement, scale: number) {
-  const scrollY = window.scrollY;
+  const width = Math.ceil(element.offsetWidth || element.scrollWidth);
+  const height = Math.ceil(element.scrollHeight);
 
   return html2canvas(element, {
     backgroundColor: "#000000",
@@ -121,17 +140,27 @@ async function renderCanvas(element: HTMLElement, scale: number) {
     useCORS: true,
     allowTaint: false,
     logging: false,
-    scrollX: 0,
-    scrollY: -scrollY,
-    width: element.scrollWidth,
-    height: element.scrollHeight,
-    windowWidth: element.scrollWidth,
-    windowHeight: element.scrollHeight,
+    scrollX: -window.scrollX,
+    scrollY: -window.scrollY,
+    width,
+    height,
+    windowWidth: width,
+    windowHeight: height,
     onclone: (clonedDocument, clonedElement) => {
       stripStylesheets(clonedDocument);
       inlineComputedStyles(element, clonedElement);
-      clonedElement.style.background = "#000000";
-      clonedElement.style.width = `${element.scrollWidth}px`;
+      resetCloneLayout(clonedElement, width);
+
+      const { body, documentElement } = clonedDocument;
+      if (body) {
+        body.style.margin = "0";
+        body.style.padding = "0";
+        body.style.background = "#000000";
+      }
+      if (documentElement) {
+        documentElement.style.margin = "0";
+        documentElement.style.padding = "0";
+      }
     },
   });
 }
@@ -164,27 +193,116 @@ async function renderCanvasWithHtmlToImage(
     backgroundColor: "#000000",
     pixelRatio,
     cacheBust: true,
+    style: {
+      margin: "0",
+      marginLeft: "0",
+      marginRight: "0",
+      transform: "none",
+      maxWidth: "none",
+    },
   });
 
   return loadDataUrlToCanvas(dataUrl);
 }
 
+/**
+ * Crops uniform black letterboxing that html2canvas sometimes leaves on one
+ * side when capturing centered layouts.
+ */
+function trimBlackEdges(canvas: HTMLCanvasElement): HTMLCanvasElement {
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+
+  const { width, height } = canvas;
+  const { data } = context.getImageData(0, 0, width, height);
+  const isBlack = (index: number) =>
+    data[index] <= 8 && data[index + 1] <= 8 && data[index + 2] <= 8;
+
+  let top = 0;
+  let bottom = height - 1;
+  let left = 0;
+  let right = width - 1;
+
+  outerTop: for (; top < height; top++) {
+    for (let x = 0; x < width; x++) {
+      if (!isBlack((top * width + x) * 4)) break outerTop;
+    }
+  }
+  outerBottom: for (; bottom > top; bottom--) {
+    for (let x = 0; x < width; x++) {
+      if (!isBlack((bottom * width + x) * 4)) break outerBottom;
+    }
+  }
+  outerLeft: for (; left < width; left++) {
+    for (let y = top; y <= bottom; y++) {
+      if (!isBlack((y * width + left) * 4)) break outerLeft;
+    }
+  }
+  outerRight: for (; right > left; right--) {
+    for (let y = top; y <= bottom; y++) {
+      if (!isBlack((y * width + right) * 4)) break outerRight;
+    }
+  }
+
+  const cropWidth = right - left + 1;
+  const cropHeight = bottom - top + 1;
+  if (
+    cropWidth <= 0 ||
+    cropHeight <= 0 ||
+    (left === 0 && top === 0 && right === width - 1 && bottom === height - 1)
+  ) {
+    return canvas;
+  }
+
+  // Ignore tiny trims (anti-aliasing) and near-empty results.
+  if (left < 4 && right > width - 5 && top < 4 && bottom > height - 5) {
+    return canvas;
+  }
+  if (cropWidth < width * 0.5 || cropHeight < height * 0.5) {
+    return canvas;
+  }
+
+  const trimmed = document.createElement("canvas");
+  trimmed.width = cropWidth;
+  trimmed.height = cropHeight;
+  const trimmedContext = trimmed.getContext("2d");
+  if (!trimmedContext) return canvas;
+  trimmedContext.fillStyle = "#000000";
+  trimmedContext.fillRect(0, 0, cropWidth, cropHeight);
+  trimmedContext.drawImage(
+    canvas,
+    left,
+    top,
+    cropWidth,
+    cropHeight,
+    0,
+    0,
+    cropWidth,
+    cropHeight,
+  );
+  return trimmed;
+}
+
 function addCanvasToPdf(canvas: HTMLCanvasElement, pdf: jsPDF) {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
+  const usableWidth = pageWidth - PDF_PAGE_MARGIN_MM * 2;
+
   const imgData = canvas.toDataURL("image/jpeg", 0.92);
-  const imgHeight = (canvas.height * pageWidth) / canvas.width;
+  const imgWidth = usableWidth;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  const x = (pageWidth - imgWidth) / 2;
 
   let heightLeft = imgHeight;
-  let position = 0;
+  let position = PDF_PAGE_MARGIN_MM;
 
-  pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
-  heightLeft -= pageHeight;
+  pdf.addImage(imgData, "JPEG", x, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight - PDF_PAGE_MARGIN_MM;
 
   while (heightLeft > 0) {
     position -= pageHeight;
     pdf.addPage();
-    pdf.addImage(imgData, "JPEG", 0, position, pageWidth, imgHeight);
+    pdf.addImage(imgData, "JPEG", x, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
   }
 }
@@ -195,8 +313,23 @@ export async function exportElementToPdf(
 ): Promise<void> {
   await document.fonts.ready;
 
+  const previousScrollX = window.scrollX;
   const previousScrollY = window.scrollY;
   window.scrollTo(0, 0);
+
+  const previousMarginLeft = element.style.marginLeft;
+  const previousMarginRight = element.style.marginRight;
+  const previousMaxWidth = element.style.maxWidth;
+  const previousWidth = element.style.width;
+  const previousTransform = element.style.transform;
+
+  // Temporarily pin the live element so capture isn't biased by mx-auto.
+  const captureWidth = Math.ceil(element.offsetWidth || element.scrollWidth);
+  element.style.marginLeft = "0";
+  element.style.marginRight = "0";
+  element.style.maxWidth = "none";
+  element.style.width = `${captureWidth}px`;
+  element.style.transform = "none";
 
   try {
     let canvas: HTMLCanvasElement | undefined;
@@ -220,6 +353,8 @@ export async function exportElementToPdf(
       }
     }
 
+    canvas = trimBlackEdges(canvas);
+
     if (canvas.width === 0 || canvas.height === 0) {
       throw new Error("Canvas is empty");
     }
@@ -234,6 +369,11 @@ export async function exportElementToPdf(
     addCanvasToPdf(canvas, pdf);
     pdf.save(filename);
   } finally {
-    window.scrollTo(0, previousScrollY);
+    element.style.marginLeft = previousMarginLeft;
+    element.style.marginRight = previousMarginRight;
+    element.style.maxWidth = previousMaxWidth;
+    element.style.width = previousWidth;
+    element.style.transform = previousTransform;
+    window.scrollTo(previousScrollX, previousScrollY);
   }
 }

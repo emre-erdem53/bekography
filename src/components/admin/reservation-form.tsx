@@ -341,6 +341,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 package: {
                   id: string;
                   title: string;
+                  accentColor?: string | null;
                   serviceArea: {
                     id: string;
                     title: string;
@@ -375,7 +376,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               paymentType: item.paymentType,
               unitPrice: item.unitPrice,
               label: item.shootType.label,
-              accentColor: serviceArea.accentColor,
+              accentColor:
+                item.shootType.package.accentColor || serviceArea.accentColor,
               shootDate: toDateInputValue(item.shootDate),
               shootContent: item.shootContent,
               readyTime: item.readyTime?.trim() || DEFAULT_READY_TIME,
@@ -435,6 +437,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               package: {
                 id: string;
                 title: string;
+                accentColor?: string | null;
                 serviceArea: {
                   id: string;
                   title: string;
@@ -460,7 +463,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               paymentType: item.paymentType,
               unitPrice: item.unitPrice,
               label: item.shootType.label,
-              accentColor: serviceArea.accentColor,
+              accentColor:
+                item.shootType.package.accentColor || serviceArea.accentColor,
               shootDate: defaultDate,
               shootContent: item.shootType.label,
               readyTime: DEFAULT_READY_TIME,
@@ -614,7 +618,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       paymentType: "pesin",
       unitPrice: shootType.cashPrice,
       label: shootType.label,
-      accentColor: serviceArea.accentColor,
+      accentColor: pkg.accentColor || serviceArea.accentColor,
       shootDate: defaultShootDate,
       shootContent: shootType.label,
       readyTime: DEFAULT_READY_TIME,

@@ -59,13 +59,12 @@ export function PackagesHero({
     ? {
         eyebrow: "Paketler",
         title: serviceArea!.title,
-        description:
-          "Pakete tıklayın, çekim türünü seçin ve detayları inceleyin.",
+        description: null as string | null,
       }
     : {
         eyebrow: "Paketler",
         title: "Paket Oluştur",
-        description: "Bir hizmet alanı seçin, ardından paketleri inceleyin.",
+        description: null as string | null,
       };
 
   const inner = (
@@ -91,9 +90,11 @@ export function PackagesHero({
           <h1 className="mt-3 text-3xl font-semibold md:text-4xl lg:text-5xl">
             {heading.title}
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm text-zinc-400">
-            {heading.description}
-          </p>
+          {heading.description ? (
+            <p className="mx-auto mt-3 max-w-md text-sm text-zinc-400">
+              {heading.description}
+            </p>
+          ) : null}
         </div>
 
         {isSingleServiceArea ? (

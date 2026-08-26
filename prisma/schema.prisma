@@ -61,6 +61,7 @@ model Package {
   serviceAreaId String
   slug          String
   title         String
+  accentColor   String?
   iconKey       String?
   sortOrder     Int         @default(0)
   isActive      Boolean     @default(true)
