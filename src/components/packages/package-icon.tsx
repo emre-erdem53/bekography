@@ -52,6 +52,11 @@ export function isCustomPackageIcon(iconKey: string) {
   );
 }
 
+/** Yalnızca monokrom SVG ikonlar accent rengi ile boyanır; PNG/JPG kırpılmadan gösterilir. */
+function shouldTintCustomIcon(iconKey: string) {
+  return iconKey.toLowerCase().endsWith(".svg");
+}
+
 export function getPackageIcon(iconKey: string) {
   return iconMap[iconKey as keyof typeof iconMap] ?? Package;
 }
@@ -100,7 +105,9 @@ function CustomPackageIcon({
       alt=""
       width={24}
       height={24}
-      className={`${className} object-contain`}
+      className={
+        /\bobject-/.test(className) ? className : `${className} object-contain`
+      }
       sizes={imageSizes}
       unoptimized
     />
@@ -116,7 +123,9 @@ export function PackageIconDisplay({
   if (isCustomPackageIcon(iconKey)) {
     const src = packageMediaUrl(iconKey) ?? iconKey;
     const color =
-      typeof style?.color === "string" ? style.color : undefined;
+      shouldTintCustomIcon(iconKey) && typeof style?.color === "string"
+        ? style.color
+        : undefined;
 
     return (
       <CustomPackageIcon

@@ -9,9 +9,10 @@ import {
 } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BekographyBrand } from "@/components/bekography-brand";
 import { EASE_OUT, duration } from "@/lib/motion";
+import { PACKAGES_PAGE_HEADER_CLASS } from "@/lib/packages-page-layout";
 
 const links: {
   href: string;
@@ -45,11 +46,16 @@ function scrollSpringConfig(speed: number, reduce: boolean | null) {
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const [showPackagesChrome, setShowPackagesChrome] = useState(false);
   const [open, setOpen] = useState(false);
   const reduce = useReducedMotion();
   const headerY = useMotionValue(0);
   const hideOffsetRef = useRef(0);
   const lastScrollYRef = useRef(0);
+
+  useLayoutEffect(() => {
+    setShowPackagesChrome(pathname === "/paketler");
+  }, [pathname]);
 
   useEffect(() => {
     lastScrollYRef.current = window.scrollY;
@@ -84,24 +90,35 @@ export function SiteHeader() {
 
   return (
     <motion.header
+      id="site-header"
       className="fixed top-0 z-50 w-full border-b border-white/10 bg-zinc-950/90 backdrop-blur-md"
       style={{ y: headerY }}
-      initial={reduce ? false : { opacity: 0 }}
+      initial={reduce || showPackagesChrome ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{
         opacity: {
-          duration: reduce ? 0.01 : 0.45,
+          duration: reduce || showPackagesChrome ? 0.01 : 0.45,
           ease: EASE_OUT,
         },
       }}
     >
-      <div className="relative mx-auto flex h-24 max-w-7xl items-center justify-between gap-4 px-8 md:px-10">
+      <div
+        className={`relative mx-auto flex max-w-7xl items-center justify-between gap-4 px-8 md:px-10 ${
+          showPackagesChrome ? `${PACKAGES_PAGE_HEADER_CLASS} py-2.5` : "h-24"
+        }`}
+      >
         <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          className={showPackagesChrome ? "flex flex-col gap-1.5" : undefined}
         >
           <BekographyBrand />
+          {showPackagesChrome ? (
+            <span className="text-[8px] font-semibold uppercase tracking-[0.34em] text-zinc-500 sm:text-[9px]">
+              Paketler
+            </span>
+          ) : null}
         </motion.div>
         <nav className="hidden items-center gap-12 md:flex">
           {links.map(({ href, label }, i) => {

@@ -146,7 +146,7 @@ export function PackageCartBar() {
   );
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[80]">
+    <div className="fixed bottom-0 left-0 right-0 z-[80]" data-package-cart-bar>
       <div className="border-t border-white/10 bg-black/95 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-3 sm:max-w-3xl sm:gap-4 sm:px-6 lg:max-w-4xl xl:max-w-5xl">
           {isCartPage ? (

@@ -18,6 +18,7 @@ type PackageCartToggleButtonProps = {
   serviceArea: ServiceAreaData;
   pkg: PackageData;
   shootType: ShootTypeData;
+  accentColor?: string;
   variant?: "full" | "compact" | "icon";
 };
 
@@ -25,9 +26,11 @@ export function PackageCartToggleButton({
   serviceArea,
   pkg,
   shootType,
+  accentColor: accentColorProp,
   variant = "full",
 }: PackageCartToggleButtonProps) {
-  const accentColor = resolvePackageAccentColor(pkg, serviceArea);
+  const accentColor =
+    accentColorProp ?? resolvePackageAccentColor(pkg, serviceArea);
   const inCart = useCartStore((state) =>
     state.items.some((item) => item.shootTypeId === shootType.id),
   );

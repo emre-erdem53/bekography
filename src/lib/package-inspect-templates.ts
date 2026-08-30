@@ -423,8 +423,12 @@ const SALON_SLUGS = new Set([
   "dugun",
   "dugun-salon",
   "kina",
+  "kina-salon",
   "nisan",
+  "nisan-salon",
+  "soz",
   "soz-isteme",
+  "soz-nisan-salon",
 ]);
 
 /** Hizmet alanı slug'ı ve çekim türüne göre tam Açıklama bölümlerini üretir. */
@@ -437,10 +441,10 @@ export function buildPackageInspectSections(
   if (ctx.slug === "gelin-cikisi") {
     return buildGelinCikisiSections(ctx);
   }
-  if (ctx.slug === "kuafor") {
+  if (ctx.slug === "hazirlik-bride" || ctx.slug === "kuafor") {
     return buildKuaforSections(ctx);
   }
-  if (ctx.slug === "full-hikaye") {
+  if (ctx.slug === "full-hikaye" || ctx.slug === "full-dugun-gunu") {
     return buildFullHikayeSections(ctx);
   }
   if (SALON_SLUGS.has(ctx.slug)) {

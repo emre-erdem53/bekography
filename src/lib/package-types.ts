@@ -2,6 +2,7 @@ import type {
   ServiceAreaContent,
   ShootTypeContent,
 } from "@/lib/package-seed-data";
+import { nestedPackageAccentTone } from "@/lib/color-utils";
 
 export type ScheduleType = "indoor" | "outdoor";
 
@@ -31,6 +32,17 @@ export function resolvePackageAccentColor(
   serviceArea: Pick<ServiceAreaData, "accentColor">,
 ) {
   return pkg.accentColor || serviceArea.accentColor;
+}
+
+/**
+ * Vitrin iç paket listesi: hizmet alanı renginin açık→koyu tonları.
+ */
+export function resolveNestedPackageAccentColor(
+  serviceArea: Pick<ServiceAreaData, "accentColor">,
+  index: number,
+  count: number,
+) {
+  return nestedPackageAccentTone(serviceArea.accentColor, index, count);
 }
 
 export type ServiceAreaData = {

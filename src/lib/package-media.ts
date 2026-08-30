@@ -7,7 +7,8 @@ export function packageMediaUrl(
   fileName: string | null | undefined,
 ): string | null {
   if (!fileName) return null;
-  if (fileName.startsWith("http")) return fileName;
+  // Tam URL veya sitedeki mutlak yol (örn. /deneme.png) olduğu gibi kalır.
+  if (fileName.startsWith("http") || fileName.startsWith("/")) return fileName;
   return blobBaseUrl ? `${blobBaseUrl}/${fileName}` : `/reels/${fileName}`;
 }
 

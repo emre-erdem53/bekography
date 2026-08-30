@@ -1,6 +1,10 @@
 "use client";
 
-import { formatPrice, type PaymentType } from "@/lib/constants";
+import {
+  formatInstallmentBreakdown,
+  formatPrice,
+  type PaymentType,
+} from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
 type PaymentTypePriceProps = {
@@ -11,6 +15,17 @@ type PaymentTypePriceProps = {
   className?: string;
 };
 
+function resolvePaymentNote(
+  type: PaymentType,
+  price: number,
+  description: string,
+) {
+  if (type === "taksitli") {
+    return formatInstallmentBreakdown(price);
+  }
+  return description.trim() || "Rezervasyondan önce tümü ödenir.";
+}
+
 export function PaymentTypePrice({
   type,
   price,
@@ -20,7 +35,7 @@ export function PaymentTypePrice({
 }: PaymentTypePriceProps) {
   const { labels, descriptions } = usePaymentTypeCopy();
   const label = labels[type];
-  const description = descriptions[type];
+  const note = resolvePaymentNote(type, price, descriptions[type]);
   const emphasized = type === "pesin";
   const alignClass = align === "right" ? "text-right" : "text-left";
 
@@ -42,7 +57,7 @@ export function PaymentTypePrice({
           {formatPrice(price)}
         </p>
         <p className="mt-2 max-w-xs text-xs leading-relaxed text-zinc-500 sm:text-sm">
-          {description}
+          {note}
         </p>
       </div>
     );
@@ -53,8 +68,8 @@ export function PaymentTypePrice({
       <div className={`${alignClass} ${className}`}>
         <p className="text-[10px] text-zinc-500 sm:text-xs">{label}</p>
         <p className={`text-xs sm:text-sm ${priceClass}`}>{formatPrice(price)}</p>
-        <p className="mt-0.5 hidden max-w-[9rem] text-[9px] leading-tight text-zinc-600 sm:block">
-          {description}
+        <p className="mt-0.5 text-[9px] leading-tight text-zinc-600 sm:text-[10px]">
+          {note}
         </p>
       </div>
     );
@@ -67,8 +82,8 @@ export function PaymentTypePrice({
         <p className={`text-base sm:text-lg ${priceClass}`}>
           {formatPrice(price)}
         </p>
-        <p className="mt-0.5 hidden text-[10px] leading-tight text-zinc-600 sm:block">
-          {description}
+        <p className="mt-0.5 text-[10px] leading-tight text-zinc-600">
+          {note}
         </p>
       </div>
     );
@@ -81,7 +96,7 @@ export function PaymentTypePrice({
         {formatPrice(price)}
       </p>
       <p className="mt-0.5 text-[10px] leading-snug text-zinc-600 sm:text-[11px]">
-        {description}
+        {note}
       </p>
     </div>
   );
@@ -100,7 +115,7 @@ export function PaymentTypeOptionButton({
 }) {
   const { labels, descriptions } = usePaymentTypeCopy();
   const label = labels[type];
-  const description = descriptions[type];
+  const note = resolvePaymentNote(type, price, descriptions[type]);
 
   return (
     <button
@@ -132,7 +147,7 @@ export function PaymentTypeOptionButton({
           selected ? "text-zinc-700" : "text-zinc-500"
         }`}
       >
-        {description}
+        {note}
       </span>
     </button>
   );

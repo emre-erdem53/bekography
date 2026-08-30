@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
 
-const blobUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL;
-const blobHostname = blobUrl ? new URL(blobUrl).hostname : null;
+const blobUrl = process.env.NEXT_PUBLIC_BLOB_BASE_URL?.trim();
+const blobHostname = (() => {
+  if (!blobUrl) return null;
+  try {
+    return new URL(blobUrl).hostname;
+  } catch {
+    return null;
+  }
+})();
 
 const nextConfig: NextConfig = {
   images: {

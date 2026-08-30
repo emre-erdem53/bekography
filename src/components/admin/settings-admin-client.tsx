@@ -78,7 +78,7 @@ export function SettingsAdminClient() {
               className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                {type === "pesin" ? "Hemen ödeme" : "Parçalı ödeme"} alanı
+                {type === "pesin" ? "Peşin indirimli" : "3 Taksitli"} alanı
               </p>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-zinc-500">

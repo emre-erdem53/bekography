@@ -60,6 +60,7 @@ export function ServiceAreaForm({ serviceAreaId }: { serviceAreaId?: string }) {
         const loaded = (data.content ?? {}) as ServiceAreaContent;
         setContent({
           services: loaded.services ?? [],
+          subtitle: loaded.subtitle ?? "",
           requestFieldLabels: loaded.requestFieldLabels,
         });
       })
@@ -71,10 +72,20 @@ export function ServiceAreaForm({ serviceAreaId }: { serviceAreaId?: string }) {
     defaultRequestFieldLabels(title || "Çekim", scheduleType);
 
   async function handleIconUpload(file: File) {
+    const lowerName = file.name.toLowerCase();
     const isSvg =
-      file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg");
-    if (!isSvg) {
-      setError("Hizmet alanı ikonu yalnızca SVG formatında olabilir");
+      file.type === "image/svg+xml" || lowerName.endsWith(".svg");
+    const isRaster =
+      file.type === "image/png" ||
+      file.type === "image/jpeg" ||
+      file.type === "image/webp" ||
+      lowerName.endsWith(".png") ||
+      lowerName.endsWith(".jpg") ||
+      lowerName.endsWith(".jpeg") ||
+      lowerName.endsWith(".webp");
+
+    if (!isSvg && !isRaster) {
+      setError("Vitrin görseli SVG, PNG, JPG veya WebP formatında olmalı");
       return;
     }
 
@@ -93,6 +104,9 @@ export function ServiceAreaForm({ serviceAreaId }: { serviceAreaId?: string }) {
     const data = await response.json();
     setIconKey(data.url as string);
   }
+
+  const usesRasterIcon =
+    isCustomPackageIcon(iconKey) && !iconKey.toLowerCase().endsWith(".svg");
 
   function updateService(index: number, patch: Partial<PackageServiceItem>) {
     const next = [...content.services];
@@ -152,6 +166,7 @@ export function ServiceAreaForm({ serviceAreaId }: { serviceAreaId?: string }) {
           subLines: service.subLines.filter((line) => line.trim()),
           iconKey: service.iconKey,
         })),
+        subtitle: (content.subtitle ?? "").trim(),
         requestFieldLabels,
       },
     };
@@ -229,6 +244,22 @@ export function ServiceAreaForm({ serviceAreaId }: { serviceAreaId?: string }) {
             Vitrindeki adres: /paketler/{slug.trim() || "..."}
           </span>
         </Field>
+        <div className="md:col-span-2">
+          <Field label="Kısa açıklama (vitrin)">
+            <input
+              value={content.subtitle ?? ""}
+              onChange={(e) =>
+                setContent({ ...content, subtitle: e.target.value })
+              }
+              placeholder="örn. Doğa ve şehirde sinematik dış çekim paketleri"
+              maxLength={200}
+              className={inputClass}
+            />
+            <span className="text-xs text-zinc-500">
+              Paketler listesinde başlığın altında italic olarak görünür.
+            </span>
+          </Field>
+        </div>
         <Field label="Accent Renk">
           <HexColorInput value={accentColor} onChange={setAccentColor} />
         </Field>
@@ -240,19 +271,35 @@ export function ServiceAreaForm({ serviceAreaId }: { serviceAreaId?: string }) {
             className={inputClass}
           />
         </Field>
-        <Field label="Hizmet Alanı İkonu (SVG)">
+        <Field label="Vitrin görseli">
           <p className="mb-2 text-xs leading-relaxed text-zinc-500">
-            Kare oranlı, tek renkli veya siyah SVG yükleyin. İkon rengi accent
-            renginden gelir; SVG içine sabit renk kodu yazmayın.
+            Paketler listesinde başlığın solunda görünür. Kare (1:1) fotoğraf
+            (PNG/JPG) veya tek renkli SVG ikon yükleyebilirsiniz. SVG ikonlar
+            accent rengiyle boyanır; fotoğraflar olduğu gibi gösterilir.
           </p>
           {isCustomPackageIcon(iconKey) ? (
             <div className="mb-3 flex min-w-0 items-center gap-3 rounded-xl border border-white/10 bg-black/40 p-3">
-              <PackageIconDisplay
-                iconKey={iconKey}
-                className="h-6 w-6 shrink-0"
-                style={{ color: accentColor }}
-                imageSizes="24px"
-              />
+              <span
+                className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl ${
+                  usesRasterIcon ? "h-14 w-14" : "h-10 w-10"
+                }`}
+                style={
+                  usesRasterIcon
+                    ? undefined
+                    : { backgroundColor: `${accentColor}22` }
+                }
+              >
+                <PackageIconDisplay
+                  iconKey={iconKey}
+                  className={
+                    usesRasterIcon
+                      ? "h-full w-full object-cover"
+                      : "h-6 w-6"
+                  }
+                  style={{ color: accentColor }}
+                  imageSizes={usesRasterIcon ? "56px" : "24px"}
+                />
+              </span>
               <span className="min-w-0 flex-1 break-all text-xs text-zinc-400">
                 {iconKey}
               </span>
@@ -264,10 +311,10 @@ export function ServiceAreaForm({ serviceAreaId }: { serviceAreaId?: string }) {
             </p>
           )}
           <AdminFileUpload
-            accept=".svg,image/svg+xml"
-            label="SVG İkon Yükle"
-            fileLabel={isCustomPackageIcon(iconKey) ? "İkonu Değiştir" : undefined}
-            hint="Yalnızca .svg dosyaları kabul edilir."
+            accept=".svg,image/svg+xml,image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp"
+            label="Vitrin Görseli Yükle"
+            fileLabel={isCustomPackageIcon(iconKey) ? "Görseli Değiştir" : undefined}
+            hint="SVG, PNG, JPG veya WebP. Kare oran önerilir."
             onFileSelect={handleIconUpload}
           />
         </Field>

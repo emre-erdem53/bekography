@@ -146,6 +146,7 @@ export const shootTypeContentSchema = z
 export const serviceAreaContentSchema = z
   .object({
     services: z.array(packageServiceItemSchema).default([]),
+    subtitle: z.string().max(200).optional().default(""),
     requestFieldLabels: packageRequestFieldLabelsSchema.optional(),
   })
   .strict();

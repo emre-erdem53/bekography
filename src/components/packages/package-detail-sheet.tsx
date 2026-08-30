@@ -128,7 +128,7 @@ export function PackageDetailSheet({
 
   const quickRequestDisabled = Boolean(serviceArea?.isCompanionOnly);
 
-  const backHref = serviceArea ? `/paketler/${serviceArea.slug}` : "/paketler";
+  const backHref = "/paketler";
 
   const content =
     serviceArea && pkg && shootType ? (

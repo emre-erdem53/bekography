@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PackagesHero } from "@/components/packages/packages-hero";
+import { PaketlerPageClient } from "@/components/packages/paketler-page-client";
 import { getActivePackages, serializeServiceAreas } from "@/lib/packages";
 import type { ServiceAreaData } from "@/lib/package-types";
 import { createPageMetadata } from "@/lib/seo";
@@ -22,5 +22,5 @@ export default async function PaketlerPage() {
     console.error("Failed to load packages:", error);
   }
 
-  return <PackagesHero serviceAreas={serviceAreas} />;
+  return <PaketlerPageClient serviceAreas={serviceAreas} />;
 }

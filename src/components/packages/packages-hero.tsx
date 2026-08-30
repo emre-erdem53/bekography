@@ -10,14 +10,15 @@ import type {
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { PackageAccordion } from "@/components/packages/package-accordion";
 import { ServiceAreasGrid } from "@/components/packages/service-areas-grid";
+import { PackagesPageHeader } from "@/components/packages/packages-page-header";
+import { PACKAGES_PAGE_MAIN_OFFSET_CLASS } from "@/lib/packages-page-layout";
 
-const pageMainClass = "flex-1 bg-black pt-24 pb-10 text-white";
 const sectionClass = "scroll-mt-24 bg-black pb-6 text-white";
 
 type PackagesHeroProps = {
-  /** Hizmet alanı listesi modu: kartlar gösterilir. */
+  /** Hizmet alanı listesi: accordion ile paketler yerinde açılır. */
   serviceAreas?: ServiceAreaData[];
-  /** Tek hizmet alanı modu: o alanın paket accordion'u gösterilir. */
+  /** Tek hizmet alanı: paketler kompakt listelenir. */
   serviceArea?: ServiceAreaData;
   variant?: "page" | "section";
   visible?: boolean;
@@ -29,43 +30,50 @@ export function PackagesHero({
   variant = "page",
   visible = true,
 }: PackagesHeroProps) {
-  const [expandedPackageId, setExpandedPackageId] = useState<string | null>(
-    null,
-  );
+  const [expandedServiceAreaId, setExpandedServiceAreaId] = useState<
+    string | null
+  >(null);
+  const [detailServiceArea, setDetailServiceArea] =
+    useState<ServiceAreaData | null>(null);
   const [detailPackage, setDetailPackage] = useState<PackageData | null>(null);
   const [detailShootType, setDetailShootType] = useState<ShootTypeData | null>(
     null,
   );
 
   const isSingleServiceArea = Boolean(serviceArea);
+  const isPackagesListPage = variant === "page" && !isSingleServiceArea;
 
-  function handleTogglePackage(packageId: string) {
-    setExpandedPackageId((current) =>
-      current === packageId ? null : packageId,
+  function handleToggleServiceArea(serviceAreaId: string) {
+    setExpandedServiceAreaId((current) =>
+      current === serviceAreaId ? null : serviceAreaId,
     );
   }
 
-  function handleSelectShootType(pkg: PackageData, shootType: ShootTypeData) {
+  function handleSelectShootType(
+    area: ServiceAreaData,
+    pkg: PackageData,
+    shootType: ShootTypeData,
+  ) {
+    setDetailServiceArea(area);
     setDetailPackage(pkg);
     setDetailShootType(shootType);
   }
 
+  function handleSelectShootTypeSingle(
+    pkg: PackageData,
+    shootType: ShootTypeData,
+  ) {
+    if (!serviceArea) return;
+    handleSelectShootType(serviceArea, pkg, shootType);
+  }
+
   function handleCloseDetail() {
+    setDetailServiceArea(null);
     setDetailPackage(null);
     setDetailShootType(null);
   }
 
-  const heading = isSingleServiceArea
-    ? {
-        eyebrow: "Paketler",
-        title: serviceArea!.title,
-        description: null as string | null,
-      }
-    : {
-        eyebrow: "Paketler",
-        title: "Paket Oluştur",
-        description: null as string | null,
-      };
+  const activeDetailArea = detailServiceArea ?? serviceArea ?? null;
 
   const inner = (
     <>
@@ -80,37 +88,48 @@ export function PackagesHero({
         }
         transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         className={`mx-auto w-full max-w-2xl px-4 sm:max-w-3xl sm:px-6 lg:max-w-3xl ${
-          variant === "section" ? "pb-6 pt-16" : "pb-16 pt-4"
+          variant === "section" ? "pb-6 pt-16" : "pb-16 pt-0"
         } ${variant === "section" && !visible ? "pointer-events-none" : ""}`}
       >
-        <div className="text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-            {heading.eyebrow}
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold md:text-4xl lg:text-5xl">
-            {heading.title}
-          </h1>
-          {heading.description ? (
-            <p className="mx-auto mt-3 max-w-md text-sm text-zinc-400">
-              {heading.description}
+        {isPackagesListPage ? (
+          <PackagesPageHeader />
+        ) : isSingleServiceArea ? (
+          <div className="text-center">
+            <span className="inline-block rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-400">
+              Paketler
+            </span>
+            <h1 className="mt-5 text-3xl font-semibold md:text-4xl">
+              {serviceArea!.title}
+            </h1>
+          </div>
+        ) : (
+          <div className="text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
+              Paketler
             </p>
-          ) : null}
-        </div>
+            <h1 className="mt-3 text-3xl font-semibold md:text-4xl lg:text-5xl">
+              Paket Oluştur
+            </h1>
+          </div>
+        )}
 
         {isSingleServiceArea ? (
           <PackageAccordion
             serviceArea={serviceArea!}
-            expandedPackageId={expandedPackageId}
-            onTogglePackage={handleTogglePackage}
-            onSelectShootType={handleSelectShootType}
+            onSelectShootType={handleSelectShootTypeSingle}
           />
         ) : (
-          <ServiceAreasGrid serviceAreas={serviceAreas ?? []} />
+          <ServiceAreasGrid
+            serviceAreas={serviceAreas ?? []}
+            expandedServiceAreaId={expandedServiceAreaId}
+            onToggleServiceArea={handleToggleServiceArea}
+            onSelectShootType={handleSelectShootType}
+          />
         )}
       </motion.div>
 
       <PackageDetailSheet
-        serviceArea={serviceArea ?? null}
+        serviceArea={activeDetailArea}
         pkg={detailPackage}
         shootType={detailShootType}
         onClose={handleCloseDetail}
@@ -130,5 +149,13 @@ export function PackagesHero({
     );
   }
 
-  return <main className={pageMainClass}>{inner}</main>;
+  return (
+    <main
+      className={`flex-1 bg-black pb-10 text-white ${
+        isPackagesListPage ? PACKAGES_PAGE_MAIN_OFFSET_CLASS : "pt-24"
+      }`}
+    >
+      {inner}
+    </main>
+  );
 }
