@@ -1,3 +1,5 @@
+import { resolveBlobSharedBase } from "@/lib/blob-base-url";
+
 function normalizeBase(url: string | undefined): string | undefined {
   const t = url?.trim();
   if (!t) return undefined;
@@ -16,7 +18,9 @@ function backstageBlobPrefix(): string {
 const backstageDedicatedBase = normalizeBase(
   process.env.NEXT_PUBLIC_BLOB_BACKSTAGE_BASE_URL,
 );
-const blobSharedBase = normalizeBase(process.env.NEXT_PUBLIC_BLOB_BASE_URL);
+const blobSharedBase = resolveBlobSharedBase(
+  process.env.NEXT_PUBLIC_BLOB_BASE_URL,
+);
 
 const backstagePosterExt =
   process.env.NEXT_PUBLIC_BACKSTAGE_POSTER_EXT?.replace(/^\./, "").trim() ||
@@ -36,11 +40,6 @@ export const BACKSTAGE_VIDEO_FILES = Array.from(
  */
 export function getBackstageVideoSrc(fileName: string): string {
   const base = backstageDedicatedBase ?? blobSharedBase;
-  if (!base) {
-    throw new Error(
-      "Backstage videoları için NEXT_PUBLIC_BLOB_BACKSTAGE_BASE_URL veya NEXT_PUBLIC_BLOB_BASE_URL tanımlı olmalıdır.",
-    );
-  }
   const prefix = backstageBlobPrefix();
   return `${base}/${prefix}${fileName}`;
 }

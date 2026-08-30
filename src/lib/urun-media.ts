@@ -1,3 +1,5 @@
+import { resolveBlobSharedBase } from "@/lib/blob-base-url";
+
 function normalizeBase(url: string | undefined): string | undefined {
   const t = url?.trim();
   if (!t) return undefined;
@@ -17,7 +19,9 @@ function blobUrunlerPrefix(): string {
 const blobUrunlerBase = normalizeBase(
   process.env.NEXT_PUBLIC_BLOB_URUNLER_BASE_URL,
 );
-const blobSharedBase = normalizeBase(process.env.NEXT_PUBLIC_BLOB_BASE_URL);
+const blobSharedBase = resolveBlobSharedBase(
+  process.env.NEXT_PUBLIC_BLOB_BASE_URL,
+);
 
 /**
  * Ürün görselleri yalnızca Vercel Blob üzerinden gelir; yerel `public` klasörü kullanılmaz.
@@ -27,11 +31,6 @@ const blobSharedBase = normalizeBase(process.env.NEXT_PUBLIC_BLOB_BASE_URL);
  */
 export function getUrunImageSrc(fileName: string): string {
   const base = blobUrunlerBase ?? blobSharedBase;
-  if (!base) {
-    throw new Error(
-      "Ürün görselleri için NEXT_PUBLIC_BLOB_URUNLER_BASE_URL veya NEXT_PUBLIC_BLOB_BASE_URL tanımlı olmalıdır.",
-    );
-  }
   const prefix = blobUrunlerPrefix();
   return `${base}/${prefix}${fileName}`;
 }

@@ -1,3 +1,5 @@
+import { resolveBlobSharedBase } from "@/lib/blob-base-url";
+
 function normalizeBase(url: string | undefined): string | undefined {
   const t = url?.trim();
   if (!t) return undefined;
@@ -16,7 +18,9 @@ function aboutBlobPrefix(): string {
 const aboutDedicatedBase = normalizeBase(
   process.env.NEXT_PUBLIC_BLOB_ABOUT_BASE_URL,
 );
-const blobSharedBase = normalizeBase(process.env.NEXT_PUBLIC_BLOB_BASE_URL);
+const blobSharedBase = resolveBlobSharedBase(
+  process.env.NEXT_PUBLIC_BLOB_BASE_URL,
+);
 
 export const ABOUT_TEAM_PORTRAIT_FILES = {
   kevser: "kevser.jpg",
@@ -32,11 +36,6 @@ export const ABOUT_TEAM_PORTRAIT_FILES = {
  */
 export function getAboutTeamPortraitSrc(fileName: string): string {
   const base = aboutDedicatedBase ?? blobSharedBase;
-  if (!base) {
-    throw new Error(
-      "Ekip portreleri için NEXT_PUBLIC_BLOB_ABOUT_BASE_URL veya NEXT_PUBLIC_BLOB_BASE_URL tanımlı olmalıdır.",
-    );
-  }
   const prefix = aboutBlobPrefix();
   return `${base}/${prefix}${fileName}`;
 }
