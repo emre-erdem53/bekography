@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Check,
+  ChevronLeft,
+  ChevronRight,
   ImageIcon,
   Loader2,
   Play,
@@ -33,6 +34,14 @@ type BlobMediaPickerModalProps = {
   initialFolder?: string;
 };
 
+function moveSelectedItem(order: string[], index: number, direction: -1 | 1) {
+  const nextIndex = index + direction;
+  if (nextIndex < 0 || nextIndex >= order.length) return order;
+  const next = [...order];
+  [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+  return next;
+}
+
 export function BlobMediaPickerModal({
   open,
   onClose,
@@ -44,7 +53,10 @@ export function BlobMediaPickerModal({
   const [prefix, setPrefix] = useState(initialFolder);
   const [folders, setFolders] = useState<BlobMediaFolder[]>([]);
   const [items, setItems] = useState<BlobMediaItem[]>([]);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selectedOrder, setSelectedOrder] = useState<string[]>([]);
+  const [itemCache, setItemCache] = useState<Map<string, BlobMediaItem>>(
+    new Map(),
+  );
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -53,6 +65,8 @@ export function BlobMediaPickerModal({
   const [previewVideo, setPreviewVideo] = useState<BlobMediaItem | null>(null);
 
   const existingSet = new Set(existingUrls);
+  const isRoot = prefix === "";
+  const showRootItems = !isRoot || folders.length === 0;
 
   const fetchPage = useCallback(
     async (pageOffset: number, append: boolean, folderPrefix: string) => {
@@ -70,6 +84,11 @@ export function BlobMediaPickerModal({
       const data = (await response.json()) as BlobMediaResponse;
       setFolders(data.folders);
       setItems((prev) => (append ? [...prev, ...data.items] : data.items));
+      setItemCache((prev) => {
+        const next = new Map(prev);
+        for (const item of data.items) next.set(item.url, item);
+        return next;
+      });
       setHasMore(data.hasMore);
       setOffset(data.nextOffset ?? pageOffset + data.items.length);
     },
@@ -78,7 +97,7 @@ export function BlobMediaPickerModal({
 
   useEffect(() => {
     if (!open) return;
-    setSelected(new Set());
+    setSelectedOrder([]);
     setPreviewVideo(null);
     setPrefix(initialFolder);
   }, [open, initialFolder]);
@@ -102,18 +121,29 @@ export function BlobMediaPickerModal({
       .finally(() => setLoading(false));
   }, [open, prefix, fetchPage]);
 
-  function toggleItem(url: string) {
-    if (existingSet.has(url)) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(url)) next.delete(url);
-      else next.add(url);
-      return next;
+  function toggleItem(item: BlobMediaItem) {
+    if (existingSet.has(item.url)) return;
+
+    setItemCache((prev) => new Map(prev).set(item.url, item));
+    setSelectedOrder((prev) => {
+      const index = prev.indexOf(item.url);
+      if (index >= 0) {
+        return prev.filter((url) => url !== item.url);
+      }
+      return [...prev, item.url];
     });
   }
 
+  function getSelectionNumber(url: string) {
+    const index = selectedOrder.indexOf(url);
+    return index >= 0 ? index + 1 : null;
+  }
+
   function handleConfirm() {
-    const chosen = items.filter((item) => selected.has(item.url));
+    const chosen = selectedOrder
+      .map((url) => itemCache.get(url))
+      .filter((item): item is BlobMediaItem => !!item);
+
     onSelect(
       chosen.map((item) => ({
         url: item.url,
@@ -160,7 +190,8 @@ export function BlobMediaPickerModal({
               <div>
                 <h3 className="text-lg font-semibold text-white">{title}</h3>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Ürün klasörünüze gidip fotoğraf ve videoları seçin.
+                  Ürün klasörünü seçin, ardından tıklama sırasına göre medya
+                  ekleyin. Seçilen sıra galeri sırası olur.
                 </p>
               </div>
               <button
@@ -179,6 +210,7 @@ export function BlobMediaPickerModal({
                 folders={folders}
                 onPrefixChange={setPrefix}
                 onCreateFolder={setPrefix}
+                allowCreateFolder={false}
               />
             </div>
 
@@ -192,6 +224,10 @@ export function BlobMediaPickerModal({
                 <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                   {error}
                 </p>
+              ) : !showRootItems ? (
+                <p className="py-10 text-center text-sm text-zinc-500">
+                  Devam etmek için yukarıdan bir ürün klasörü seçin.
+                </p>
               ) : items.length === 0 ? (
                 <p className="py-16 text-center text-sm text-zinc-500">
                   {prefix
@@ -204,7 +240,9 @@ export function BlobMediaPickerModal({
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                   {items.map((item) => {
                     const isExisting = existingSet.has(item.url);
-                    const isSelected = selected.has(item.url);
+                    const selectionNumber = getSelectionNumber(item.url);
+                    const isSelected = selectionNumber !== null;
+
                     return (
                       <div
                         key={item.url}
@@ -246,9 +284,11 @@ export function BlobMediaPickerModal({
                           <button
                             type="button"
                             disabled={isExisting}
-                            onClick={() => toggleItem(item.url)}
+                            onClick={() => toggleItem(item)}
                             className="absolute inset-0 disabled:cursor-not-allowed"
-                            aria-label={isSelected ? "Seçimi kaldır" : "Seç"}
+                            aria-label={
+                              isSelected ? "Seçimi kaldır" : "Sıraya ekle"
+                            }
                           />
                           <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-medium text-white">
                             {item.type === "video" ? (
@@ -258,9 +298,9 @@ export function BlobMediaPickerModal({
                             )}
                             {item.type === "video" ? "Video" : "Görsel"}
                           </span>
-                          {isSelected ? (
-                            <span className="pointer-events-none absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-[#93f8b6] text-black">
-                              <Check className="h-4 w-4" />
+                          {selectionNumber ? (
+                            <span className="pointer-events-none absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[#93f8b6] text-sm font-bold text-black">
+                              {selectionNumber}
                             </span>
                           ) : null}
                           {isExisting ? (
@@ -285,7 +325,7 @@ export function BlobMediaPickerModal({
                 </div>
               )}
 
-              {hasMore && !loading ? (
+              {hasMore && !loading && showRootItems ? (
                 <div className="mt-4 flex justify-center">
                   <button
                     type="button"
@@ -299,10 +339,80 @@ export function BlobMediaPickerModal({
               ) : null}
             </div>
 
+            {selectedOrder.length > 0 ? (
+              <div className="border-t border-white/10 px-5 py-3">
+                <p className="mb-2 text-xs text-zinc-500">
+                  Seçim sırası — galeriye bu sırayla eklenecek
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {selectedOrder.map((url, index) => {
+                    const item = itemCache.get(url);
+                    if (!item) return null;
+
+                    return (
+                      <div
+                        key={url}
+                        className="relative w-20 shrink-0 rounded-xl border border-white/10 bg-black/40 p-1.5"
+                      >
+                        <div className="relative aspect-square overflow-hidden rounded-lg bg-[#1a1a1a]">
+                          {item.type === "video" ? (
+                            <video
+                              src={item.url}
+                              className="h-full w-full object-cover"
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                          ) : (
+                            <img
+                              src={item.url}
+                              alt={item.label}
+                              className="h-full w-full object-cover"
+                            />
+                          )}
+                          <span className="absolute left-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#93f8b6] text-[10px] font-bold text-black">
+                            {index + 1}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center justify-center gap-0.5">
+                          <button
+                            type="button"
+                            disabled={index === 0}
+                            onClick={() =>
+                              setSelectedOrder((prev) =>
+                                moveSelectedItem(prev, index, -1),
+                              )
+                            }
+                            className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                            aria-label="Sola taşı"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === selectedOrder.length - 1}
+                            onClick={() =>
+                              setSelectedOrder((prev) =>
+                                moveSelectedItem(prev, index, 1),
+                              )
+                            }
+                            className="rounded p-0.5 text-zinc-400 hover:bg-white/10 hover:text-white disabled:opacity-30"
+                            aria-label="Sağa taşı"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
             <div className="flex flex-col gap-3 border-t border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-zinc-400">
-                {selected.size > 0
-                  ? `${selected.size} medya seçildi`
+                {selectedOrder.length > 0
+                  ? `${selectedOrder.length} medya seçildi`
                   : "Eklemek için medya seçin"}
               </p>
               <div className="flex gap-2">
@@ -316,7 +426,7 @@ export function BlobMediaPickerModal({
                 <button
                   type="button"
                   onClick={handleConfirm}
-                  disabled={selected.size === 0}
+                  disabled={selectedOrder.length === 0}
                   className="rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-black transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Galeriye ekle
