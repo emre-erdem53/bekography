@@ -15,6 +15,7 @@ type BlobMediaFolderNavProps = {
   onPrefixChange: (prefix: string) => void;
   onCreateFolder: (folderPrefix: string) => void;
   showFolderGrid?: boolean;
+  allowCreateFolder?: boolean;
 };
 
 function buildPrefixFromSegments(segments: string[]): string {
@@ -28,6 +29,7 @@ export function BlobMediaFolderNav({
   onPrefixChange,
   onCreateFolder,
   showFolderGrid = true,
+  allowCreateFolder = true,
 }: BlobMediaFolderNavProps) {
   const segments = getBlobFolderSegments(prefix);
 
@@ -92,14 +94,16 @@ export function BlobMediaFolderNav({
           })}
         </nav>
 
-        <button
-          type="button"
-          onClick={handleCreateFolder}
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
-        >
-          <FolderPlus className="h-4 w-4" />
-          Yeni klasör
-        </button>
+        {allowCreateFolder ? (
+          <button
+            type="button"
+            onClick={handleCreateFolder}
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5 hover:text-white"
+          >
+            <FolderPlus className="h-4 w-4" />
+            Yeni klasör
+          </button>
+        ) : null}
       </div>
 
       {showFolderGrid && folders.length > 0 ? (
