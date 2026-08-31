@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CalendarCheck,
   ClipboardList,
+  ExternalLink,
   Images,
   LayoutDashboard,
   LogOut,
@@ -88,7 +89,17 @@ export function AdminNav({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="border-t border-white/10 p-3">
+      <div className="space-y-1 border-t border-white/10 p-3">
+        <Link
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-400 transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <ExternalLink className="h-4 w-4 shrink-0" />
+          Siteyi Gör
+        </Link>
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/admin/login" })}

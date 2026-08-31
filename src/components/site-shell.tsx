@@ -13,6 +13,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
   const isTracking = pathname.startsWith("/takip");
+  const isMaintenance = pathname === "/maintenance";
   const showCartBar = usePackageCartBarVisible();
   const cartBottomInset = useCartBottomInset();
   const [mounted, setMounted] = useState(false);
@@ -22,7 +23,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     setMounted(true);
   }, []);
 
-  if (isAdmin) {
+  if (isAdmin || isMaintenance) {
     return <>{children}</>;
   }
 
