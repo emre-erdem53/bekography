@@ -1,8 +1,13 @@
 export const DEFAULT_MAINTENANCE_MESSAGE =
   "Bekography yeni paketler ve hizmetleriyle yenileniyor.";
 
+function parseMaintenanceFlag(value: string | undefined) {
+  const normalized = value?.trim().replace(/^["']|["']$/g, "").toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
+}
+
 export function isMaintenanceModeEnabled() {
-  return process.env.MAINTENANCE_MODE === "true";
+  return parseMaintenanceFlag(process.env.MAINTENANCE_MODE);
 }
 
 export function getMaintenanceMessage() {
