@@ -97,6 +97,42 @@ export function toBlobMediaFolder(fullPrefix: string): BlobMediaFolder {
   };
 }
 
+export function getRelativeBlobPath(pathname: string, parentPrefix: string): string {
+  const normalizedParent = normalizeBlobFolderPrefix(parentPrefix);
+  const trimmedPath = pathname.replace(/^\/+/, "");
+
+  if (!normalizedParent) return trimmedPath;
+  if (!trimmedPath.startsWith(normalizedParent)) return trimmedPath;
+
+  return trimmedPath.slice(normalizedParent.length);
+}
+
+/** pathname, parentPrefix altında doğrudan çocuk dosya mı (alt klasörde değil). */
+export function isDirectBlobChild(pathname: string, parentPrefix: string): boolean {
+  const relative = getRelativeBlobPath(pathname, parentPrefix);
+  return relative.length > 0 && !relative.includes("/");
+}
+
+/** Tüm pathname'lerden bir seviye alt klasörleri türet. */
+export function deriveChildFolderPrefixes(
+  pathnames: string[],
+  parentPrefix: string,
+): string[] {
+  const normalizedParent = normalizeBlobFolderPrefix(parentPrefix);
+  const folderSet = new Set<string>();
+
+  for (const pathname of pathnames) {
+    const relative = getRelativeBlobPath(pathname, parentPrefix);
+    const slashIndex = relative.indexOf("/");
+    if (slashIndex <= 0) continue;
+
+    const segment = relative.slice(0, slashIndex);
+    folderSet.add(`${normalizedParent}${segment}/`);
+  }
+
+  return [...folderSet];
+}
+
 export function mapBlobToMediaItem(blob: {
   url: string;
   pathname: string;

@@ -6,6 +6,7 @@ import { tr } from "date-fns/locale";
 import { ImageIcon, Loader2, Play, Trash2, Video, X } from "lucide-react";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
 import { BlobMediaFolderNav } from "@/components/admin/blob-media-folder-nav";
+import { BlobMediaFolderCard } from "@/components/admin/blob-media-folder-card";
 import {
   BLOB_MEDIA_ACCEPT,
   formatBlobFolderLabel,
@@ -141,7 +142,8 @@ export function MediaLibraryClient() {
         <h1 className="text-2xl font-semibold text-white">Medya Kütüphanesi</h1>
         <p className="mt-1 text-sm text-zinc-400">
           Ürün bazlı klasörler oluşturup fotoğraf ve videoları birlikte yönetin.
-          Bu klasörde: {total} dosya
+          {folders.length > 0 ? ` ${folders.length} klasör ·` : ""} Bu klasörde{" "}
+          {total} dosya
         </p>
       </div>
 
@@ -150,6 +152,7 @@ export function MediaLibraryClient() {
         folders={folders}
         onPrefixChange={setPrefix}
         onCreateFolder={setPrefix}
+        showFolderGrid={false}
       />
 
       <AdminFileUpload
@@ -177,16 +180,21 @@ export function MediaLibraryClient() {
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           Yükleniyor...
         </div>
-      ) : items.length === 0 ? (
+      ) : folders.length === 0 && items.length === 0 ? (
         <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-12 text-center text-sm text-zinc-400">
           {prefix
             ? "Bu klasörde henüz dosya yok. Yukarıdan fotoğraf veya video yükleyebilirsiniz."
-            : folders.length > 0
-              ? "Bir klasör seçin veya köke dosya yükleyin."
-              : "Henüz dosya yok."}
+            : "Henüz klasör veya dosya yok. Yeni klasör oluşturup medya yükleyin."}
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {folders.map((folder) => (
+            <BlobMediaFolderCard
+              key={folder.prefix}
+              folder={folder}
+              onOpen={setPrefix}
+            />
+          ))}
           {items.map((item) => (
             <div
               key={item.pathname}

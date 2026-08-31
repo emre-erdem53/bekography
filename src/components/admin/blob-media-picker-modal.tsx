@@ -14,6 +14,7 @@ import {
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { BlobMediaFolderNav } from "@/components/admin/blob-media-folder-nav";
+import { BlobMediaFolderCard } from "@/components/admin/blob-media-folder-card";
 import type { PackageGalleryMedia } from "@/lib/package-seed-data";
 import type { BlobMediaFolder, BlobMediaItem } from "@/lib/blob-media";
 
@@ -66,7 +67,7 @@ export function BlobMediaPickerModal({
 
   const existingSet = new Set(existingUrls);
   const isRoot = prefix === "";
-  const showRootItems = !isRoot || folders.length === 0;
+  const showRootFiles = !isRoot || folders.length === 0;
 
   const fetchPage = useCallback(
     async (pageOffset: number, append: boolean, folderPrefix: string) => {
@@ -211,6 +212,7 @@ export function BlobMediaPickerModal({
                 onPrefixChange={setPrefix}
                 onCreateFolder={setPrefix}
                 allowCreateFolder={false}
+                showFolderGrid={false}
               />
             </div>
 
@@ -224,21 +226,23 @@ export function BlobMediaPickerModal({
                 <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                   {error}
                 </p>
-              ) : !showRootItems ? (
-                <p className="py-10 text-center text-sm text-zinc-500">
-                  Devam etmek için yukarıdan bir ürün klasörü seçin.
-                </p>
-              ) : items.length === 0 ? (
+              ) : folders.length === 0 && items.length === 0 ? (
                 <p className="py-16 text-center text-sm text-zinc-500">
                   {prefix
                     ? "Bu klasörde medya yok. Önce Medya Kütüphanesi'ne yükleyin."
-                    : folders.length > 0
-                      ? "Ürün klasörünü seçin."
-                      : "Medya bulunamadı."}
+                    : "Medya bulunamadı."}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                  {items.map((item) => {
+                  {folders.map((folder) => (
+                    <BlobMediaFolderCard
+                      key={folder.prefix}
+                      folder={folder}
+                      onOpen={setPrefix}
+                    />
+                  ))}
+                  {showRootFiles
+                    ? items.map((item) => {
                     const isExisting = existingSet.has(item.url);
                     const selectionNumber = getSelectionNumber(item.url);
                     const isSelected = selectionNumber !== null;
@@ -321,11 +325,12 @@ export function BlobMediaPickerModal({
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                    : null}
                 </div>
               )}
 
-              {hasMore && !loading && showRootItems ? (
+              {hasMore && !loading && showRootFiles ? (
                 <div className="mt-4 flex justify-center">
                   <button
                     type="button"

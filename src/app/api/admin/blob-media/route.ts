@@ -2,6 +2,8 @@ import { del, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import {
+  deriveChildFolderPrefixes,
+  isDirectBlobChild,
   mapBlobToMediaItem,
   normalizeBlobFolderPrefix,
   toBlobMediaFolder,
@@ -14,8 +16,7 @@ const MAX_LIMIT = 50;
 
 async function listFolderContents(prefix: string) {
   const normalizedPrefix = normalizeBlobFolderPrefix(prefix);
-  const blobs: Awaited<ReturnType<typeof list>>["blobs"] = [];
-  const folderPaths = new Set<string>();
+  const allBlobs: Awaited<ReturnType<typeof list>>["blobs"] = [];
   let cursor: string | undefined;
 
   do {
@@ -23,22 +24,23 @@ async function listFolderContents(prefix: string) {
       cursor,
       limit: 1000,
       prefix: normalizedPrefix || undefined,
-      mode: "folded",
     });
 
-    for (const folderPath of page.folders ?? []) {
-      folderPaths.add(folderPath);
-    }
-
-    blobs.push(...page.blobs);
+    allBlobs.push(...page.blobs);
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor);
 
-  const folders = [...folderPaths]
+  const folderPaths = deriveChildFolderPrefixes(
+    allBlobs.map((blob) => blob.pathname),
+    normalizedPrefix,
+  );
+
+  const folders = folderPaths
     .map((folderPath) => toBlobMediaFolder(folderPath))
     .sort((a, b) => a.name.localeCompare(b.name, "tr"));
 
-  const items = blobs
+  const items = allBlobs
+    .filter((blob) => isDirectBlobChild(blob.pathname, normalizedPrefix))
     .map((blob) => mapBlobToMediaItem(blob))
     .filter((item): item is BlobMediaItem => item !== null)
     .sort(
