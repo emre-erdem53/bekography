@@ -1,7 +1,17 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { buildBlobUploadPath } from "@/lib/blob-media";
+import { buildBlobUploadPath, getBlobMediaKind } from "@/lib/blob-media";
+
+function resolveUploadContentType(file: File): string | undefined {
+  if (file.type) return file.type;
+
+  const kind = getBlobMediaKind(file.name);
+  if (kind === "image") return "image/jpeg";
+  if (kind === "video") return "video/mp4";
+
+  return undefined;
+}
 
 export async function POST(request: Request) {
   const authResult = await requireAdmin();
@@ -16,10 +26,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Dosya gerekli" }, { status: 400 });
     }
 
+    if (!getBlobMediaKind(file.name)) {
+      return NextResponse.json(
+        { error: "Desteklenmeyen dosya formatı" },
+        { status: 400 },
+      );
+    }
+
     const pathname = buildBlobUploadPath(folder, file.name);
+    const contentType = resolveUploadContentType(file);
     const blob = await put(pathname, file, {
       access: "public",
       addRandomSuffix: true,
+      ...(contentType ? { contentType } : {}),
     });
 
     return NextResponse.json({ url: blob.url, pathname: blob.pathname });
