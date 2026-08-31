@@ -5,19 +5,29 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { ImageIcon, Loader2, Play, Trash2, Video, X } from "lucide-react";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
-
-type BlobMediaItem = {
-  url: string;
-  pathname: string;
-  uploadedAt: string;
-  type: "image" | "video";
-  label: string;
-};
+import { BlobMediaFolderNav } from "@/components/admin/blob-media-folder-nav";
+import {
+  formatBlobFolderLabel,
+  getBlobFolderSegments,
+  type BlobMediaFolder,
+  type BlobMediaItem,
+} from "@/lib/blob-media";
 
 type MediaTab = "image" | "video";
 
+type BlobMediaResponse = {
+  prefix: string;
+  folders: BlobMediaFolder[];
+  items: BlobMediaItem[];
+  hasMore: boolean;
+  nextOffset: number | null;
+  total: number;
+};
+
 export function MediaLibraryClient() {
   const [tab, setTab] = useState<MediaTab>("image");
+  const [prefix, setPrefix] = useState("");
+  const [folders, setFolders] = useState<BlobMediaFolder[]>([]);
   const [items, setItems] = useState<BlobMediaItem[]>([]);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
@@ -30,17 +40,24 @@ export function MediaLibraryClient() {
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
   const fetchPage = useCallback(
-    async (pageOffset: number, append: boolean, mediaType: MediaTab) => {
-      const response = await fetch(
-        `/api/admin/blob-media?limit=24&offset=${pageOffset}&type=${mediaType}`,
-      );
+    async (
+      pageOffset: number,
+      append: boolean,
+      mediaType: MediaTab,
+      folderPrefix: string,
+    ) => {
+      const params = new URLSearchParams({
+        limit: "24",
+        offset: String(pageOffset),
+        type: mediaType,
+      });
+      if (folderPrefix) params.set("prefix", folderPrefix);
+
+      const response = await fetch(`/api/admin/blob-media?${params.toString()}`);
       if (!response.ok) throw new Error("Medya listesi alınamadı");
-      const data = (await response.json()) as {
-        items: BlobMediaItem[];
-        hasMore: boolean;
-        nextOffset: number | null;
-        total: number;
-      };
+
+      const data = (await response.json()) as BlobMediaResponse;
+      setFolders(data.folders);
       setItems((prev) => (append ? [...prev, ...data.items] : data.items));
       setHasMore(data.hasMore);
       setTotal(data.total);
@@ -52,7 +69,7 @@ export function MediaLibraryClient() {
   useEffect(() => {
     setLoading(true);
     setError("");
-    fetchPage(0, false, tab)
+    fetchPage(0, false, tab, prefix)
       .catch((fetchError) => {
         setError(
           fetchError instanceof Error
@@ -61,7 +78,7 @@ export function MediaLibraryClient() {
         );
       })
       .finally(() => setLoading(false));
-  }, [tab, fetchPage]);
+  }, [tab, prefix, fetchPage]);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -69,12 +86,14 @@ export function MediaLibraryClient() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (prefix) formData.append("folder", prefix);
+
       const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
       if (!response.ok) throw new Error("Dosya yüklenemedi");
-      await fetchPage(0, false, tab);
+      await fetchPage(0, false, tab, prefix);
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
@@ -125,13 +144,20 @@ export function MediaLibraryClient() {
       ? "image/jpeg,image/png,image/webp,image/gif,image/avif"
       : "video/mp4,video/webm,video/quicktime";
 
+  const uploadHint = prefix
+    ? `"${formatBlobFolderLabel(getBlobFolderSegments(prefix).at(-1)! )}" klasörüne yüklenecek`
+    : tab === "image"
+      ? "JPEG, PNG, WebP, GIF veya AVIF — ürün klasörüne girmek için yukarıdan seçin"
+      : "MP4, WebM veya MOV — ürün klasörüne girmek için yukarıdan seçin";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-white">Medya Kütüphanesi</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Yüklenen fotoğraf ve videoları yönetin. Toplam: {total}
+            Ürün bazlı klasörler oluşturup görselleri ve videoları ayrı ayrı
+            yönetin. Bu klasörde: {total} dosya
           </p>
         </div>
         <div className="flex rounded-xl border border-white/10 p-1">
@@ -162,15 +188,24 @@ export function MediaLibraryClient() {
         </div>
       </div>
 
+      <BlobMediaFolderNav
+        prefix={prefix}
+        folders={folders}
+        onPrefixChange={setPrefix}
+        onCreateFolder={setPrefix}
+      />
+
       <AdminFileUpload
         accept={accept}
         onFileSelect={(file) => void handleUpload(file)}
-        label={uploading ? "Yükleniyor..." : "Kütüphaneye yükle"}
-        hint={
-          tab === "image"
-            ? "JPEG, PNG, WebP, GIF veya AVIF"
-            : "MP4, WebM veya MOV"
+        label={
+          uploading
+            ? "Yükleniyor..."
+            : prefix
+              ? "Bu klasöre yükle"
+              : "Kütüphaneye yükle"
         }
+        hint={uploadHint}
         disabled={uploading}
       />
 
@@ -187,7 +222,11 @@ export function MediaLibraryClient() {
         </div>
       ) : items.length === 0 ? (
         <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-12 text-center text-sm text-zinc-400">
-          Bu kategoride henüz dosya yok.
+          {prefix
+            ? "Bu klasörde henüz dosya yok. Yukarıdan yükleyebilirsiniz."
+            : folders.length > 0
+              ? "Bir klasör seçin veya köke dosya yükleyin."
+              : "Bu kategoride henüz dosya yok."}
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -252,7 +291,7 @@ export function MediaLibraryClient() {
           type="button"
           onClick={() => {
             setLoadingMore(true);
-            fetchPage(offset, true, tab)
+            fetchPage(offset, true, tab, prefix)
               .catch(() => setError("Daha fazla medya yüklenemedi"))
               .finally(() => setLoadingMore(false));
           }}

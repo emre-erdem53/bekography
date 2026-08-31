@@ -12,17 +12,19 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
+import { BlobMediaFolderNav } from "@/components/admin/blob-media-folder-nav";
 import type { PackageGalleryMedia } from "@/lib/package-seed-data";
-
-type BlobMediaItem = {
-  url: string;
-  pathname: string;
-  uploadedAt: string;
-  type: "image" | "video";
-  label: string;
-};
+import type { BlobMediaFolder, BlobMediaItem } from "@/lib/blob-media";
 
 type MediaTab = "image" | "video";
+
+type BlobMediaResponse = {
+  prefix: string;
+  folders: BlobMediaFolder[];
+  items: BlobMediaItem[];
+  hasMore: boolean;
+  nextOffset: number | null;
+};
 
 type BlobMediaPickerModalProps = {
   open: boolean;
@@ -30,6 +32,7 @@ type BlobMediaPickerModalProps = {
   onSelect: (items: PackageGalleryMedia[]) => void;
   existingUrls?: string[];
   title?: string;
+  initialFolder?: string;
 };
 
 export function BlobMediaPickerModal({
@@ -38,8 +41,11 @@ export function BlobMediaPickerModal({
   onSelect,
   existingUrls = [],
   title = "Medya Kütüphanesi",
+  initialFolder = "",
 }: BlobMediaPickerModalProps) {
   const [tab, setTab] = useState<MediaTab>("image");
+  const [prefix, setPrefix] = useState(initialFolder);
+  const [folders, setFolders] = useState<BlobMediaFolder[]>([]);
   const [items, setItems] = useState<BlobMediaItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [offset, setOffset] = useState(0);
@@ -52,18 +58,26 @@ export function BlobMediaPickerModal({
   const existingSet = new Set(existingUrls);
 
   const fetchPage = useCallback(
-    async (pageOffset: number, append: boolean, mediaType: MediaTab) => {
-      const response = await fetch(
-        `/api/admin/blob-media?limit=20&offset=${pageOffset}&type=${mediaType}`,
-      );
+    async (
+      pageOffset: number,
+      append: boolean,
+      mediaType: MediaTab,
+      folderPrefix: string,
+    ) => {
+      const params = new URLSearchParams({
+        limit: "20",
+        offset: String(pageOffset),
+        type: mediaType,
+      });
+      if (folderPrefix) params.set("prefix", folderPrefix);
+
+      const response = await fetch(`/api/admin/blob-media?${params.toString()}`);
       if (!response.ok) {
         throw new Error("Medya listesi alınamadı");
       }
-      const data = (await response.json()) as {
-        items: BlobMediaItem[];
-        hasMore: boolean;
-        nextOffset: number | null;
-      };
+
+      const data = (await response.json()) as BlobMediaResponse;
+      setFolders(data.folders);
       setItems((prev) => (append ? [...prev, ...data.items] : data.items));
       setHasMore(data.hasMore);
       setOffset(data.nextOffset ?? pageOffset + data.items.length);
@@ -73,15 +87,20 @@ export function BlobMediaPickerModal({
 
   useEffect(() => {
     if (!open) return;
-
     setSelected(new Set());
+    setPreviewVideo(null);
+    setPrefix(initialFolder);
+  }, [open, initialFolder]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    setLoading(true);
     setItems([]);
     setOffset(0);
     setError("");
-    setPreviewVideo(null);
-    setLoading(true);
 
-    fetchPage(0, false, tab)
+    fetchPage(0, false, tab, prefix)
       .catch((fetchError) => {
         setError(
           fetchError instanceof Error
@@ -90,7 +109,7 @@ export function BlobMediaPickerModal({
         );
       })
       .finally(() => setLoading(false));
-  }, [open, tab, fetchPage]);
+  }, [open, tab, prefix, fetchPage]);
 
   function toggleItem(url: string) {
     if (existingSet.has(url)) return;
@@ -117,7 +136,7 @@ export function BlobMediaPickerModal({
     setLoadingMore(true);
     setError("");
     try {
-      await fetchPage(offset, true, tab);
+      await fetchPage(offset, true, tab, prefix);
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -150,7 +169,7 @@ export function BlobMediaPickerModal({
               <div>
                 <h3 className="text-lg font-semibold text-white">{title}</h3>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Blob&apos;a daha önce yüklediğiniz görseller ve videolar.
+                  Ürün klasörünüze gidip ilgili görselleri seçin.
                 </p>
               </div>
               <button
@@ -190,6 +209,15 @@ export function BlobMediaPickerModal({
               </button>
             </div>
 
+            <div className="border-b border-white/10 px-5 py-4">
+              <BlobMediaFolderNav
+                prefix={prefix}
+                folders={folders}
+                onPrefixChange={setPrefix}
+                onCreateFolder={setPrefix}
+              />
+            </div>
+
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
               {loading ? (
                 <div className="flex items-center justify-center gap-2 py-16 text-sm text-zinc-400">
@@ -202,7 +230,11 @@ export function BlobMediaPickerModal({
                 </p>
               ) : items.length === 0 ? (
                 <p className="py-16 text-center text-sm text-zinc-500">
-                  Bu kategoride medya bulunamadı.
+                  {prefix
+                    ? "Bu klasörde medya yok. Önce Medya Kütüphanesi'ne yükleyin."
+                    : folders.length > 0
+                      ? "Ürün klasörünü seçin."
+                      : "Bu kategoride medya bulunamadı."}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
