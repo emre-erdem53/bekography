@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type {
   PackageData,
@@ -12,6 +12,20 @@ import { PackageAccordion } from "@/components/packages/package-accordion";
 import { ServiceAreasGrid } from "@/components/packages/service-areas-grid";
 import { PackagesPageHeader } from "@/components/packages/packages-page-header";
 import { PACKAGES_PAGE_MAIN_OFFSET_CLASS } from "@/lib/packages-page-layout";
+
+const ACCORDION_ANIMATION_MS = 260;
+
+type ScrollAnchor = {
+  button: HTMLButtonElement;
+  viewportTop: number;
+};
+
+function compensateAccordionScroll(anchor: ScrollAnchor) {
+  const delta = anchor.button.getBoundingClientRect().top - anchor.viewportTop;
+  if (Math.abs(delta) > 0.5) {
+    window.scrollBy({ top: delta, left: 0 });
+  }
+}
 
 const sectionClass = "scroll-mt-24 bg-black pb-6 text-white";
 
@@ -30,6 +44,7 @@ export function PackagesHero({
   variant = "page",
   visible = true,
 }: PackagesHeroProps) {
+  const scrollAnchorRef = useRef<ScrollAnchor | null>(null);
   const [expandedServiceAreaId, setExpandedServiceAreaId] = useState<
     string | null
   >(null);
@@ -43,11 +58,32 @@ export function PackagesHero({
   const isSingleServiceArea = Boolean(serviceArea);
   const isPackagesListPage = variant === "page" && !isSingleServiceArea;
 
-  function handleToggleServiceArea(serviceAreaId: string) {
+  function handleToggleServiceArea(
+    serviceAreaId: string,
+    button: HTMLButtonElement,
+  ) {
+    scrollAnchorRef.current = {
+      button,
+      viewportTop: button.getBoundingClientRect().top,
+    };
     setExpandedServiceAreaId((current) =>
       current === serviceAreaId ? null : serviceAreaId,
     );
   }
+
+  useLayoutEffect(() => {
+    const anchor = scrollAnchorRef.current;
+    if (!anchor) return;
+
+    compensateAccordionScroll(anchor);
+
+    const timer = window.setTimeout(() => {
+      compensateAccordionScroll(anchor);
+      scrollAnchorRef.current = null;
+    }, ACCORDION_ANIMATION_MS);
+
+    return () => window.clearTimeout(timer);
+  }, [expandedServiceAreaId]);
 
   function handleSelectShootType(
     area: ServiceAreaData,

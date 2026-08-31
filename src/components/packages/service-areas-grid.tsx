@@ -41,7 +41,10 @@ export function ServiceAreasGrid({
 }: {
   serviceAreas: ServiceAreaData[];
   expandedServiceAreaId: string | null;
-  onToggleServiceArea: (serviceAreaId: string) => void;
+  onToggleServiceArea: (
+    serviceAreaId: string,
+    button: HTMLButtonElement,
+  ) => void;
   onSelectShootType: (
     serviceArea: ServiceAreaData,
     pkg: PackageData,
@@ -70,7 +73,9 @@ export function ServiceAreasGrid({
           >
             <button
               type="button"
-              onClick={() => onToggleServiceArea(serviceArea.id)}
+              onClick={(event) =>
+                onToggleServiceArea(serviceArea.id, event.currentTarget)
+              }
               aria-expanded={isOpen}
               className="group flex min-h-14 w-full min-w-0 items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-[#111] active:bg-[#141414] sm:min-h-16 sm:gap-4 sm:px-5 sm:py-4"
             >
@@ -96,7 +101,7 @@ export function ServiceAreasGrid({
 
               <span className="min-w-0 flex-1">
                 <span
-                  className="block truncate text-3xl font-semibold leading-none sm:text-4xl md:text-5xl"
+                  className="block truncate text-2xl font-semibold leading-none sm:text-3xl md:text-4xl"
                   style={{ color: serviceArea.accentColor }}
                 >
                   {serviceArea.title}
@@ -123,7 +128,7 @@ export function ServiceAreasGrid({
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.24, ease: "easeOut" }}
-                  className="overflow-hidden"
+                  className="overflow-hidden [overflow-anchor:none]"
                 >
                   <div className="border-t border-white/10 px-2.5 pb-3 pt-2 sm:px-3 sm:pb-3.5">
                     <PackageAccordion

@@ -54,7 +54,7 @@ const OUTDOOR_COMBO_SECIM_TAGS = [
   "Whatsapp’dan Gönderim",
 ];
 const OUTDOOR_COMBO_SECIM_BODY =
-  "Çekimden sonraki 30 gün içinde albüm ve çerçeve tasarımlarında kullanılacak fotoğraflar ve Video Klipte kullanılması istenen müzik WhatsApp grubu üzerinden çift tarafından iletilir. İstenildiği takdirde seçimler tamamen Bekography’e bırakılabilir.";
+  "Çekimden sonraki 30 gün içinde albüm ve çerçeve tasarımlarında kullanılacak fotoğraflar ve Video Filmde kullanılması istenen müzik WhatsApp grubu üzerinden çift tarafından iletilir. İstenildiği takdirde seçimler tamamen Bekography’e bırakılabilir.";
 
 const OUTDOOR_PHOTO_DUZENLEME_TAGS = [
   "18 Fotoğraf",
@@ -68,13 +68,13 @@ const OUTDOOR_ZIRVE_PHOTO_DUZENLEME_BODY =
   "Seçim süreci tamamlandıktan sonra en geç 70 gün içinde seçilen fotoğraflar düzenlenir, albüm ve çerçeve tasarımları tamamlanır. Düzenlenen çalışma ve yüksek çözünürlüklü düzenlenmiş fotoğraflar WhatsApp grubu üzerinden paylaşılır.";
 
 const OUTDOOR_COMBO_DUZENLEME_TAGS = [
-  "Video Klip",
+  "Video Film",
   "18 Fotoğraf",
   "1 Albüm Tasarımı",
   "3 Çerçeve Tasarımı",
 ];
 const OUTDOOR_COMBO_DUZENLEME_BODY =
-  "Seçim süreci tamamlandıktan sonra en geç 70 gün içinde seçilen fotoğraflar düzenlenir, albüm ve çerçeve tasarımları tamamlanır. Ayrıca 30 ile 60 saniye arasında değişen Video Klip düzenlenir. Düzenlenen çalışma ve yüksek çözünürlüklü düzenlenmiş fotoğraflar WhatsApp grubu üzerinden paylaşılır.";
+  "Seçim süreci tamamlandıktan sonra en geç 70 gün içinde seçilen fotoğraflar düzenlenir, albüm ve çerçeve tasarımları tamamlanır. Ayrıca 30 ile 60 saniye arasında değişen Video Film düzenlenir. Düzenlenen çalışma ve yüksek çözünürlüklü düzenlenmiş fotoğraflar WhatsApp grubu üzerinden paylaşılır.";
 
 const VIDEO_DIJITAL_TAGS = [
   "Ham Videolar",
@@ -99,11 +99,11 @@ const COMBO_DIJITAL_BODY = OUTDOOR_COMBO_DIJITAL_BODY;
 
 const SALON_SECIM_TAGS = ["1 Müzik", "Whatsapp’dan Gönderim"];
 const SALON_SECIM_BODY =
-  "Çekimden sonraki 30 gün içinde Video Klipte kullanılması istenen müzik WhatsApp grubu üzerinden çift tarafından iletilir. İstenildiği takdirde seçimler tamamen Bekography’e bırakılabilir.";
+  "Çekimden sonraki 30 gün içinde Video Filmde kullanılması istenen müzik WhatsApp grubu üzerinden çift tarafından iletilir. İstenildiği takdirde seçimler tamamen Bekography’e bırakılabilir.";
 
-const SALON_DUZENLEME_TAGS = ["Video Klip"];
+const SALON_DUZENLEME_TAGS = ["Video Film"];
 const SALON_DUZENLEME_BODY =
-  "Seçim süreci tamamlandıktan sonra en geç 70 gün içinde 30 ile 60 saniye arasında değişen Video Klip düzenlenir. Düzenlenen film WhatsApp grubu üzerinden paylaşılır.";
+  "Seçim süreci tamamlandıktan sonra en geç 70 gün içinde 30 ile 60 saniye arasında değişen Video Film düzenlenir. Düzenlenen film WhatsApp grubu üzerinden paylaşılır.";
 
 function sharedStart(key: string): PackageDetailSection[] {
   return [
@@ -262,7 +262,7 @@ const ZIRVE_COMBO_CEKIM_BODY =
   "Vadi rotalarında çekime başlayıp farklı noktalarda devam eden fotoğraf çekimi yapılır. Çiftin ayarladığı altı yüksek bir araçla gün batımı için merkeze tahmini 2,5-3 saatlik zirve yaylalara çıkılarak çekim tamamlanır. Belirlenen noktalardan birinde, hem yerden kamerayla hem de hava koşullarının elverdiği sürece drone ile video kayıtları alınır. Çekim esnasında kareler çiftle paylaşılır; sohbet eşliğinde yönlendirmeler yapılarak rahat bir atmosfer yaratılır ve süreç birlikte şekillendirilir. Mevsime göre gün batımı saatlerine bağlı olarak başlangıç saati daha erkene alınabilir.";
 
 const ZIRVE_COMBO_SECIM_BODY =
-  "Çekimden sonraki 30 gün içinde albüm ve çerçeve tasarımlarında kullanılacak fotoğraflar ve video klipte kullanılması istenen müzik WhatsApp grubu üzerinden çift tarafından iletilir. İstenildiği takdirde seçimler tamamen Bekography’e bırakılabilir.";
+  "Çekimden sonraki 30 gün içinde albüm ve çerçeve tasarımlarında kullanılacak fotoğraflar ve video filmde kullanılması istenen müzik WhatsApp grubu üzerinden çift tarafından iletilir. İstenildiği takdirde seçimler tamamen Bekography’e bırakılabilir.";
 
 const CATALOG: Record<string, PackageDetailSection[]> = {
   // —— Hazırlık Bride ——
@@ -416,7 +416,7 @@ const CATALOG: Record<string, PackageDetailSection[]> = {
       "Aile Vedası",
       "Ritüeller",
       "1 Saat Süre",
-      "Video Klip",
+      "Video Film",
       "Uzun Metraj Video",
     ],
     GELIN_VIDEO_CEKIM_BODY,
@@ -433,7 +433,7 @@ const CATALOG: Record<string, PackageDetailSection[]> = {
       "Aile Vedası",
       "Ritüeller",
       "1 Saat Süre",
-      "Video Klip",
+      "Video Film",
       "Uzun Metraj Video",
       "Anlık Kareler",
       "Aile Fotoğrafları",
@@ -530,7 +530,7 @@ const CATALOG: Record<string, PackageDetailSection[]> = {
       "Giriş",
       "Dans",
       "Eğlence",
-      "Video Klip",
+      "Video Film",
       "Uzun Metraj Video",
     ],
     "Söz programından en az yarım saat önce mekanda hazır olunur; akış ve özel istekler teyit edilir. Damat ailesinin gelişi, mekandaki detaylar, isteme anı, kahve ikramı kayıt altına alınır. Kısa bir aradan sonra nişan için çiftin girişi, dansı, yüzük merasimi ve eğlence anları kaydedilir. Ekstra bir talep olmadığı sürece takı töreni çekim kapsamına dahil edilmez. Program öncesi hazırlık ve prova için 1 saat, söz boyunca 1 saat, iki organizasyon arasında yarım saat, nişan için 3 saat ve kapanış/vedalaşma anları için sağlanan yarım saatlik esneklikle birlikte yol toplamda, 6 saatlik bir çekim süreci yürütülür.",
@@ -548,7 +548,7 @@ const CATALOG: Record<string, PackageDetailSection[]> = {
       "Giriş",
       "Dans",
       "Eğlence",
-      "Video Klip",
+      "Video Film",
       "Uzun Metraj Video",
       "Anlık Kareler",
       "Aile Fotoğrafları",
@@ -568,7 +568,7 @@ const CATALOG: Record<string, PackageDetailSection[]> = {
       "Giriş",
       "Dans",
       "Eğlence",
-      "Video Klip",
+      "Video Film",
       "Uzun Metraj Video",
     ],
     "Söz programından en az yarım saat önce mekanda hazır olunur; akış ve özel istekler teyit edilir. Damat ailesinin gelişi, mekandaki detaylar, isteme anı, kahve ikramı kayıt altına alınır. Kısa bir aradan sonra nişan için çiftin girişi, dansı, yüzük merasimi ve eğlence anları kaydedilir. Ekstra bir talep olmadığı sürece takı töreni çekim kapsamına dahil edilmez. Program öncesi hazırlık ve prova için 1 saat, söz boyunca 1 saat, iki organizasyon arasında yarım saat, nişan için 3 saat ve kapanış/vedalaşma anları için sağlanan yarım saatlik esneklikle birlikte yol toplamda, 6 saatlik bir çekim süreci yürütülür.",
@@ -586,7 +586,7 @@ const CATALOG: Record<string, PackageDetailSection[]> = {
       "Giriş",
       "Dans",
       "Eğlence",
-      "Video Klip",
+      "Video Film",
       "Uzun Metraj Video",
       "Anlık Kareler",
       "Aile Fotoğrafları",

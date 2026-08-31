@@ -95,17 +95,28 @@ const packageServiceItemSchema = z.object({
 });
 
 export const MAX_HIERARCHY_TAGS = 5;
+/** Ürün detayında (fotoğraf üstü) gösterilen çekim türü etiketleri. */
+export const MAX_SHOOT_TYPE_HIGHLIGHT_TAGS = 15;
 
-/** Hiyerarşinin üç seviyesinde de ortak: opsiyonel, en fazla 5 etiket. */
+const tagStringSchema = z
+  .string()
+  .trim()
+  .min(1, "Etiket boş bırakılamaz")
+  .max(40, "Etiket en fazla 40 karakter olabilir");
+
+/** Hizmet alanı ve paket kartları: en fazla 5 etiket. */
 export const hierarchyTagsSchema = z
-  .array(
-    z
-      .string()
-      .trim()
-      .min(1, "Etiket boş bırakılamaz")
-      .max(40, "Etiket en fazla 40 karakter olabilir"),
-  )
+  .array(tagStringSchema)
   .max(MAX_HIERARCHY_TAGS, `En fazla ${MAX_HIERARCHY_TAGS} etiket girebilirsiniz`)
+  .default([]);
+
+/** Çekim türü vitrin etiketleri (ürün detay başlığı altı). */
+export const shootTypeHighlightTagsSchema = z
+  .array(tagStringSchema)
+  .max(
+    MAX_SHOOT_TYPE_HIGHLIGHT_TAGS,
+    `En fazla ${MAX_SHOOT_TYPE_HIGHLIGHT_TAGS} etiket girebilirsiniz`,
+  )
   .default([]);
 
 /** `/paketler/[slug]` route'u ile çakışan yollar hizmet alanı slug'ı olamaz. */
@@ -181,7 +192,7 @@ export const shootTypeSchema = z.object({
   iconKey: z.string().nullable().optional(),
   sortOrder: z.number().int().optional(),
   isActive: z.boolean().optional(),
-  tags: hierarchyTagsSchema.optional(),
+  tags: shootTypeHighlightTagsSchema.optional(),
   content: shootTypeContentSchema.optional(),
 });
 

@@ -37,7 +37,10 @@ import {
   inferOptionIconKey,
   PACKAGE_OPTION_ICON_KEYS,
 } from "@/lib/package-option-icon";
-import { MAX_HIERARCHY_TAGS } from "@/lib/validations";
+import {
+  MAX_HIERARCHY_TAGS,
+  MAX_SHOOT_TYPE_HIGHLIGHT_TAGS,
+} from "@/lib/validations";
 
 type ShootTypeForm = {
   /** Mevcut satırın id'si; yeni eklenenlerde yok. */
@@ -1087,12 +1090,12 @@ export function PackageForm({
                     </div>
 
                     <ReorderableTagsEditor
-                      title="Çekim Türü Etiketleri"
+                      title="Ürün detay etiketleri"
                       tags={shootType.tags}
                       onChange={(nextTags) =>
                         updateShootType(pkg.key, key, { tags: nextTags })
                       }
-                      maxTags={MAX_HIERARCHY_TAGS}
+                      maxTags={MAX_SHOOT_TYPE_HIGHLIGHT_TAGS}
                     />
 
                     <div className="space-y-3 border-t border-white/10 pt-4">

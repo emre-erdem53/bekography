@@ -33,8 +33,8 @@ function ShootTypeRow({
   const { labels: paymentLabels } = usePaymentTypeCopy();
 
   return (
-    <div className="flex items-center gap-2 border-t border-white/[0.06] py-1.5 first:border-t-0 sm:gap-3 sm:py-2">
-      <p className="min-w-0 flex-1 truncate text-sm font-medium text-white">
+    <div className="flex items-start gap-2 border-t border-white/[0.06] py-1.5 first:border-t-0 sm:gap-3 sm:py-2">
+      <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-white">
         {shootType.label}
       </p>
 
@@ -101,9 +101,7 @@ export function PackageAccordion({
         return (
           <div
             key={pkg.id}
-            className={`rounded-xl border border-white/10 px-3.5 py-3 sm:px-4 sm:py-3.5 ${
-              nested ? "bg-black/50" : "bg-[#0a0a0a]"
-            }`}
+            className="rounded-xl border border-white/10 bg-white/[0.045] px-3.5 py-3 sm:px-4 sm:py-3.5"
           >
             <div className="min-w-0">
               <p
