@@ -1,5 +1,8 @@
 export type BlobMediaKind = "image" | "video";
 
+export const BLOB_MEDIA_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime";
+
 export type BlobMediaItem = {
   url: string;
   pathname: string;

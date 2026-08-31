@@ -7,13 +7,12 @@ import { ImageIcon, Loader2, Play, Trash2, Video, X } from "lucide-react";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
 import { BlobMediaFolderNav } from "@/components/admin/blob-media-folder-nav";
 import {
+  BLOB_MEDIA_ACCEPT,
   formatBlobFolderLabel,
   getBlobFolderSegments,
   type BlobMediaFolder,
   type BlobMediaItem,
 } from "@/lib/blob-media";
-
-type MediaTab = "image" | "video";
 
 type BlobMediaResponse = {
   prefix: string;
@@ -25,7 +24,6 @@ type BlobMediaResponse = {
 };
 
 export function MediaLibraryClient() {
-  const [tab, setTab] = useState<MediaTab>("image");
   const [prefix, setPrefix] = useState("");
   const [folders, setFolders] = useState<BlobMediaFolder[]>([]);
   const [items, setItems] = useState<BlobMediaItem[]>([]);
@@ -40,16 +38,10 @@ export function MediaLibraryClient() {
   const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
   const fetchPage = useCallback(
-    async (
-      pageOffset: number,
-      append: boolean,
-      mediaType: MediaTab,
-      folderPrefix: string,
-    ) => {
+    async (pageOffset: number, append: boolean, folderPrefix: string) => {
       const params = new URLSearchParams({
         limit: "24",
         offset: String(pageOffset),
-        type: mediaType,
       });
       if (folderPrefix) params.set("prefix", folderPrefix);
 
@@ -69,7 +61,7 @@ export function MediaLibraryClient() {
   useEffect(() => {
     setLoading(true);
     setError("");
-    fetchPage(0, false, tab, prefix)
+    fetchPage(0, false, prefix)
       .catch((fetchError) => {
         setError(
           fetchError instanceof Error
@@ -78,7 +70,7 @@ export function MediaLibraryClient() {
         );
       })
       .finally(() => setLoading(false));
-  }, [tab, prefix, fetchPage]);
+  }, [prefix, fetchPage]);
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -93,7 +85,7 @@ export function MediaLibraryClient() {
         body: formData,
       });
       if (!response.ok) throw new Error("Dosya yüklenemedi");
-      await fetchPage(0, false, tab, prefix);
+      await fetchPage(0, false, prefix);
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
@@ -139,53 +131,18 @@ export function MediaLibraryClient() {
     }
   }
 
-  const accept =
-    tab === "image"
-      ? "image/jpeg,image/png,image/webp,image/gif,image/avif"
-      : "video/mp4,video/webm,video/quicktime";
-
   const uploadHint = prefix
-    ? `"${formatBlobFolderLabel(getBlobFolderSegments(prefix).at(-1)! )}" klasörüne yüklenecek`
-    : tab === "image"
-      ? "JPEG, PNG, WebP, GIF veya AVIF — ürün klasörüne girmek için yukarıdan seçin"
-      : "MP4, WebM veya MOV — ürün klasörüne girmek için yukarıdan seçin";
+    ? `"${formatBlobFolderLabel(getBlobFolderSegments(prefix).at(-1)! )}" klasörüne fotoğraf veya video yüklenecek`
+    : "JPEG, PNG, WebP, GIF, AVIF, MP4, WebM veya MOV — ürün klasörüne girmek için yukarıdan seçin";
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-white">Medya Kütüphanesi</h1>
-          <p className="mt-1 text-sm text-zinc-400">
-            Ürün bazlı klasörler oluşturup görselleri ve videoları ayrı ayrı
-            yönetin. Bu klasörde: {total} dosya
-          </p>
-        </div>
-        <div className="flex rounded-xl border border-white/10 p-1">
-          <button
-            type="button"
-            onClick={() => setTab("image")}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-              tab === "image"
-                ? "bg-white text-black"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <ImageIcon className="h-4 w-4" />
-            Fotoğraflar
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("video")}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
-              tab === "video"
-                ? "bg-white text-black"
-                : "text-zinc-400 hover:text-white"
-            }`}
-          >
-            <Video className="h-4 w-4" />
-            Videolar
-          </button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-semibold text-white">Medya Kütüphanesi</h1>
+        <p className="mt-1 text-sm text-zinc-400">
+          Ürün bazlı klasörler oluşturup fotoğraf ve videoları birlikte yönetin.
+          Bu klasörde: {total} dosya
+        </p>
       </div>
 
       <BlobMediaFolderNav
@@ -196,7 +153,7 @@ export function MediaLibraryClient() {
       />
 
       <AdminFileUpload
-        accept={accept}
+        accept={BLOB_MEDIA_ACCEPT}
         onFileSelect={(file) => void handleUpload(file)}
         label={
           uploading
@@ -223,10 +180,10 @@ export function MediaLibraryClient() {
       ) : items.length === 0 ? (
         <p className="rounded-2xl border border-white/10 bg-white/5 px-4 py-12 text-center text-sm text-zinc-400">
           {prefix
-            ? "Bu klasörde henüz dosya yok. Yukarıdan yükleyebilirsiniz."
+            ? "Bu klasörde henüz dosya yok. Yukarıdan fotoğraf veya video yükleyebilirsiniz."
             : folders.length > 0
               ? "Bir klasör seçin veya köke dosya yükleyin."
-              : "Bu kategoride henüz dosya yok."}
+              : "Henüz dosya yok."}
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
@@ -261,6 +218,14 @@ export function MediaLibraryClient() {
                     </span>
                   </button>
                 )}
+                <span className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-full bg-black/75 px-2 py-0.5 text-[10px] font-medium text-white">
+                  {item.type === "video" ? (
+                    <Video className="h-3 w-3" />
+                  ) : (
+                    <ImageIcon className="h-3 w-3" />
+                  )}
+                  {item.type === "video" ? "Video" : "Görsel"}
+                </span>
                 <button
                   type="button"
                   onClick={() => void handleDelete(item)}
@@ -291,7 +256,7 @@ export function MediaLibraryClient() {
           type="button"
           onClick={() => {
             setLoadingMore(true);
-            fetchPage(offset, true, tab, prefix)
+            fetchPage(offset, true, prefix)
               .catch(() => setError("Daha fazla medya yüklenemedi"))
               .finally(() => setLoadingMore(false));
           }}
