@@ -16,8 +16,6 @@ import { BlobMediaFolderNav } from "@/components/admin/blob-media-folder-nav";
 import type { PackageGalleryMedia } from "@/lib/package-seed-data";
 import type { BlobMediaFolder, BlobMediaItem } from "@/lib/blob-media";
 
-type MediaTab = "image" | "video";
-
 type BlobMediaResponse = {
   prefix: string;
   folders: BlobMediaFolder[];
@@ -43,7 +41,6 @@ export function BlobMediaPickerModal({
   title = "Medya Kütüphanesi",
   initialFolder = "",
 }: BlobMediaPickerModalProps) {
-  const [tab, setTab] = useState<MediaTab>("image");
   const [prefix, setPrefix] = useState(initialFolder);
   const [folders, setFolders] = useState<BlobMediaFolder[]>([]);
   const [items, setItems] = useState<BlobMediaItem[]>([]);
@@ -58,16 +55,10 @@ export function BlobMediaPickerModal({
   const existingSet = new Set(existingUrls);
 
   const fetchPage = useCallback(
-    async (
-      pageOffset: number,
-      append: boolean,
-      mediaType: MediaTab,
-      folderPrefix: string,
-    ) => {
+    async (pageOffset: number, append: boolean, folderPrefix: string) => {
       const params = new URLSearchParams({
         limit: "20",
         offset: String(pageOffset),
-        type: mediaType,
       });
       if (folderPrefix) params.set("prefix", folderPrefix);
 
@@ -100,7 +91,7 @@ export function BlobMediaPickerModal({
     setOffset(0);
     setError("");
 
-    fetchPage(0, false, tab, prefix)
+    fetchPage(0, false, prefix)
       .catch((fetchError) => {
         setError(
           fetchError instanceof Error
@@ -109,7 +100,7 @@ export function BlobMediaPickerModal({
         );
       })
       .finally(() => setLoading(false));
-  }, [open, tab, prefix, fetchPage]);
+  }, [open, prefix, fetchPage]);
 
   function toggleItem(url: string) {
     if (existingSet.has(url)) return;
@@ -136,7 +127,7 @@ export function BlobMediaPickerModal({
     setLoadingMore(true);
     setError("");
     try {
-      await fetchPage(offset, true, tab, prefix);
+      await fetchPage(offset, true, prefix);
     } catch (fetchError) {
       setError(
         fetchError instanceof Error
@@ -169,7 +160,7 @@ export function BlobMediaPickerModal({
               <div>
                 <h3 className="text-lg font-semibold text-white">{title}</h3>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Ürün klasörünüze gidip ilgili görselleri seçin.
+                  Ürün klasörünüze gidip fotoğraf ve videoları seçin.
                 </p>
               </div>
               <button
@@ -179,33 +170,6 @@ export function BlobMediaPickerModal({
                 aria-label="Kapat"
               >
                 <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex gap-2 border-b border-white/10 px-5 py-3">
-              <button
-                type="button"
-                onClick={() => setTab("image")}
-                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                  tab === "image"
-                    ? "bg-white text-black"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <ImageIcon className="h-3.5 w-3.5" />
-                Fotoğraflar
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("video")}
-                className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                  tab === "video"
-                    ? "bg-white text-black"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <Video className="h-3.5 w-3.5" />
-                Videolar
               </button>
             </div>
 
@@ -234,7 +198,7 @@ export function BlobMediaPickerModal({
                     ? "Bu klasörde medya yok. Önce Medya Kütüphanesi'ne yükleyin."
                     : folders.length > 0
                       ? "Ürün klasörünü seçin."
-                      : "Bu kategoride medya bulunamadı."}
+                      : "Medya bulunamadı."}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
