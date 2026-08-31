@@ -1,47 +1,52 @@
 import { del, list } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { decodeBlobPathname, getBlobMediaKind } from "@/lib/blob-media";
+import {
+  mapBlobToMediaItem,
+  normalizeBlobFolderPrefix,
+  toBlobMediaFolder,
+  type BlobMediaItem,
+} from "@/lib/blob-media";
 import { prisma } from "@/lib/prisma";
 
-const DEFAULT_LIMIT = 20;
+const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 50;
 
-type BlobMediaItem = {
-  url: string;
-  pathname: string;
-  uploadedAt: string;
-  type: "image" | "video";
-  label: string;
-};
-
-async function listAllMediaBlobs() {
+async function listFolderContents(prefix: string) {
+  const normalizedPrefix = normalizeBlobFolderPrefix(prefix);
   const blobs: Awaited<ReturnType<typeof list>>["blobs"] = [];
+  const folderPaths = new Set<string>();
   let cursor: string | undefined;
 
   do {
-    const page = await list({ cursor, limit: 1000 });
+    const page = await list({
+      cursor,
+      limit: 1000,
+      prefix: normalizedPrefix || undefined,
+      mode: "folded",
+    });
+
+    for (const folderPath of page.folders ?? []) {
+      folderPaths.add(folderPath);
+    }
+
     blobs.push(...page.blobs);
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor);
 
-  return blobs
-    .map((blob) => {
-      const type = getBlobMediaKind(blob.pathname);
-      if (!type) return null;
-      return {
-        url: blob.url,
-        pathname: blob.pathname,
-        uploadedAt: blob.uploadedAt.toISOString(),
-        type,
-        label: decodeBlobPathname(blob.pathname),
-      } satisfies BlobMediaItem;
-    })
+  const folders = [...folderPaths]
+    .map((folderPath) => toBlobMediaFolder(folderPath))
+    .sort((a, b) => a.name.localeCompare(b.name, "tr"));
+
+  const items = blobs
+    .map((blob) => mapBlobToMediaItem(blob))
     .filter((item): item is BlobMediaItem => item !== null)
     .sort(
       (a, b) =>
         new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime(),
     );
+
+  return { folders, items };
 }
 
 async function findPackageUsageCount(url: string) {
@@ -71,8 +76,9 @@ export async function GET(request: Request) {
       Math.max(1, Number(searchParams.get("limit") ?? DEFAULT_LIMIT) || DEFAULT_LIMIT),
     );
     const typeFilter = searchParams.get("type");
+    const prefix = searchParams.get("prefix") ?? "";
 
-    const allItems = await listAllMediaBlobs();
+    const { folders, items: allItems } = await listFolderContents(prefix);
     const filtered =
       typeFilter === "image" || typeFilter === "video"
         ? allItems.filter((item) => item.type === typeFilter)
@@ -83,6 +89,8 @@ export async function GET(request: Request) {
     const hasMore = nextOffset < filtered.length;
 
     return NextResponse.json({
+      prefix: normalizeBlobFolderPrefix(prefix),
+      folders,
       items,
       hasMore,
       nextOffset: hasMore ? nextOffset : null,
