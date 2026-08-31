@@ -13,18 +13,45 @@ import { ServiceAreasGrid } from "@/components/packages/service-areas-grid";
 import { PackagesPageHeader } from "@/components/packages/packages-page-header";
 import { PACKAGES_PAGE_MAIN_OFFSET_CLASS } from "@/lib/packages-page-layout";
 
-const ACCORDION_ANIMATION_MS = 260;
+const ACCORDION_ANIMATION_MS = 320;
 
 type ScrollAnchor = {
-  button: HTMLButtonElement;
+  element: HTMLElement;
   viewportTop: number;
 };
 
-function compensateAccordionScroll(anchor: ScrollAnchor) {
-  const delta = anchor.button.getBoundingClientRect().top - anchor.viewportTop;
-  if (Math.abs(delta) > 0.5) {
-    window.scrollBy({ top: delta, left: 0 });
-  }
+/** Accordion açılıp kapanırken tıklanan başlığın viewport konumunu sabit tutar. */
+function lockElementViewportPosition(
+  anchor: ScrollAnchor,
+  durationMs = ACCORDION_ANIMATION_MS,
+) {
+  const { element, viewportTop } = anchor;
+  const startedAt = performance.now();
+  let frameId = 0;
+
+  const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+  document.documentElement.style.scrollBehavior = "auto";
+
+  const tick = () => {
+    const delta = element.getBoundingClientRect().top - viewportTop;
+    if (Math.abs(delta) > 0.5) {
+      window.scrollBy({ top: delta, left: 0, behavior: "auto" });
+    }
+
+    if (performance.now() - startedAt < durationMs) {
+      frameId = window.requestAnimationFrame(tick);
+      return;
+    }
+
+    document.documentElement.style.scrollBehavior = previousScrollBehavior;
+  };
+
+  frameId = window.requestAnimationFrame(tick);
+
+  return () => {
+    window.cancelAnimationFrame(frameId);
+    document.documentElement.style.scrollBehavior = previousScrollBehavior;
+  };
 }
 
 const sectionClass = "scroll-mt-24 bg-black pb-6 text-white";
@@ -45,6 +72,7 @@ export function PackagesHero({
   visible = true,
 }: PackagesHeroProps) {
   const scrollAnchorRef = useRef<ScrollAnchor | null>(null);
+  const scrollLockCleanupRef = useRef<(() => void) | null>(null);
   const [expandedServiceAreaId, setExpandedServiceAreaId] = useState<
     string | null
   >(null);
@@ -60,11 +88,12 @@ export function PackagesHero({
 
   function handleToggleServiceArea(
     serviceAreaId: string,
-    button: HTMLButtonElement,
+    cardElement: HTMLElement,
   ) {
+    scrollLockCleanupRef.current?.();
     scrollAnchorRef.current = {
-      button,
-      viewportTop: button.getBoundingClientRect().top,
+      element: cardElement,
+      viewportTop: cardElement.getBoundingClientRect().top,
     };
     setExpandedServiceAreaId((current) =>
       current === serviceAreaId ? null : serviceAreaId,
@@ -75,14 +104,13 @@ export function PackagesHero({
     const anchor = scrollAnchorRef.current;
     if (!anchor) return;
 
-    compensateAccordionScroll(anchor);
+    scrollLockCleanupRef.current = lockElementViewportPosition(anchor);
 
-    const timer = window.setTimeout(() => {
-      compensateAccordionScroll(anchor);
+    return () => {
+      scrollLockCleanupRef.current?.();
+      scrollLockCleanupRef.current = null;
       scrollAnchorRef.current = null;
-    }, ACCORDION_ANIMATION_MS);
-
-    return () => window.clearTimeout(timer);
+    };
   }, [expandedServiceAreaId]);
 
   function handleSelectShootType(

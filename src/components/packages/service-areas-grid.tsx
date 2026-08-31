@@ -43,7 +43,7 @@ export function ServiceAreasGrid({
   expandedServiceAreaId: string | null;
   onToggleServiceArea: (
     serviceAreaId: string,
-    button: HTMLButtonElement,
+    cardElement: HTMLElement,
   ) => void;
   onSelectShootType: (
     serviceArea: ServiceAreaData,
@@ -60,7 +60,7 @@ export function ServiceAreasGrid({
   }
 
   return (
-    <div className="mt-6 flex w-full flex-col gap-2.5 sm:mt-8 sm:gap-3">
+    <div className="mt-6 flex w-full flex-col gap-2.5 [overflow-anchor:none] sm:mt-8 sm:gap-3">
       {serviceAreas.map((serviceArea) => {
         const isOpen = expandedServiceAreaId === serviceArea.id;
         const subtitle = resolveServiceAreaSubtitle(serviceArea);
@@ -69,12 +69,18 @@ export function ServiceAreasGrid({
         return (
           <div
             key={serviceArea.id}
-            className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]"
+            data-service-area-card
+            className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a] [overflow-anchor:none]"
           >
             <button
               type="button"
               onClick={(event) =>
-                onToggleServiceArea(serviceArea.id, event.currentTarget)
+                onToggleServiceArea(
+                  serviceArea.id,
+                  event.currentTarget.closest("[data-service-area-card]") as
+                    | HTMLElement
+                    | null ?? event.currentTarget,
+                )
               }
               aria-expanded={isOpen}
               className="group flex min-h-14 w-full min-w-0 items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-[#111] active:bg-[#141414] sm:min-h-16 sm:gap-4 sm:px-5 sm:py-4"
