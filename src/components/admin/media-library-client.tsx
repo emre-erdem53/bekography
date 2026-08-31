@@ -73,20 +73,39 @@ export function MediaLibraryClient() {
       .finally(() => setLoading(false));
   }, [prefix, fetchPage]);
 
-  async function handleUpload(file: File) {
+  async function handleUpload(files: File[]) {
+    if (files.length === 0) return;
+
     setUploading(true);
     setError("");
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (prefix) formData.append("folder", prefix);
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) throw new Error("Dosya yüklenemedi");
+    let failed = 0;
+    try {
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (prefix) formData.append("folder", prefix);
+
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          failed += 1;
+          continue;
+        }
+      }
+
       await fetchPage(0, false, prefix);
+
+      if (failed > 0) {
+        setError(
+          failed === files.length
+            ? "Dosyalar yüklenemedi"
+            : `${failed} / ${files.length} dosya yüklenemedi`,
+        );
+      }
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
@@ -133,8 +152,8 @@ export function MediaLibraryClient() {
   }
 
   const uploadHint = prefix
-    ? `"${formatBlobFolderLabel(getBlobFolderSegments(prefix).at(-1)! )}" klasörüne fotoğraf veya video yüklenecek`
-    : "JPEG, PNG, WebP, GIF, AVIF, MP4, WebM veya MOV — ürün klasörüne girmek için yukarıdan seçin";
+    ? `"${formatBlobFolderLabel(getBlobFolderSegments(prefix).at(-1)! )}" klasörüne fotoğraf veya video yüklenecek — birden fazla dosya seçebilirsiniz`
+    : "JPG, JPEG, PNG, WebP, GIF, AVIF, MP4, WebM veya MOV — birden fazla dosya seçebilirsiniz";
 
   return (
     <div className="space-y-6">
@@ -157,7 +176,9 @@ export function MediaLibraryClient() {
 
       <AdminFileUpload
         accept={BLOB_MEDIA_ACCEPT}
-        onFileSelect={(file) => void handleUpload(file)}
+        multiple
+        onFilesSelect={(files) => void handleUpload(files)}
+        onFileSelect={(file) => void handleUpload([file])}
         label={
           uploading
             ? "Yükleniyor..."

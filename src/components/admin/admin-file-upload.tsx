@@ -6,6 +6,8 @@ import { Upload } from "lucide-react";
 type AdminFileUploadProps = {
   accept: string;
   onFileSelect: (file: File) => void;
+  onFilesSelect?: (files: File[]) => void;
+  multiple?: boolean;
   label?: string;
   hint?: string;
   fileLabel?: string | null;
@@ -15,6 +17,8 @@ type AdminFileUploadProps = {
 export function AdminFileUpload({
   accept,
   onFileSelect,
+  onFilesSelect,
+  multiple = false,
   label = "Dosya Yükle",
   hint,
   fileLabel,
@@ -23,9 +27,19 @@ export function AdminFileUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
-  function handleFile(file: File | undefined) {
-    if (!file || disabled) return;
-    onFileSelect(file);
+  function handleFiles(fileList: FileList | undefined | null) {
+    if (!fileList?.length || disabled) return;
+
+    const files = [...fileList];
+    if (multiple) {
+      onFilesSelect?.(files);
+      if (!onFilesSelect) {
+        for (const file of files) onFileSelect(file);
+      }
+    } else {
+      onFileSelect(files[0]);
+    }
+
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -43,7 +57,7 @@ export function AdminFileUpload({
         onDrop={(event) => {
           event.preventDefault();
           setDragOver(false);
-          handleFile(event.dataTransfer.files?.[0]);
+          handleFiles(event.dataTransfer.files);
         }}
         className={`group mt-2 flex w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-all duration-200 ${
           disabled
@@ -62,9 +76,10 @@ export function AdminFileUpload({
         ref={inputRef}
         type="file"
         accept={accept}
+        multiple={multiple}
         disabled={disabled}
         className="sr-only"
-        onChange={(event) => handleFile(event.target.files?.[0])}
+        onChange={(event) => handleFiles(event.target.files)}
       />
       {hint ? <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">{hint}</p> : null}
     </div>
