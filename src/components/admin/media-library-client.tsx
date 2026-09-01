@@ -9,6 +9,8 @@ import { BlobMediaFolderNav } from "@/components/admin/blob-media-folder-nav";
 import { BlobMediaFolderCard } from "@/components/admin/blob-media-folder-card";
 import {
   BLOB_MEDIA_ACCEPT,
+  BLOB_MEDIA_UPLOAD_SIZE_HINT,
+  validateBlobUploadFile,
   formatBlobFolderLabel,
   getBlobFolderSegments,
   type BlobMediaFolder,
@@ -80,8 +82,21 @@ export function MediaLibraryClient() {
     setError("");
 
     let failed = 0;
+    let validationFailed = 0;
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      const validationError = validateBlobUploadFile(file);
+      if (validationError) {
+        validationFailed += 1;
+        setError(validationError);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
     try {
-      for (const file of files) {
+      for (const file of validFiles) {
         const formData = new FormData();
         formData.append("file", file);
         if (prefix) formData.append("folder", prefix);
@@ -97,14 +112,18 @@ export function MediaLibraryClient() {
         }
       }
 
-      await fetchPage(0, false, prefix);
+      if (validFiles.length > 0) {
+        await fetchPage(0, false, prefix);
+      }
 
       if (failed > 0) {
         setError(
-          failed === files.length
+          failed === validFiles.length
             ? "Dosyalar yüklenemedi"
-            : `${failed} / ${files.length} dosya yüklenemedi`,
+            : `${failed} / ${validFiles.length} dosya yüklenemedi`,
         );
+      } else if (validationFailed > 0 && validFiles.length === 0) {
+        setError("Seçilen dosyalar boyut veya format nedeniyle yüklenemedi.");
       }
     } catch (uploadError) {
       setError(
@@ -152,8 +171,8 @@ export function MediaLibraryClient() {
   }
 
   const uploadHint = prefix
-    ? `"${formatBlobFolderLabel(getBlobFolderSegments(prefix).at(-1)! )}" klasörüne fotoğraf veya video yüklenecek — birden fazla dosya seçebilirsiniz`
-    : "JPG, JPEG, PNG, WebP, GIF, AVIF, MP4, WebM veya MOV — birden fazla dosya seçebilirsiniz";
+    ? `"${formatBlobFolderLabel(getBlobFolderSegments(prefix).at(-1)! )}" klasörüne fotoğraf veya video yüklenecek — ${BLOB_MEDIA_UPLOAD_SIZE_HINT}`
+    : `JPG, JPEG, PNG, WebP, GIF, AVIF, MP4, WebM veya MOV — ${BLOB_MEDIA_UPLOAD_SIZE_HINT}`;
 
   return (
     <div className="space-y-6">

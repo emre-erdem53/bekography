@@ -10,6 +10,7 @@ import type {
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { PackageAccordion } from "@/components/packages/package-accordion";
 import { ServiceAreasGrid } from "@/components/packages/service-areas-grid";
+import { PackagesBundleDiscountNote } from "@/components/packages/packages-bundle-discount-note";
 import { PackagesPageHeader } from "@/components/packages/packages-page-header";
 import { PACKAGES_PAGE_MAIN_OFFSET_CLASS } from "@/lib/packages-page-layout";
 
@@ -183,12 +184,15 @@ export function PackagesHero({
             onSelectShootType={handleSelectShootTypeSingle}
           />
         ) : (
-          <ServiceAreasGrid
-            serviceAreas={serviceAreas ?? []}
-            expandedServiceAreaId={expandedServiceAreaId}
-            onToggleServiceArea={handleToggleServiceArea}
-            onSelectShootType={handleSelectShootType}
-          />
+          <>
+            <ServiceAreasGrid
+              serviceAreas={serviceAreas ?? []}
+              expandedServiceAreaId={expandedServiceAreaId}
+              onToggleServiceArea={handleToggleServiceArea}
+              onSelectShootType={handleSelectShootType}
+            />
+            <PackagesBundleDiscountNote />
+          </>
         )}
       </motion.div>
 

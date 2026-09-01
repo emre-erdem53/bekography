@@ -8,7 +8,12 @@ import type {
   ServiceAreaData,
   ShootTypeData,
 } from "@/lib/package-types";
-import { useCartStore } from "@/stores/cart-store";
+import { useCartStore, getCartItemDiscountPrices } from "@/stores/cart-store";
+import {
+  getCartTotalsWithDiscount,
+  SECOND_PACKAGE_DISCOUNT_NOTE,
+} from "@/lib/cart-bundle-discount";
+import { formatPrice } from "@/lib/constants";
 import {
   getShootTypeGalleryPreviewMedia,
   isVideoMediaUrl,
@@ -42,13 +47,20 @@ export function PackagesCartClient({ serviceAreas }: PackagesCartClientProps) {
 
   const cartTotals = useMemo(() => {
     const selected = items.filter((item) => item.selected);
+    const discountItems = selected.map((item) => ({
+      cashPrice: item.cashPrice,
+      installmentPrice: item.installmentPrice,
+      scheduleType: item.scheduleType,
+      areaSlug: item.serviceAreaSlug,
+      isCompanionOnly: item.isCompanionOnly,
+    }));
+    const totals = getCartTotalsWithDiscount(discountItems);
+
     return {
-      cash: selected.reduce((sum, item) => sum + item.cashPrice, 0),
-      installment: selected.reduce(
-        (sum, item) => sum + item.installmentPrice,
-        0,
-      ),
+      cash: totals.cash,
+      installment: totals.installment,
       selectedCount: selected.length,
+      discountAppliedCount: totals.discountAppliedCount,
     };
   }, [items]);
 
@@ -125,6 +137,7 @@ export function PackagesCartClient({ serviceAreas }: PackagesCartClientProps) {
                 item.shootTypeId,
                 item.imageUrl,
               );
+              const effective = getCartItemDiscountPrices(item, items);
 
               return (
                 <li
@@ -163,6 +176,11 @@ export function PackagesCartClient({ serviceAreas }: PackagesCartClientProps) {
                       <p className="text-sm text-zinc-400">
                         {item.packageTitle} · {item.shootTypeLabel}
                       </p>
+                      {effective.discountApplied ? (
+                        <p className="mt-1 text-xs font-medium text-[#93f8b6]">
+                          %10 indirim uygulandı
+                        </p>
+                      ) : null}
                     </div>
                     <button
                       type="button"
@@ -177,16 +195,30 @@ export function PackagesCartClient({ serviceAreas }: PackagesCartClientProps) {
                     </button>
                   </button>
                   <div className="mt-3 grid grid-cols-2 gap-3 border-t border-white/5 pt-3 md:mt-4">
-                    <PaymentTypePrice
-                      type="pesin"
-                      price={item.cashPrice}
-                      variant="stacked"
-                    />
-                    <PaymentTypePrice
-                      type="taksitli"
-                      price={item.installmentPrice}
-                      variant="stacked"
-                    />
+                    <div>
+                      {effective.discountApplied ? (
+                        <p className="mb-1 text-xs text-zinc-500 line-through">
+                          {formatPrice(item.cashPrice)}
+                        </p>
+                      ) : null}
+                      <PaymentTypePrice
+                        type="pesin"
+                        price={effective.cashPrice}
+                        variant="stacked"
+                      />
+                    </div>
+                    <div>
+                      {effective.discountApplied ? (
+                        <p className="mb-1 text-xs text-zinc-500 line-through">
+                          {formatPrice(item.installmentPrice)}
+                        </p>
+                      ) : null}
+                      <PaymentTypePrice
+                        type="taksitli"
+                        price={effective.installmentPrice}
+                        variant="stacked"
+                      />
+                    </div>
                   </div>
                 </li>
               );
@@ -223,6 +255,11 @@ export function PackagesCartClient({ serviceAreas }: PackagesCartClientProps) {
                 variant="featured"
               />
             </div>
+            {cartTotals.discountAppliedCount > 0 ? (
+              <p className="mt-4 text-sm text-[#93f8b6]">
+                {SECOND_PACKAGE_DISCOUNT_NOTE}
+              </p>
+            ) : null}
             {cartTotals.selectedCount === 0 ? (
               <p className="mt-5 text-sm text-zinc-400">
                 Toplamı görmek için en az bir ürün seçin.

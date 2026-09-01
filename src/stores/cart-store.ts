@@ -2,11 +2,17 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type {
   PackageData,
+  ScheduleType,
   ServiceAreaData,
   ShootTypeData,
 } from "@/lib/package-types";
 import { defaultRequestFieldLabels } from "@/lib/package-seed-data";
 import { getShootTypeGalleryPreviewUrl } from "@/lib/package-media";
+import {
+  getCartItemEffectivePrices,
+  getCartTotalsWithDiscount,
+  type CartDiscountItem,
+} from "@/lib/cart-bundle-discount";
 
 export type CartItem = {
   shootTypeId: string;
@@ -16,6 +22,7 @@ export type CartItem = {
   serviceAreaId: string;
   serviceAreaSlug: string;
   serviceAreaTitle: string;
+  scheduleType: ScheduleType;
   isCompanionOnly: boolean;
   cashPrice: number;
   installmentPrice: number;
@@ -57,6 +64,7 @@ export function buildCartItemFromShootType(
     serviceAreaId: serviceArea.id,
     serviceAreaSlug: serviceArea.slug,
     serviceAreaTitle: serviceArea.title,
+    scheduleType: serviceArea.scheduleType,
     isCompanionOnly: serviceArea.isCompanionOnly,
     cashPrice: shootType.cashPrice,
     installmentPrice: shootType.installmentPrice,
@@ -106,19 +114,41 @@ export const useCartStore = create<CartState>()(
         })),
       clearCart: () => set({ items: [] }),
       getTotalCash: () =>
-        get()
-          .items.filter((item) => item.selected)
-          .reduce((sum, item) => sum + item.cashPrice, 0),
+        getCartTotalsWithDiscount(
+          getSelectedDiscountItems(get().items),
+        ).cash,
       getTotalInstallment: () =>
-        get()
-          .items.filter((item) => item.selected)
-          .reduce((sum, item) => sum + item.installmentPrice, 0),
+        getCartTotalsWithDiscount(
+          getSelectedDiscountItems(get().items),
+        ).installment,
       getSelectedItems: () => get().items.filter((item) => item.selected),
     }),
     {
-      // v3 sepetleri farklı bir shape taşıdığı için key bump ile düşer.
-      name: "bekography-cart-v4",
+      // v5: scheduleType eklendi; ikinci paket indirimi için gerekli.
+      name: "bekography-cart-v5",
       skipHydration: true,
     },
   ),
 );
+
+function toDiscountItem(item: CartItem): CartDiscountItem {
+  return {
+    cashPrice: item.cashPrice,
+    installmentPrice: item.installmentPrice,
+    scheduleType: item.scheduleType,
+    areaSlug: item.serviceAreaSlug,
+    isCompanionOnly: item.isCompanionOnly,
+  };
+}
+
+function getSelectedDiscountItems(items: CartItem[]): CartDiscountItem[] {
+  return items.filter((item) => item.selected).map(toDiscountItem);
+}
+
+export function getCartItemDiscountPrices(item: CartItem, items: CartItem[]) {
+  const discountItems = items.map(toDiscountItem);
+  const index = items.findIndex(
+    (entry) => entry.shootTypeId === item.shootTypeId,
+  );
+  return getCartItemEffectivePrices(toDiscountItem(item), index, discountItems);
+}

@@ -1,7 +1,7 @@
 import { put } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { buildBlobUploadPath, getBlobMediaKind } from "@/lib/blob-media";
+import { buildBlobUploadPath, getBlobMediaKind, validateBlobUploadFile } from "@/lib/blob-media";
 
 function resolveUploadContentType(file: File): string | undefined {
   if (file.type) return file.type;
@@ -31,6 +31,11 @@ export async function POST(request: Request) {
         { error: "Desteklenmeyen dosya formatı" },
         { status: 400 },
       );
+    }
+
+    const validationError = validateBlobUploadFile(file);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
     const pathname = buildBlobUploadPath(folder, file.name);

@@ -9,6 +9,10 @@ import {
   getCompanionRequirementMessage,
 } from "@/lib/cart-companion-rules";
 import {
+  resolveRequestUnitPrice,
+  type CartDiscountItem,
+} from "@/lib/cart-bundle-discount";
+import {
   itemShootTypeInclude,
   shootTypeWithParentsInclude,
 } from "@/lib/prisma-includes";
@@ -65,6 +69,21 @@ export async function POST(request: Request) {
     );
     const citySummary = [...new Set(items.map((item) => item.city))].join(", ");
 
+    const discountItems: CartDiscountItem[] = items.map((item) => {
+      const shootType = shootTypes.find(
+        (candidate) => candidate.id === item.shootTypeId,
+      )!;
+      return {
+        cashPrice: shootType.cashPrice,
+        installmentPrice: shootType.installmentPrice,
+        scheduleType: shootType.package.serviceArea.scheduleType as
+          | "indoor"
+          | "outdoor",
+        areaSlug: shootType.package.serviceArea.slug,
+        isCompanionOnly: shootType.package.serviceArea.isCompanionOnly,
+      };
+    });
+
     const requestRecord = await prisma.request.create({
       data: {
         publicId: nanoid(8).toUpperCase(),
@@ -76,14 +95,19 @@ export async function POST(request: Request) {
         city: citySummary,
         shootDate: earliestDate,
         items: {
-          create: items.map((item) => {
+          create: items.map((item, itemIndex) => {
             const shootType = shootTypes.find(
               (candidate) => candidate.id === item.shootTypeId,
             )!;
-            const unitPrice =
+            const basePrice =
               item.paymentType === "pesin"
                 ? shootType.cashPrice
                 : shootType.installmentPrice;
+            const unitPrice = resolveRequestUnitPrice(
+              basePrice,
+              itemIndex,
+              discountItems,
+            );
             return {
               shootTypeId: item.shootTypeId,
               paymentType: item.paymentType,
