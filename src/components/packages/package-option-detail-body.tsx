@@ -8,8 +8,9 @@ import { PackageDetailSectionsList } from "@/components/packages/package-detail-
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 
 type PackageOptionDetailBodyProps = {
-  categoryTitle: string;
-  optionLabel: string;
+  serviceAreaTitle: string;
+  packageTitle?: string | null;
+  shootTypeLabel: string;
   highlightTags?: string[];
   cashPrice: number;
   installmentPrice: number;
@@ -23,8 +24,9 @@ type PackageOptionDetailBodyProps = {
 };
 
 export function PackageOptionDetailBody({
-  categoryTitle,
-  optionLabel,
+  serviceAreaTitle,
+  packageTitle,
+  shootTypeLabel,
   highlightTags = [],
   cashPrice,
   installmentPrice,
@@ -40,10 +42,15 @@ export function PackageOptionDetailBody({
     <>
       <header className="mb-4 sm:mb-5">
         <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
-          {categoryTitle}
+          {serviceAreaTitle}
         </h2>
+        {packageTitle ? (
+          <p className="mt-0.5 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+            {packageTitle}
+          </p>
+        ) : null}
         <p className="mt-0.5 text-lg font-semibold leading-tight text-white/90 sm:text-xl">
-          {optionLabel}
+          {shootTypeLabel}
         </p>
         {highlightTags.length > 0 ? (
           <div className="mt-1.5 flex flex-wrap gap-1.5 sm:gap-2">

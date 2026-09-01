@@ -15,9 +15,12 @@ export type TrackingTimelineStep = {
 
 export type TrackingShootItem = {
   id: string;
-  categoryTitle: string;
+  serviceAreaTitle: string;
+  packageTitle: string;
   accentColor: string;
+  /** Çekim türünün ham adı (ör. "Fotoğraf + Video Film"). */
   optionLabel: string;
+  /** Normalize edilmiş kısa etiket (ör. "Fotoğraf + Video"). */
   shootTypeLabel: string;
   shootContent: string;
   shootDate: string;

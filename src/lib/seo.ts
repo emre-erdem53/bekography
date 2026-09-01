@@ -10,7 +10,7 @@ export const SITE_NAME = "Bekography - Fotoğraf & Film";
 export const SITE_SHORT_NAME = "Bekography";
 
 export const SITE_URL = (
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://bekography.com"
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || "https://bekography.com"
 ).replace(/\/$/, "");
 
 /** Google arama snippet'inde görünen açıklama — şehir adı yok. */

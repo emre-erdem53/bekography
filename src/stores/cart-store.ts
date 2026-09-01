@@ -1,9 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { PackageCategoryData, ScheduleType } from "@/lib/package-types";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type {
+  PackageData,
+  ScheduleType,
+  ServiceAreaData,
+  ShootTypeData,
+} from "@/lib/package-types";
 import { defaultRequestFieldLabels } from "@/lib/package-seed-data";
-import { getOptionGalleryPreviewUrl } from "@/lib/package-media";
+import { getShootTypeGalleryPreviewUrl } from "@/lib/package-media";
 import {
   getCartItemEffectivePrices,
   getCartTotalsWithDiscount,
@@ -11,12 +15,15 @@ import {
 } from "@/lib/cart-bundle-discount";
 
 export type CartItem = {
-  packageOptionId: string;
-  categoryId: string;
-  categorySlug: string;
-  categoryTitle: string;
-  optionLabel: string;
+  shootTypeId: string;
+  shootTypeLabel: string;
+  packageId: string;
+  packageTitle: string;
+  serviceAreaId: string;
+  serviceAreaSlug: string;
+  serviceAreaTitle: string;
   scheduleType: ScheduleType;
+  isCompanionOnly: boolean;
   cashPrice: number;
   installmentPrice: number;
   accentColor: string;
@@ -31,8 +38,8 @@ export type CartItemInput = Omit<CartItem, "selected"> & { selected?: boolean };
 type CartState = {
   items: CartItem[];
   addItem: (item: CartItemInput) => void;
-  removeItem: (packageOptionId: string) => void;
-  toggleSelected: (packageOptionId: string) => void;
+  removeItem: (shootTypeId: string) => void;
+  toggleSelected: (shootTypeId: string) => void;
   selectAll: (selected: boolean) => void;
   clearCart: () => void;
   getTotalCash: () => number;
@@ -40,29 +47,29 @@ type CartState = {
   getSelectedItems: () => CartItem[];
 };
 
-export function buildCartItemFromCategory(
-  category: PackageCategoryData,
-  option: PackageCategoryData["options"][number],
+export function buildCartItemFromShootType(
+  serviceArea: ServiceAreaData,
+  pkg: PackageData,
+  shootType: ShootTypeData,
 ): CartItemInput {
-  const content = category.content as PackageCategoryContent;
   const labels =
-    content.requestFieldLabels ??
-    defaultRequestFieldLabels(
-      category.title,
-      content.scheduleType ?? "indoor",
-    );
+    serviceArea.content.requestFieldLabels ??
+    defaultRequestFieldLabels(serviceArea.title, serviceArea.scheduleType);
 
   return {
-    packageOptionId: option.id,
-    categoryId: category.id,
-    categorySlug: category.slug,
-    categoryTitle: category.title,
-    optionLabel: option.label,
-    scheduleType: content.scheduleType ?? "indoor",
-    cashPrice: option.cashPrice,
-    installmentPrice: option.installmentPrice,
-    accentColor: category.accentColor,
-    imageUrl: getOptionGalleryPreviewUrl(category, option.id, option.label),
+    shootTypeId: shootType.id,
+    shootTypeLabel: shootType.label,
+    packageId: pkg.id,
+    packageTitle: pkg.title,
+    serviceAreaId: serviceArea.id,
+    serviceAreaSlug: serviceArea.slug,
+    serviceAreaTitle: serviceArea.title,
+    scheduleType: serviceArea.scheduleType,
+    isCompanionOnly: serviceArea.isCompanionOnly,
+    cashPrice: shootType.cashPrice,
+    installmentPrice: shootType.installmentPrice,
+    accentColor: pkg.accentColor || serviceArea.accentColor,
+    imageUrl: getShootTypeGalleryPreviewUrl(shootType),
     dateLabel: labels.dateLabel,
     cityLabel: labels.cityLabel,
   };
@@ -75,29 +82,28 @@ export const useCartStore = create<CartState>()(
       addItem: (item) =>
         set((state) => {
           const exists = state.items.some(
-            (existing) => existing.packageOptionId === item.packageOptionId,
+            (existing) => existing.shootTypeId === item.shootTypeId,
           );
           if (exists) return state;
-          const withoutSameCategory = state.items.filter(
-            (existing) => existing.categoryId !== item.categoryId,
+          // Bir hizmet alanından sepette yalnızca tek çekim türü tutulur.
+          const withoutSameServiceArea = state.items.filter(
+            (existing) => existing.serviceAreaId !== item.serviceAreaId,
           );
           return {
             items: [
-              ...withoutSameCategory,
+              ...withoutSameServiceArea,
               { ...item, selected: item.selected ?? true },
             ],
           };
         }),
-      removeItem: (packageOptionId) =>
+      removeItem: (shootTypeId) =>
         set((state) => ({
-          items: state.items.filter(
-            (item) => item.packageOptionId !== packageOptionId,
-          ),
+          items: state.items.filter((item) => item.shootTypeId !== shootTypeId),
         })),
-      toggleSelected: (packageOptionId) =>
+      toggleSelected: (shootTypeId) =>
         set((state) => ({
           items: state.items.map((item) =>
-            item.packageOptionId === packageOptionId
+            item.shootTypeId === shootTypeId
               ? { ...item, selected: !item.selected }
               : item,
           ),
@@ -108,14 +114,18 @@ export const useCartStore = create<CartState>()(
         })),
       clearCart: () => set({ items: [] }),
       getTotalCash: () =>
-        getCartTotalsWithDiscount(getSelectedDiscountItems(get().items)).cash,
+        getCartTotalsWithDiscount(
+          getSelectedDiscountItems(get().items),
+        ).cash,
       getTotalInstallment: () =>
-        getCartTotalsWithDiscount(getSelectedDiscountItems(get().items))
-          .installment,
+        getCartTotalsWithDiscount(
+          getSelectedDiscountItems(get().items),
+        ).installment,
       getSelectedItems: () => get().items.filter((item) => item.selected),
     }),
     {
-      name: "bekography-cart-v4",
+      // v5: scheduleType eklendi; ikinci paket indirimi için gerekli.
+      name: "bekography-cart-v5",
       skipHydration: true,
     },
   ),
@@ -126,7 +136,8 @@ function toDiscountItem(item: CartItem): CartDiscountItem {
     cashPrice: item.cashPrice,
     installmentPrice: item.installmentPrice,
     scheduleType: item.scheduleType,
-    areaSlug: item.categorySlug,
+    areaSlug: item.serviceAreaSlug,
+    isCompanionOnly: item.isCompanionOnly,
   };
 }
 
@@ -137,7 +148,7 @@ function getSelectedDiscountItems(items: CartItem[]): CartDiscountItem[] {
 export function getCartItemDiscountPrices(item: CartItem, items: CartItem[]) {
   const discountItems = items.map(toDiscountItem);
   const index = items.findIndex(
-    (entry) => entry.packageOptionId === item.packageOptionId,
+    (entry) => entry.shootTypeId === item.shootTypeId,
   );
   return getCartItemEffectivePrices(toDiscountItem(item), index, discountItems);
 }

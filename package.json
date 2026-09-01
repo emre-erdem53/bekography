@@ -13,7 +13,9 @@
     "db:seed": "prisma db seed",
     "hash-password": "npx tsx scripts/hash-password.ts",
     "sync-reviews": "npx tsx scripts/sync-google-reviews.ts",
-    "migrate-inspect-tags": "npx tsx scripts/migrate-inspect-section-tags.ts",
+    "backup-packages": "npx tsx scripts/backup-package-data.ts",
+    "migrate-package-content": "npx tsx scripts/migrate-package-content.ts",
+    "verify-post-shoot": "npx tsx scripts/verify-post-shoot-mapping.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

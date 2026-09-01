@@ -60,7 +60,7 @@ export const ReservationOrderDocument = forwardRef<
           <SectionHeading icon={Camera}>Çekim Hizmeti</SectionHeading>
           <div className="mt-2 space-y-4">
             {data.items.map((item) => (
-              <ShootServiceCard key={item.id || item.categoryTitle} item={item} />
+              <ShootServiceCard key={item.id || item.serviceAreaTitle} item={item} />
             ))}
           </div>
         </section>
@@ -372,8 +372,13 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
           className="text-center text-3xl font-bold leading-tight sm:text-4xl"
           style={{ color: item.accentColor }}
         >
-          {item.categoryTitle}
+          {item.serviceAreaTitle}
         </h3>
+        {item.packageTitle ? (
+          <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+            {item.packageTitle}
+          </p>
+        ) : null}
         <p className="text-sm font-medium text-zinc-400">{shootDateLabel}</p>
         {item.workflowFlags.deliveredAt ? (
           <span className="absolute right-0 top-0 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 sm:static sm:px-3 sm:text-xs">

@@ -15,10 +15,12 @@ import { useCartUiStore } from "@/stores/cart-ui-store";
 export const PACKAGE_CART_BAR_PATH = "/paketler";
 export const PACKAGE_CART_PAGE_PATH = "/paketler/sepet";
 
+/** `/paketler` ve tüm alt yolları (hizmet alanı sayfaları, sepet) sepet barını gösterir. */
 export function isPackageCartBarRoute(pathname: string | null): boolean {
+  if (!pathname) return false;
   return (
     pathname === PACKAGE_CART_BAR_PATH ||
-    pathname === PACKAGE_CART_PAGE_PATH
+    pathname.startsWith(`${PACKAGE_CART_BAR_PATH}/`)
   );
 }
 
@@ -75,7 +77,12 @@ function CartBarIconBadge({ count }: { count: number }) {
 function CartBarItemList({
   items,
 }: {
-  items: Array<{ packageOptionId: string; categoryTitle: string; optionLabel: string }>;
+  items: Array<{
+    shootTypeId: string;
+    serviceAreaTitle: string;
+    packageTitle: string;
+    shootTypeLabel: string;
+  }>;
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-start gap-2.5">
@@ -83,11 +90,11 @@ function CartBarItemList({
       <ul className="min-w-0 flex-1 space-y-0.5">
         {items.map((item) => (
           <li
-            key={item.packageOptionId}
+            key={item.shootTypeId}
             className="truncate text-[11px] leading-snug text-zinc-400 sm:text-xs"
           >
             <span className="text-zinc-500">• </span>
-            {item.categoryTitle} {item.optionLabel}
+            {item.serviceAreaTitle} · {item.packageTitle} {item.shootTypeLabel}
           </li>
         ))}
       </ul>
@@ -139,7 +146,7 @@ export function PackageCartBar() {
   );
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[80]">
+    <div className="fixed bottom-0 left-0 right-0 z-[80]" data-package-cart-bar>
       <div className="border-t border-white/10 bg-black/95 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 py-3 sm:max-w-3xl sm:gap-4 sm:px-6 lg:max-w-4xl xl:max-w-5xl">
           {isCartPage ? (

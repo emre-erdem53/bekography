@@ -27,7 +27,7 @@ export function TrackingPurchasedProducts({
         <SectionHeading>Satın Alınan Ürünler</SectionHeading>
         <ul className="mt-5 space-y-4">
           {products.map((product) => (
-            <li key={product.packageOptionId}>
+            <li key={product.shootTypeId}>
               <button
                 type="button"
                 onClick={() => setSelectedProduct(product)}
@@ -48,10 +48,15 @@ export function TrackingPurchasedProducts({
                       className="text-xl font-bold tracking-tight sm:text-2xl"
                       style={{ color: product.accentColor }}
                     >
-                      {product.categoryTitle}
+                      {product.serviceAreaTitle}
                     </h3>
+                    {product.packageTitle ? (
+                      <p className="mt-0.5 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
+                        {product.packageTitle}
+                      </p>
+                    ) : null}
                     <p className="mt-0.5 text-base font-semibold leading-tight text-white/90 sm:text-lg">
-                      {product.optionLabel}
+                      {product.shootTypeLabelRaw || product.shootTypeLabel}
                     </p>
                     {product.highlightTags.length > 0 ? (
                       <div className="mt-1.5 flex flex-wrap gap-1.5">

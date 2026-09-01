@@ -54,9 +54,12 @@ type ReservationDetail = {
     arrivalTime: string | null;
     startTime: string | null;
     endTime: string | null;
-    packageOption: {
+    shootType: {
       label: string;
-      category: { title: string; slug: string; accentColor: string };
+      package: {
+        title: string;
+        serviceArea: { title: string; slug: string; accentColor: string };
+      };
     };
   }[];
   installments: { id: string; amount: number; dueDate: string; paidAt: string | null }[];
@@ -220,7 +223,13 @@ export function ReservationDetailClient({
                 key={item.id}
                 reservationId={reservationId}
                 itemId={item.id}
-                itemTitle={`${item.categoryTitle} · ${item.shootTypeLabel}`}
+                itemTitle={[
+                  item.serviceAreaTitle,
+                  item.packageTitle,
+                  item.shootTypeLabel,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
                 postShoot={trackingData.postShoot}
                 workflow={item.workflow}
                 hasPrinting={item.hasPrinting}
@@ -234,12 +243,6 @@ export function ReservationDetailClient({
             Süreç bilgisi yüklenemedi.
           </p>
         )}
-        <Link
-          href={`/admin/rezervasyonlar/${reservationId}/ozet`}
-          className="mt-4 inline-flex rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/5"
-        >
-          Müşteri önizlemesini aç
-        </Link>
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-[#0f0f0f] p-4">
@@ -288,13 +291,16 @@ export function ReservationDetailClient({
             <div
               key={item.id ?? index}
               className="rounded-xl border border-white/10 p-4"
-              style={{ borderColor: `${item.packageOption.category.accentColor}55` }}
+              style={{
+                borderColor: `${item.shootType.package.serviceArea.accentColor}55`,
+              }}
             >
               <h3
                 className="font-semibold"
-                style={{ color: item.packageOption.category.accentColor }}
+                style={{ color: item.shootType.package.serviceArea.accentColor }}
               >
-                {item.packageOption.category.title} — {item.shootContent}
+                {item.shootType.package.serviceArea.title} ·{" "}
+                {item.shootType.package.title} — {item.shootContent}
               </h3>
               <div className="mt-3 grid-safe grid gap-2 text-sm md:grid-cols-2">
                 <p className="text-zinc-400">
@@ -363,14 +369,17 @@ export function ReservationDetailClient({
                 key={trackingItem.id}
                 className="rounded-xl border border-white/10 bg-white/5 p-4"
                 style={{
-                  borderColor: `${reservationItem.packageOption.category.accentColor}55`,
+                  borderColor: `${reservationItem.shootType.package.serviceArea.accentColor}55`,
                 }}
               >
                 <h3
                   className="text-sm font-semibold"
-                  style={{ color: reservationItem.packageOption.category.accentColor }}
+                  style={{
+                    color:
+                      reservationItem.shootType.package.serviceArea.accentColor,
+                  }}
                 >
-                  {reservationItem.packageOption.category.title} ·{" "}
+                  {reservationItem.shootType.package.serviceArea.title} ·{" "}
                   {reservationItem.shootContent}
                 </h3>
                 <div className="mt-3 space-y-3">

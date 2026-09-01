@@ -388,3 +388,66 @@ body {
     white-space: nowrap;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  html.packages-intro-pending #site-header,
+  html.packages-intro-pending footer,
+  html.packages-intro-pending [data-package-cart-bar],
+  html.packages-intro-pending [data-packages-page] {
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* Paketler giriş animasyonu — ilk karede chrome gizli kalır, kayma olmaz */
+#site-header {
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html.packages-intro-pending #site-header,
+html.packages-intro-pending footer,
+html.packages-intro-pending [data-package-cart-bar] {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.packages-intro-pending.packages-intro-exiting #site-header {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transition:
+    opacity 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.08s,
+    visibility 0s linear 0.08s !important;
+}
+
+html.packages-intro-pending.packages-intro-exiting footer,
+html.packages-intro-pending.packages-intro-exiting [data-package-cart-bar] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.28s,
+    visibility 0s linear 0.28s !important;
+}
+
+html.packages-intro-pending:not(.packages-intro-exiting) [data-packages-page] {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html.packages-intro-pending.packages-intro-exiting [data-packages-page] {
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+html.packages-intro-pending {
+  overflow: hidden;
+}
+
+html.packages-intro-pending body {
+  overflow: hidden;
+}

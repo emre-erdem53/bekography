@@ -1,62 +1,55 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
-import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
-import { getOptionGalleryMedia } from "@/lib/package-media";
-import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
+import type {
+  PackageData,
+  ServiceAreaData,
+  ShootTypeData,
+} from "@/lib/package-types";
+import { getShootTypeGalleryMedia } from "@/lib/package-media";
+import { getShootTypeDetailSections } from "@/lib/package-detail-section";
 import { PackageOptionDetailBody } from "@/components/packages/package-option-detail-body";
 import { BekographyBrand } from "@/components/bekography-brand";
 import { PackageCartToggleButton } from "@/components/packages/package-cart-toggle-button";
 import {
-  buildCartItemFromCategory,
+  buildCartItemFromShootType,
   type CartItemInput,
 } from "@/stores/cart-store";
-import {
-  getCompanionRequirementMessage,
-  isCompanionOnlyCategorySlug,
-} from "@/lib/cart-companion-rules";
+import { getCompanionRequirementMessage } from "@/lib/cart-companion-rules";
 import { RequestModal } from "@/components/packages/request-modal";
-import { RequestActionLabel, requestActionSurfaceClassFull } from "@/components/packages/request-action-label";
+import {
+  RequestActionLabel,
+  requestActionSurfaceClassFull,
+} from "@/components/packages/request-action-label";
 import { useCartBottomInset } from "@/components/packages/package-cart-bar";
 
 type PackageDetailSheetProps = {
-  category: PackageCategoryData | null;
-  initialOptionId?: string | null;
+  serviceArea: ServiceAreaData | null;
+  pkg: PackageData | null;
+  shootType: ShootTypeData | null;
   onClose: () => void;
   presentation?: "overlay" | "inline";
 };
 
-function PackageOptionDetailView({
-  category,
-  option,
+function ShootTypeDetailView({
+  serviceArea,
+  pkg,
+  shootType,
   onQuickRequest,
   quickRequestDisabled,
 }: {
-  category: PackageCategoryData;
-  option: PackageOptionData;
+  serviceArea: ServiceAreaData;
+  pkg: PackageData;
+  shootType: ShootTypeData;
   onQuickRequest: () => void;
   quickRequestDisabled: boolean;
 }) {
   const cartBottomInset = useCartBottomInset();
-  const content = category.content as PackageCategoryContent;
-  const galleryMedia = getOptionGalleryMedia(
-    category,
-    option.id,
-    option.label,
-  );
-  const tags =
-    content.highlightTagsByOption?.[option.id] ??
-    content.highlightTagsByOption?.[option.label] ??
-    [];
-  const sections = resolveDetailSectionsForOption(
-    content,
-    option.id,
-    option.label,
-  );
+  const galleryMedia = getShootTypeGalleryMedia(shootType);
+  const sections = getShootTypeDetailSections(shootType);
 
   return (
     <div
@@ -66,17 +59,22 @@ function PackageOptionDetailView({
       }`}
     >
       <PackageOptionDetailBody
-        categoryTitle={category.title}
-        optionLabel={option.label}
-        highlightTags={tags}
-        cashPrice={option.cashPrice}
-        installmentPrice={option.installmentPrice}
+        serviceAreaTitle={serviceArea.title}
+        packageTitle={pkg.title}
+        shootTypeLabel={shootType.label}
+        highlightTags={shootType.tags}
+        cashPrice={shootType.cashPrice}
+        installmentPrice={shootType.installmentPrice}
         detailSections={sections}
         galleryMedia={galleryMedia}
         showGallery
         actions={
           <>
-            <PackageCartToggleButton category={category} option={option} />
+            <PackageCartToggleButton
+              serviceArea={serviceArea}
+              pkg={pkg}
+              shootType={shootType}
+            />
             <button
               type="button"
               onClick={onQuickRequest}
@@ -100,8 +98,9 @@ function PackageOptionDetailView({
 }
 
 export function PackageDetailSheet({
-  category,
-  initialOptionId = null,
+  serviceArea,
+  pkg,
+  shootType,
   onClose,
   presentation = "overlay",
 }: PackageDetailSheetProps) {
@@ -110,20 +109,8 @@ export function PackageDetailSheet({
     [],
   );
 
-  const selectedOption = useMemo(() => {
-    if (!category) return null;
-    if (initialOptionId) {
-      return (
-        category.options.find((option) => option.id === initialOptionId) ??
-        category.options[0] ??
-        null
-      );
-    }
-    return category.options[0] ?? null;
-  }, [category, initialOptionId]);
-
   useEffect(() => {
-    if (!category) return;
+    if (!shootType) return;
     setRequestOpen(false);
     setSingleRequestItems([]);
     if (presentation !== "overlay") return;
@@ -132,19 +119,19 @@ export function PackageDetailSheet({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [category?.id, initialOptionId, presentation]);
+  }, [shootType?.id, presentation]);
 
   const shellClass =
     presentation === "inline"
       ? "relative w-full"
       : "fixed inset-0 z-[70] flex flex-col bg-black";
 
-  const quickRequestDisabled = Boolean(
-    category && isCompanionOnlyCategorySlug(category.slug),
-  );
+  const quickRequestDisabled = Boolean(serviceArea?.isCompanionOnly);
+
+  const backHref = "/paketler";
 
   const content =
-    category && selectedOption ? (
+    serviceArea && pkg && shootType ? (
       <>
         <header
           className={
@@ -155,27 +142,28 @@ export function PackageDetailSheet({
         >
           <div className="flex items-center justify-between gap-3">
             <Link
-              href="/paketler"
+              href={backHref}
               onClick={onClose}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-              aria-label="Paketler sayfasına dön"
+              aria-label={`${serviceArea.title} paketlerine dön`}
             >
               <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
-              Paketler
+              {serviceArea.title}
             </Link>
             <BekographyBrand size="sm" className="hover:opacity-100" />
           </div>
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          <PackageOptionDetailView
-            category={category}
-            option={selectedOption}
+          <ShootTypeDetailView
+            serviceArea={serviceArea}
+            pkg={pkg}
+            shootType={shootType}
             quickRequestDisabled={quickRequestDisabled}
             onQuickRequest={() => {
               if (quickRequestDisabled) return;
               setSingleRequestItems([
-                buildCartItemFromCategory(category, selectedOption),
+                buildCartItemFromShootType(serviceArea, pkg, shootType),
               ]);
               setRequestOpen(true);
             }}
@@ -191,9 +179,9 @@ export function PackageDetailSheet({
       ) : (
         <LayoutGroup id="package-detail-overlay">
           <AnimatePresence>
-            {category && selectedOption ? (
+            {serviceArea && pkg && shootType ? (
               <motion.div
-                key={`${category.id}-${selectedOption.id}`}
+                key={shootType.id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}

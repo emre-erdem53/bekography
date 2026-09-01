@@ -12,7 +12,10 @@ import {
   resolveRequestUnitPrice,
   type CartDiscountItem,
 } from "@/lib/cart-bundle-discount";
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import {
+  itemShootTypeInclude,
+  shootTypeWithParentsInclude,
+} from "@/lib/prisma-includes";
 
 export async function POST(request: Request) {
   try {
@@ -33,26 +36,27 @@ export async function POST(request: Request) {
     const customerName = `${contactFullName} (${roleLabel})`;
     const customerPhone = "—";
 
-    const options = await prisma.packageOption.findMany({
+    const shootTypes = await prisma.shootType.findMany({
       where: {
-        id: { in: items.map((item) => item.packageOptionId) },
+        id: { in: items.map((item) => item.shootTypeId) },
         isActive: true,
+        package: { isActive: true, serviceArea: { isActive: true } },
       },
-      include: { category: true },
+      include: shootTypeWithParentsInclude,
     });
 
-    if (options.length !== items.length) {
+    if (shootTypes.length !== items.length) {
       return NextResponse.json(
         { error: "Seçilen paketlerden biri geçersiz" },
         { status: 400 },
       );
     }
 
-    const requestSlugs = options.map((option) => ({
-      categorySlug: option.category.slug,
+    const companionFlags = shootTypes.map((shootType) => ({
+      isCompanionOnly: shootType.package.serviceArea.isCompanionOnly,
     }));
 
-    if (cartRequiresAdditionalPackage(requestSlugs)) {
+    if (cartRequiresAdditionalPackage(companionFlags)) {
       return NextResponse.json(
         { error: getCompanionRequirementMessage() },
         { status: 400 },
@@ -66,15 +70,17 @@ export async function POST(request: Request) {
     const citySummary = [...new Set(items.map((item) => item.city))].join(", ");
 
     const discountItems: CartDiscountItem[] = items.map((item) => {
-      const option = options.find(
-        (candidate) => candidate.id === item.packageOptionId,
+      const shootType = shootTypes.find(
+        (candidate) => candidate.id === item.shootTypeId,
       )!;
-      const content = option.category.content as PackageCategoryContent | null;
       return {
-        cashPrice: option.cashPrice,
-        installmentPrice: option.installmentPrice,
-        scheduleType: content?.scheduleType ?? "indoor",
-        areaSlug: option.category.slug,
+        cashPrice: shootType.cashPrice,
+        installmentPrice: shootType.installmentPrice,
+        scheduleType: shootType.package.serviceArea.scheduleType as
+          | "indoor"
+          | "outdoor",
+        areaSlug: shootType.package.serviceArea.slug,
+        isCompanionOnly: shootType.package.serviceArea.isCompanionOnly,
       };
     });
 
@@ -90,18 +96,20 @@ export async function POST(request: Request) {
         shootDate: earliestDate,
         items: {
           create: items.map((item, itemIndex) => {
-            const option = options.find((o) => o.id === item.packageOptionId)!;
+            const shootType = shootTypes.find(
+              (candidate) => candidate.id === item.shootTypeId,
+            )!;
             const basePrice =
               item.paymentType === "pesin"
-                ? option.cashPrice
-                : option.installmentPrice;
+                ? shootType.cashPrice
+                : shootType.installmentPrice;
             const unitPrice = resolveRequestUnitPrice(
               basePrice,
               itemIndex,
               discountItems,
             );
             return {
-              packageOptionId: item.packageOptionId,
+              shootTypeId: item.shootTypeId,
               paymentType: item.paymentType,
               unitPrice,
               shootDate: startOfDay(new Date(item.shootDate)),
@@ -110,21 +118,16 @@ export async function POST(request: Request) {
           }),
         },
       },
-      include: {
-        items: {
-          include: {
-            packageOption: { include: { category: true } },
-          },
-        },
-      },
+      include: { items: { include: itemShootTypeInclude } },
     });
 
     return NextResponse.json({
       id: requestRecord.id,
       publicId: requestRecord.publicId,
       items: requestRecord.items.map((item) => ({
-        categoryTitle: item.packageOption.category.title,
-        optionLabel: item.packageOption.label,
+        serviceAreaTitle: item.shootType.package.serviceArea.title,
+        packageTitle: item.shootType.package.title,
+        shootTypeLabel: item.shootType.label,
         paymentType: item.paymentType,
         shootDate: item.shootDate,
         city: item.city,

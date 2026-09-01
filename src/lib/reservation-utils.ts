@@ -1,8 +1,9 @@
 import { sanitizeTurkishMobileInput } from "@/lib/phone-utils";
 
 export function getTrackingUrl(slug: string) {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  return `${base}/takip/${slug}`;
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.trim() || "http://localhost:3000";
+  return `${base.replace(/\/$/, "")}/takip/${slug}`;
 }
 
 export function formatCoupleName(brideName: string, groomName: string) {

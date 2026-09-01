@@ -1,19 +1,9 @@
 import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
 import { ADMIN_WORKFLOW_STAGE_OPTIONS } from "@/lib/tracking-workflow";
-import { reservationMatchesWorkflowStage } from "@/lib/reservation-list";
-
-type ReservationListRow = {
-  brideName: string;
-  groomName: string;
-  postShoot: unknown;
-  items: Array<{
-    id: string;
-    shootDate: string | Date;
-    location: string;
-    productSnapshot: unknown;
-    packageOption: { label: string; category: { title: string } };
-  }>;
-};
+import {
+  reservationMatchesWorkflowStage,
+  type ReservationListRow,
+} from "@/lib/reservation-list";
 
 /** Aktif rezervasyon listesinde filtre kutucuklarında gösterilen aşamalar. */
 export const RESERVATION_ADMIN_FILTER_STAGES: TrackingWorkflowStageId[] =

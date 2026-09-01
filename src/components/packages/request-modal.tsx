@@ -26,6 +26,7 @@ import {
   getCompanionRequirementMessage,
 } from "@/lib/cart-companion-rules";
 import { getCartTotalsWithDiscount } from "@/lib/cart-bundle-discount";
+import { PersonNameInput } from "@/components/forms/person-name-input";
 
 type RequestModalProps = {
   open: boolean;
@@ -33,7 +34,7 @@ type RequestModalProps = {
   itemsOverride?: CartItemInput[];
 };
 
-type CategoryFields = Record<string, { shootDate: string; city: string }>;
+type ServiceAreaFields = Record<string, { shootDate: string; city: string }>;
 
 const emptyForm = {
   contactFirstName: "",
@@ -41,10 +42,12 @@ const emptyForm = {
   contactRole: null as "gelin" | "damat" | null,
 };
 
-function buildDefaultCategoryFields(categoryIds: string[]): CategoryFields {
+function buildDefaultServiceAreaFields(
+  serviceAreaIds: string[],
+): ServiceAreaFields {
   return Object.fromEntries(
-    categoryIds.map((categoryId) => [
-      categoryId,
+    serviceAreaIds.map((serviceAreaId) => [
+      serviceAreaId,
       { city: DEFAULT_REQUEST_CITY, shootDate: "" },
     ]),
   );
@@ -120,22 +123,28 @@ export function RequestModal({
   }, [itemsOverride, selectedCartItems]);
 
   const itemIdsKey = useMemo(
-    () => items.map((item) => item.packageOptionId).join(","),
+    () => items.map((item) => item.shootTypeId).join(","),
     [items],
   );
 
-  const categories = useMemo(() => {
+  /** Tarih ve şehir hizmet alanı başına bir kez sorulur. */
+  const serviceAreaGroups = useMemo(() => {
     const map = new Map<
       string,
-      { categoryId: string; dateLabel: string; cityLabel: string; title: string }
+      {
+        serviceAreaId: string;
+        dateLabel: string;
+        cityLabel: string;
+        title: string;
+      }
     >();
     for (const item of items) {
-      if (!map.has(item.categoryId)) {
-        map.set(item.categoryId, {
-          categoryId: item.categoryId,
+      if (!map.has(item.serviceAreaId)) {
+        map.set(item.serviceAreaId, {
+          serviceAreaId: item.serviceAreaId,
           dateLabel: item.dateLabel,
           cityLabel: item.cityLabel,
-          title: item.categoryTitle,
+          title: `${item.serviceAreaTitle} · ${item.packageTitle}`,
         });
       }
     }
@@ -149,7 +158,8 @@ export function RequestModal({
           cashPrice: item.cashPrice,
           installmentPrice: item.installmentPrice,
           scheduleType: item.scheduleType,
-          areaSlug: item.categorySlug,
+          areaSlug: item.serviceAreaSlug,
+          isCompanionOnly: item.isCompanionOnly,
         })),
       ).cash,
     [items],
@@ -161,7 +171,8 @@ export function RequestModal({
           cashPrice: item.cashPrice,
           installmentPrice: item.installmentPrice,
           scheduleType: item.scheduleType,
-          areaSlug: item.categorySlug,
+          areaSlug: item.serviceAreaSlug,
+          isCompanionOnly: item.isCompanionOnly,
         })),
       ).installment,
     [items],
@@ -174,7 +185,8 @@ export function RequestModal({
   const [contactRole, setContactRole] = useState<"gelin" | "damat" | null>(
     null,
   );
-  const [categoryFields, setCategoryFields] = useState<CategoryFields>({});
+  const [serviceAreaFields, setServiceAreaFields] =
+    useState<ServiceAreaFields>({});
   const [sameDay, setSameDay] = useState(false);
   const [sameCity, setSameCity] = useState(false);
   const [globalShootDate, setGlobalShootDate] = useState("");
@@ -200,16 +212,18 @@ export function RequestModal({
     setSameCity(false);
     setGlobalShootDate("");
     setGlobalCity(DEFAULT_REQUEST_CITY);
-    setCategoryFields(
-      buildDefaultCategoryFields(categories.map((category) => category.categoryId)),
+    setServiceAreaFields(
+      buildDefaultServiceAreaFields(
+        serviceAreaGroups.map((group) => group.serviceAreaId),
+      ),
     );
-  }, [open, itemIdsKey, categories]);
+  }, [open, itemIdsKey, serviceAreaGroups]);
 
   function resetForm() {
     setContactFirstName(emptyForm.contactFirstName);
     setContactLastName(emptyForm.contactLastName);
     setContactRole(emptyForm.contactRole);
-    setCategoryFields({});
+    setServiceAreaFields({});
     setSameDay(false);
     setSameCity(false);
     setGlobalShootDate("");
@@ -219,15 +233,15 @@ export function RequestModal({
     setSuccess(false);
   }
 
-  function resolveCategoryFields(): CategoryFields {
-    const resolved = { ...categoryFields };
+  function resolveServiceAreaFields(): ServiceAreaFields {
+    const resolved = { ...serviceAreaFields };
 
-    for (const category of categories) {
-      const current = resolved[category.categoryId] ?? {
+    for (const group of serviceAreaGroups) {
+      const current = resolved[group.serviceAreaId] ?? {
         city: DEFAULT_REQUEST_CITY,
         shootDate: "",
       };
-      resolved[category.categoryId] = {
+      resolved[group.serviceAreaId] = {
         city:
           hasMultipleItems && sameCity
             ? globalCity.trim() || DEFAULT_REQUEST_CITY
@@ -257,16 +271,16 @@ export function RequestModal({
       return;
     }
 
-    const resolvedFields = resolveCategoryFields();
+    const resolvedFields = resolveServiceAreaFields();
 
-    const missingCategory = categories.find((category) => {
-      const fields = resolvedFields[category.categoryId];
+    const missingGroup = serviceAreaGroups.find((group) => {
+      const fields = resolvedFields[group.serviceAreaId];
       return !fields?.city?.trim() || !fields?.shootDate;
     });
 
-    if (missingCategory) {
+    if (missingGroup) {
       setLoading(false);
-      setError(`${missingCategory.title} için tarih ve şehir bilgisi zorunludur.`);
+      setError(`${missingGroup.title} için tarih ve şehir bilgisi zorunludur.`);
       return;
     }
 
@@ -277,12 +291,12 @@ export function RequestModal({
     }
 
     const payloadItems = items.map((item) => {
-      const category = resolvedFields[item.categoryId]!;
+      const fields = resolvedFields[item.serviceAreaId]!;
       return {
-        packageOptionId: item.packageOptionId,
+        shootTypeId: item.shootTypeId,
         paymentType,
-        shootDate: category.shootDate,
-        city: category.city.trim(),
+        shootDate: fields.shootDate,
+        city: fields.city.trim(),
       };
     });
 
@@ -306,10 +320,10 @@ export function RequestModal({
     }
 
     const whatsAppItems = items.map((item) => {
-      const fields = resolvedFields[item.categoryId]!;
+      const fields = resolvedFields[item.serviceAreaId]!;
       return {
-        categoryTitle: item.categoryTitle,
-        optionLabel: item.optionLabel,
+        categoryTitle: `${item.serviceAreaTitle} · ${item.packageTitle}`,
+        optionLabel: item.shootTypeLabel,
         shootDate: fields.shootDate,
         city: fields.city.trim(),
       };
@@ -462,27 +476,27 @@ export function RequestModal({
                   </FormSection>
                 ) : null}
 
-                {categories.map((category) => {
+                {serviceAreaGroups.map((group) => {
                   const hideDate = hasMultipleItems && sameDay;
                   const hideCity = hasMultipleItems && sameCity;
                   if (hideDate && hideCity) return null;
 
                   return (
-                    <FormSection key={category.categoryId} title={category.title}>
+                    <FormSection key={group.serviceAreaId} title={group.title}>
                       <div className="grid-safe grid gap-4 sm:grid-cols-2">
                         {hideCity ? null : (
-                          <Field label={category.cityLabel} required>
+                          <Field label={group.cityLabel} required>
                             <CityPicker
                               value={
-                                categoryFields[category.categoryId]?.city ??
+                                serviceAreaFields[group.serviceAreaId]?.city ??
                                 DEFAULT_REQUEST_CITY
                               }
                               onChange={(city) =>
-                                setCategoryFields((prev) => ({
+                                setServiceAreaFields((prev) => ({
                                   ...prev,
-                                  [category.categoryId]: {
+                                  [group.serviceAreaId]: {
                                     shootDate:
-                                      prev[category.categoryId]?.shootDate ?? "",
+                                      prev[group.serviceAreaId]?.shootDate ?? "",
                                     city,
                                   },
                                 }))
@@ -492,19 +506,19 @@ export function RequestModal({
                           </Field>
                         )}
                         {hideDate ? null : (
-                          <Field label={category.dateLabel} required>
+                          <Field label={group.dateLabel} required>
                             <input
                               type="date"
                               value={
-                                categoryFields[category.categoryId]?.shootDate ??
-                                ""
+                                serviceAreaFields[group.serviceAreaId]
+                                  ?.shootDate ?? ""
                               }
                               onChange={(e) =>
-                                setCategoryFields((prev) => ({
+                                setServiceAreaFields((prev) => ({
                                   ...prev,
-                                  [category.categoryId]: {
+                                  [group.serviceAreaId]: {
                                     city:
-                                      prev[category.categoryId]?.city ??
+                                      prev[group.serviceAreaId]?.city ??
                                       DEFAULT_REQUEST_CITY,
                                     shootDate: e.target.value,
                                   },

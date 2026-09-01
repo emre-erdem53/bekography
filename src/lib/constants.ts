@@ -33,15 +33,15 @@ export const RESERVATION_STATUS_ORDER: ReservationStatus[] = [
 ];
 
 export const PAYMENT_TYPE_LABELS = {
-  pesin: "Hemen Ödeme",
-  taksitli: "Parçalı Ödeme",
+  pesin: "Peşin İndirimli",
+  taksitli: "3 Taksitli",
 } as const;
 
 export type PaymentType = keyof typeof PAYMENT_TYPE_LABELS;
 
 export const PAYMENT_TYPE_DESCRIPTIONS: Record<PaymentType, string> = {
-  pesin: "Tüm ödemenin rezervasyondan önce yapılacağı fiyat",
-  taksitli: "Çekime kadar parça parça tamamlanacak ödeme fiyatıdır.",
+  pesin: "Rezervasyondan önce tümü ödenir.",
+  taksitli: "3 ayda tamamlanır.",
 };
 
 export const WHATSAPP_NUMBER =
@@ -49,6 +49,15 @@ export const WHATSAPP_NUMBER =
 
 export function formatPrice(amount: number) {
   return `₺${amount.toLocaleString("tr-TR")}`;
+}
+
+/** Taksit toplamından aylık dilim metni: "(14.000 TL x 3 Ay)" */
+export function formatInstallmentBreakdown(
+  total: number,
+  months = 3,
+): string {
+  const monthly = Math.round(total / months);
+  return `(${monthly.toLocaleString("tr-TR")} TL x ${months} Ay)`;
 }
 
 export function slugify(text: string) {

@@ -1,13 +1,18 @@
-import type { PackageCategoryContent, PackageDetailSection } from "@/lib/package-seed-data";
+import type { PackageDetailSection } from "@/lib/package-seed-data";
+import type {
+  ScheduleType,
+  ServiceAreaData,
+  ShootTypeData,
+} from "@/lib/package-types";
 import {
   hasAnyWorkflowStageTags,
-  resolvePackageWorkflowStageTags,
+  resolveShootTypeWorkflowStageTags,
 } from "@/lib/package-workflow-stage-tags";
 import {
   adminOptionsFromStageDefinitions,
-  resolveWorkflowStagesForOption,
+  resolveWorkflowStages,
 } from "@/lib/package-workflow-stages";
-import type { InspectCategory } from "@/lib/post-shoot-from-inspect";
+import { findShootTypeContext } from "@/lib/shoot-type-context";
 import {
   TRACKING_WORKFLOW_STAGE_ORDER,
   type TrackingWorkflowStageId,
@@ -61,32 +66,23 @@ export function applyStageTagsToDetailSections(
   });
 }
 
-export function buildItemStageTagsFromPackage(
-  packageOptionId: string,
-  categories: InspectCategory[],
-  categoryTitle?: string,
+export function buildItemStageTagsFromShootType(
+  shootTypeId: string,
+  serviceAreas: ServiceAreaData[],
 ): ItemWorkflowStageTags {
-  const category = categories.find((entry) =>
-    entry.options?.some((option) => option.id === packageOptionId),
-  );
-  if (!category) return emptyItemWorkflowStageTags();
+  const context = findShootTypeContext(serviceAreas, shootTypeId);
+  if (!context) return emptyItemWorkflowStageTags();
 
-  const option = category.options?.find((entry) => entry.id === packageOptionId);
-  const fromPackage = resolvePackageWorkflowStageTags(
-    category.content,
-    packageOptionId,
-    option?.label ?? categoryTitle,
-  );
-
-  if (hasAnyWorkflowStageTags(fromPackage)) {
-    return fromPackage;
+  const fromShootType = resolveShootTypeWorkflowStageTags(context.shootType);
+  if (hasAnyWorkflowStageTags(fromShootType)) {
+    return fromShootType;
   }
 
   return emptyItemWorkflowStageTags();
 }
 
 export function getEditableStagesForScheduleType(
-  scheduleType?: PackageCategoryContent["scheduleType"],
+  scheduleType?: ScheduleType,
 ): TrackingWorkflowStageId[] {
   if (scheduleType === "outdoor") {
     return [...TRACKING_WORKFLOW_STAGE_ORDER];
@@ -94,25 +90,11 @@ export function getEditableStagesForScheduleType(
   return TRACKING_WORKFLOW_STAGE_ORDER.filter((stage) => stage !== "baski");
 }
 
-export function getEditableStagesForCategory(
-  categorySlug: string,
-): TrackingWorkflowStageId[] {
-  if (categorySlug === "dis-cekim") {
-    return [...TRACKING_WORKFLOW_STAGE_ORDER];
-  }
-  return TRACKING_WORKFLOW_STAGE_ORDER.filter((stage) => stage !== "baski");
-}
-
-export function getEditableStagesForPackage(
-  content: Partial<PackageCategoryContent> | undefined,
-  packageOptionId: string,
-  optionLabel?: string,
+export function getEditableStagesForShootType(
+  shootType: Pick<ShootTypeData, "content"> | undefined,
+  scheduleType?: ScheduleType,
 ): Array<{ id: string; label: string }> {
-  const definitions = resolveWorkflowStagesForOption(
-    content,
-    packageOptionId,
-    optionLabel,
-  );
+  const definitions = resolveWorkflowStages(shootType, scheduleType);
   return adminOptionsFromStageDefinitions(definitions);
 }
 
@@ -131,12 +113,8 @@ export function remapItemStageTagsByKeys(
 
 export function syncItemStageTagsForItems(
   current: Record<string, ItemWorkflowStageTags> | undefined,
-  items: Array<{
-    itemKey: string;
-    packageOptionId: string;
-    categoryTitle: string;
-  }>,
-  categories: InspectCategory[],
+  items: Array<{ itemKey: string; shootTypeId: string }>,
+  serviceAreas: ServiceAreaData[],
   options?: { forceReset?: boolean },
 ): Record<string, ItemWorkflowStageTags> {
   const next: Record<string, ItemWorkflowStageTags> = {};
@@ -147,10 +125,9 @@ export function syncItemStageTagsForItems(
       continue;
     }
 
-    next[item.itemKey] = buildItemStageTagsFromPackage(
-      item.packageOptionId,
-      categories,
-      item.categoryTitle,
+    next[item.itemKey] = buildItemStageTagsFromShootType(
+      item.shootTypeId,
+      serviceAreas,
     );
   }
 

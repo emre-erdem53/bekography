@@ -1,4 +1,4 @@
-import type { PackageCategoryContent } from "@/lib/package-seed-data";
+import type { ScheduleType, ShootTypeData } from "@/lib/package-types";
 import {
   TRACKING_WORKFLOW_STAGE_ORDER,
   type TrackingWorkflowStageId,
@@ -33,7 +33,7 @@ export function slugifyWorkflowStageId(label: string) {
 }
 
 export function defaultBuiltinStageDefinitions(
-  scheduleType: PackageCategoryContent["scheduleType"] = "indoor",
+  scheduleType: ScheduleType = "indoor",
 ): PackageWorkflowStageDefinition[] {
   const order = TRACKING_WORKFLOW_STAGE_ORDER.filter(
     (id) => id !== "baski" || scheduleType === "outdoor",
@@ -47,21 +47,14 @@ export function defaultBuiltinStageDefinitions(
   }));
 }
 
-export function resolveWorkflowStagesForOption(
-  content: Partial<PackageCategoryContent> | undefined,
-  optionId: string,
-  optionLabel?: string,
+/** Çekim türünün süreç aşamaları; tanımlı değilse hizmet alanının takvim tipine göre varsayılan. */
+export function resolveWorkflowStages(
+  shootType: Pick<ShootTypeData, "content"> | undefined,
+  scheduleType: ScheduleType = "indoor",
 ): PackageWorkflowStageDefinition[] {
-  const labelKey = optionLabel?.trim();
-  const fromOption =
-    content?.workflowStagesByOption?.[optionId] ??
-    (labelKey ? content?.workflowStagesByOption?.[labelKey] : undefined);
-
-  if (fromOption?.length) return fromOption;
-
-  if (content?.workflowStages?.length) return content.workflowStages;
-
-  return defaultBuiltinStageDefinitions(content?.scheduleType ?? "indoor");
+  const stages = shootType?.content?.workflowStages;
+  if (stages?.length) return stages;
+  return defaultBuiltinStageDefinitions(scheduleType);
 }
 
 export function packageHasPrintingStage(

@@ -19,7 +19,13 @@ type ReservationStatusFiltersProps = {
       shootDate: string | Date;
       location: string;
       productSnapshot: unknown;
-      packageOption: { label: string; category: { title: string } };
+      shootType: {
+        label: string;
+        package: {
+          title: string;
+          serviceArea: { title: string; accentColor?: string };
+        };
+      };
     }>;
   }>;
   stageFilter: TrackingWorkflowStageId | null;

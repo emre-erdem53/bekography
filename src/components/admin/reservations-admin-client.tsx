@@ -31,9 +31,12 @@ type ReservationItem = {
   shootDate: string;
   location: string;
   productSnapshot: unknown;
-  packageOption: {
+  shootType: {
     label: string;
-    category: { title: string; accentColor?: string };
+    package: {
+      title: string;
+      serviceArea: { title: string; accentColor?: string };
+    };
   };
 };
 

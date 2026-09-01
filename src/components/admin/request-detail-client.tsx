@@ -25,10 +25,13 @@ type RequestDetail = {
     unitPrice: number;
     shootDate: string | null;
     city: string | null;
-    packageOption: {
+    shootType: {
       id: string;
       label: string;
-      category: { title: string };
+      package: {
+        title: string;
+        serviceArea: { title: string };
+      };
     };
   }[];
   reservation: { id: string } | null;
@@ -118,8 +121,9 @@ export function RequestDetailClient({ requestId }: { requestId: string }) {
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <span className="text-zinc-300">
-                  {item.packageOption.category.title} — {item.packageOption.label}{" "}
-                  ({paymentLabels[item.paymentType]})
+                  {item.shootType.package.serviceArea.title} ·{" "}
+                  {item.shootType.package.title} — {item.shootType.label} (
+                  {paymentLabels[item.paymentType]})
                 </span>
                 <span className="shrink-0 text-white">
                   {formatPrice(item.unitPrice)}

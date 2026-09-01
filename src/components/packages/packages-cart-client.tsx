@@ -3,14 +3,22 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Trash2 } from "lucide-react";
-import type { PackageCategoryData } from "@/lib/package-types";
+import type {
+  PackageData,
+  ServiceAreaData,
+  ShootTypeData,
+} from "@/lib/package-types";
 import { useCartStore, getCartItemDiscountPrices } from "@/stores/cart-store";
 import {
   getCartTotalsWithDiscount,
   SECOND_PACKAGE_DISCOUNT_NOTE,
 } from "@/lib/cart-bundle-discount";
 import { formatPrice } from "@/lib/constants";
-import { getOptionGalleryPreviewMedia, isVideoMediaUrl } from "@/lib/package-media";
+import {
+  getShootTypeGalleryPreviewMedia,
+  isVideoMediaUrl,
+} from "@/lib/package-media";
+import { findShootTypeContext } from "@/lib/shoot-type-context";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { CartItemThumbnail } from "@/components/packages/cart-item-thumbnail";
@@ -19,22 +27,20 @@ const contentWidth =
   "mx-auto w-full max-w-2xl px-4 sm:max-w-3xl sm:px-6 lg:max-w-4xl xl:max-w-5xl";
 
 type PackagesCartClientProps = {
-  categories: PackageCategoryData[];
+  serviceAreas: ServiceAreaData[];
 };
 
-export function PackagesCartClient({ categories }: PackagesCartClientProps) {
+export function PackagesCartClient({ serviceAreas }: PackagesCartClientProps) {
   const items = useCartStore((state) => state.items);
   const removeItem = useCartStore((state) => state.removeItem);
   const toggleSelected = useCartStore((state) => state.toggleSelected);
   const selectAll = useCartStore((state) => state.selectAll);
   const clearCart = useCartStore((state) => state.clearCart);
-  const [detailCategory, setDetailCategory] =
-    useState<PackageCategoryData | null>(null);
-  const [detailOptionId, setDetailOptionId] = useState<string | null>(null);
-
-  const categoryMap = useMemo(
-    () => new Map(categories.map((category) => [category.id, category])),
-    [categories],
+  const [detailServiceArea, setDetailServiceArea] =
+    useState<ServiceAreaData | null>(null);
+  const [detailPackage, setDetailPackage] = useState<PackageData | null>(null);
+  const [detailShootType, setDetailShootType] = useState<ShootTypeData | null>(
+    null,
   );
 
   const allSelected = items.length > 0 && items.every((item) => item.selected);
@@ -45,7 +51,8 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
       cashPrice: item.cashPrice,
       installmentPrice: item.installmentPrice,
       scheduleType: item.scheduleType,
-      areaSlug: item.categorySlug,
+      areaSlug: item.serviceAreaSlug,
+      isCompanionOnly: item.isCompanionOnly,
     }));
     const totals = getCartTotalsWithDiscount(discountItems);
 
@@ -57,26 +64,18 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
     };
   }, [items]);
 
-  function openItemDetail(categoryId: string, packageOptionId: string) {
-    const category = categoryMap.get(categoryId);
-    if (!category) return;
-    setDetailCategory(category);
-    setDetailOptionId(packageOptionId);
+  function openItemDetail(shootTypeId: string) {
+    const context = findShootTypeContext(serviceAreas, shootTypeId);
+    if (!context) return;
+    setDetailServiceArea(context.serviceArea);
+    setDetailPackage(context.package);
+    setDetailShootType(context.shootType);
   }
 
-  function getItemPreviewMedia(
-    categoryId: string,
-    packageOptionId: string,
-    optionLabel: string,
-    storedUrl: string | null,
-  ) {
-    const category = categoryMap.get(categoryId);
-    if (category) {
-      const preview = getOptionGalleryPreviewMedia(
-        category,
-        packageOptionId,
-        optionLabel,
-      );
+  function getItemPreviewMedia(shootTypeId: string, storedUrl: string | null) {
+    const context = findShootTypeContext(serviceAreas, shootTypeId);
+    if (context) {
+      const preview = getShootTypeGalleryPreviewMedia(context.shootType);
       if (preview) return preview;
     }
     if (storedUrl) {
@@ -135,24 +134,19 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
           <ul className="mt-8 space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
             {items.map((item) => {
               const preview = getItemPreviewMedia(
-                item.categoryId,
-                item.packageOptionId,
-                item.optionLabel,
+                item.shootTypeId,
                 item.imageUrl,
               );
-
               const effective = getCartItemDiscountPrices(item, items);
 
               return (
                 <li
-                  key={item.packageOptionId}
+                  key={item.shootTypeId}
                   className="rounded-2xl border border-white/10 bg-[#0a0a0a] p-4 md:p-5"
                 >
                   <button
                     type="button"
-                    onClick={() =>
-                      openItemDetail(item.categoryId, item.packageOptionId)
-                    }
+                    onClick={() => openItemDetail(item.shootTypeId)}
                     className="flex w-full gap-3 text-left"
                   >
                     <div onClick={(event) => event.stopPropagation()}>
@@ -169,7 +163,7 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
                       type="checkbox"
                       checked={item.selected}
                       onClick={(event) => event.stopPropagation()}
-                      onChange={() => toggleSelected(item.packageOptionId)}
+                      onChange={() => toggleSelected(item.shootTypeId)}
                       className="mt-1 h-4 w-4 shrink-0 accent-[#93f8b6]"
                     />
                     <div className="min-w-0 flex-1">
@@ -177,9 +171,11 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
                         className="font-semibold md:text-lg"
                         style={{ color: item.accentColor }}
                       >
-                        {item.categoryTitle}
+                        {item.serviceAreaTitle}
                       </p>
-                      <p className="text-sm text-zinc-400">{item.optionLabel}</p>
+                      <p className="text-sm text-zinc-400">
+                        {item.packageTitle} · {item.shootTypeLabel}
+                      </p>
                       {effective.discountApplied ? (
                         <p className="mt-1 text-xs font-medium text-[#93f8b6]">
                           %10 indirim uygulandı
@@ -190,7 +186,7 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        removeItem(item.packageOptionId);
+                        removeItem(item.shootTypeId);
                       }}
                       className="shrink-0 text-red-500 hover:text-red-400"
                       aria-label="Kaldır"
@@ -274,11 +270,13 @@ export function PackagesCartClient({ categories }: PackagesCartClientProps) {
       </section>
 
       <PackageDetailSheet
-        category={detailCategory}
-        initialOptionId={detailOptionId}
+        serviceArea={detailServiceArea}
+        pkg={detailPackage}
+        shootType={detailShootType}
         onClose={() => {
-          setDetailCategory(null);
-          setDetailOptionId(null);
+          setDetailServiceArea(null);
+          setDetailPackage(null);
+          setDetailShootType(null);
         }}
       />
     </main>

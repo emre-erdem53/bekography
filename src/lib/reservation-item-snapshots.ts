@@ -1,10 +1,8 @@
 import { parseDateOnlyInput } from "@/lib/date-only";
 import { prisma } from "@/lib/prisma";
+import { type ItemWorkflowStageTags } from "@/lib/item-workflow-stage-tags";
 import {
-  type ItemWorkflowStageTags,
-} from "@/lib/item-workflow-stage-tags";
-import {
-  buildProductSnapshotFromOption,
+  buildProductSnapshotFromShootType,
   emptyProductSnapshot,
   mergeProductSnapshot,
   parseProductSnapshot,
@@ -12,7 +10,7 @@ import {
 } from "@/lib/reservation-product-snapshot";
 
 export type ReservationItemInput = {
-  packageOptionId: string;
+  shootTypeId: string;
   paymentType: "pesin" | "taksitli";
   unitPrice: number;
   shootDate: string;
@@ -28,11 +26,16 @@ export type ReservationItemInput = {
   workflowStageTags?: ItemWorkflowStageTags;
 };
 
-function withStageTags(
-  snapshot: ReservationProductSnapshot,
-  _workflowStageTags?: ItemWorkflowStageTags,
-): ReservationProductSnapshot {
-  return snapshot;
+const shootTypeWithParents = {
+  package: { include: { serviceArea: true } },
+} as const;
+
+async function loadShootTypeMap(items: ReservationItemInput[]) {
+  const shootTypes = await prisma.shootType.findMany({
+    where: { id: { in: items.map((item) => item.shootTypeId) } },
+    include: shootTypeWithParents,
+  });
+  return new Map(shootTypes.map((shootType) => [shootType.id, shootType]));
 }
 
 function mapItemBase(
@@ -42,7 +45,7 @@ function mapItemBase(
 ) {
   return {
     reservationId,
-    packageOptionId: item.packageOptionId,
+    shootTypeId: item.shootTypeId,
     paymentType: item.paymentType,
     unitPrice: item.unitPrice,
     shootDate: parseDateOnlyInput(item.shootDate),
@@ -63,26 +66,17 @@ export async function buildReservationItemCreates(
   items: ReservationItemInput[],
   preservedSnapshots?: Map<string, unknown>,
 ) {
-  const options = await prisma.packageOption.findMany({
-    where: { id: { in: items.map((item) => item.packageOptionId) } },
-    include: { category: true },
-  });
-  const optionMap = new Map(options.map((option) => [option.id, option]));
+  const shootTypeMap = await loadShootTypeMap(items);
 
   return items.map((item) => {
-    const option = optionMap.get(item.packageOptionId);
-    const preserved = preservedSnapshots?.get(item.packageOptionId);
-    const productSnapshot = withStageTags(
-      preserved
-        ? mergeProductSnapshot(
-            parseProductSnapshot(preserved),
-            option ? buildProductSnapshotFromOption(option) : emptyProductSnapshot(),
-          )
-        : option
-          ? buildProductSnapshotFromOption(option)
-          : emptyProductSnapshot(),
-      item.workflowStageTags,
-    );
+    const shootType = shootTypeMap.get(item.shootTypeId);
+    const fresh = shootType
+      ? buildProductSnapshotFromShootType(shootType)
+      : emptyProductSnapshot();
+    const preserved = preservedSnapshots?.get(item.shootTypeId);
+    const productSnapshot = preserved
+      ? mergeProductSnapshot(parseProductSnapshot(preserved), fresh)
+      : fresh;
 
     return mapItemBase(reservationId, item, productSnapshot);
   });
@@ -92,50 +86,40 @@ export function mapReservationItemCreatesForNewReservation(
   items: ReservationItemInput[],
   productSnapshots: Map<string, ReservationProductSnapshot>,
 ) {
-  return items.map((item) => {
-    const productSnapshot = withStageTags(
-      resolveProductSnapshotForItem(item, productSnapshots),
-      item.workflowStageTags,
-    );
-
-    return {
-      packageOptionId: item.packageOptionId,
-      paymentType: item.paymentType,
-      unitPrice: item.unitPrice,
-      shootDate: parseDateOnlyInput(item.shootDate),
-      shootContent: item.shootContent,
-      readyTime: item.readyTime ?? "",
-      location: item.location ?? "",
-      agreedUnitPrice: item.agreedUnitPrice,
-      departureTime: item.departureTime ?? null,
-      arrivalTime: item.arrivalTime ?? null,
-      startTime: item.startTime ?? null,
-      endTime: item.endTime ?? null,
-      productSnapshot,
-    };
-  });
+  return items.map((item) => ({
+    shootTypeId: item.shootTypeId,
+    paymentType: item.paymentType,
+    unitPrice: item.unitPrice,
+    shootDate: parseDateOnlyInput(item.shootDate),
+    shootContent: item.shootContent,
+    readyTime: item.readyTime ?? "",
+    location: item.location ?? "",
+    agreedUnitPrice: item.agreedUnitPrice,
+    departureTime: item.departureTime ?? null,
+    arrivalTime: item.arrivalTime ?? null,
+    startTime: item.startTime ?? null,
+    endTime: item.endTime ?? null,
+    productSnapshot: resolveProductSnapshotForItem(item, productSnapshots),
+  }));
 }
 
 export async function loadProductSnapshotsForItems(
   items: ReservationItemInput[],
 ) {
-  const options = await prisma.packageOption.findMany({
-    where: { id: { in: items.map((item) => item.packageOptionId) } },
-    include: { category: true },
-  });
-
-  const optionMap = new Map(options.map((option) => [option.id, option]));
+  const shootTypeMap = await loadShootTypeMap(items);
   const snapshots = new Map<string, ReservationProductSnapshot>();
 
   for (const item of items) {
-    const option = optionMap.get(item.packageOptionId);
-    const snapshotKey = item.itemKey ?? item.packageOptionId;
+    const snapshotKey = item.itemKey ?? item.shootTypeId;
     if (snapshots.has(snapshotKey)) continue;
 
-    const base = option
-      ? buildProductSnapshotFromOption(option)
-      : emptyProductSnapshot();
-    snapshots.set(snapshotKey, base);
+    const shootType = shootTypeMap.get(item.shootTypeId);
+    snapshots.set(
+      snapshotKey,
+      shootType
+        ? buildProductSnapshotFromShootType(shootType)
+        : emptyProductSnapshot(),
+    );
   }
 
   return snapshots;
@@ -145,10 +129,10 @@ export function resolveProductSnapshotForItem(
   item: ReservationItemInput,
   snapshots: Map<string, ReservationProductSnapshot>,
 ): ReservationProductSnapshot {
-  const snapshotKey = item.itemKey ?? item.packageOptionId;
+  const snapshotKey = item.itemKey ?? item.shootTypeId;
   return (
     snapshots.get(snapshotKey) ??
-    snapshots.get(item.packageOptionId) ??
+    snapshots.get(item.shootTypeId) ??
     emptyProductSnapshot()
   );
 }

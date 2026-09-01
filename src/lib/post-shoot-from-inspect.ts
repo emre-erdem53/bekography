@@ -1,30 +1,25 @@
-import type { PackageCategoryContent, PackageDetailSection } from "@/lib/package-seed-data";
-import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
+import type { PackageDetailSection } from "@/lib/package-seed-data";
+import type { ServiceAreaData } from "@/lib/package-types";
+import { getShootTypeDetailSections } from "@/lib/package-detail-section";
 import {
   packageHasPrintingStage,
-  resolveWorkflowStagesForOption,
+  resolveWorkflowStages,
 } from "@/lib/package-workflow-stages";
 import type { PostShootSection, PostShootSnapshot } from "@/lib/post-shoot";
 import { syncItemStageTagsForItems } from "@/lib/item-workflow-stage-tags";
+import { findShootTypeContext } from "@/lib/shoot-type-context";
 
 export type PostShootSectionKind = "digital" | "editing" | "printing";
 
-type InspectPackageItem = {
-  packageOptionId: string;
-  categoryTitle?: string;
+export type InspectPackageItem = {
+  shootTypeId: string;
+  /** Rezervasyon kaleminde dondurulmuş hizmet alanı başlığı; yoksa canlı veriden okunur. */
+  serviceAreaTitle?: string;
   itemKey?: string;
 };
 
-export type InspectCategory = {
-  slug: string;
-  title: string;
-  content: Partial<PackageCategoryContent>;
-  options?: { id: string; label: string }[];
-};
-
 type SectionContribution = {
-  packageTitle: string;
-  categorySlug: string;
+  displayTitle: string;
   pills: string[];
   description: string;
 };
@@ -40,23 +35,14 @@ export function normalizePostShootSectionTitle(
   if (key === "dijital" || key.startsWith("dijital ")) return "digital";
   if (key === "düzenleme" || key === "duzenleme" || key.startsWith("düzenle"))
     return "editing";
-  if (key === "baskı" || key === "baski" || key.startsWith("bask")) return "printing";
+  if (key === "baskı" || key === "baski" || key.startsWith("bask"))
+    return "printing";
   return null;
 }
 
-export function isPrintingCategorySlug(slug: string): boolean {
-  return slug === "dis-cekim";
-}
-
-export function getDetailSectionsForOption(
-  content: Partial<PackageCategoryContent>,
-  packageOptionId: string,
-  optionLabel?: string,
-): PackageDetailSection[] {
-  return resolveDetailSectionsForOption(content, packageOptionId, optionLabel);
-}
-
-function detailSectionToPostShoot(section: PackageDetailSection): PostShootSection {
+function detailSectionToPostShoot(
+  section: PackageDetailSection,
+): PostShootSection {
   return {
     pills: [...(section.tags ?? [])].filter(Boolean),
     description: section.body.trim(),
@@ -74,7 +60,9 @@ function formatContributionSentence(
   return `${packageTitle} için ${sentence.charAt(0).toLowerCase()}${sentence.slice(1)}`;
 }
 
-function mergeContributions(contributions: SectionContribution[]): PostShootSection {
+function mergeContributions(
+  contributions: SectionContribution[],
+): PostShootSection {
   if (contributions.length === 0) return emptySection();
 
   const pills = [
@@ -82,7 +70,9 @@ function mergeContributions(contributions: SectionContribution[]): PostShootSect
   ];
 
   const descriptions = contributions
-    .map((entry) => formatContributionSentence(entry.packageTitle, entry.description))
+    .map((entry) =>
+      formatContributionSentence(entry.displayTitle, entry.description),
+    )
     .filter(Boolean);
 
   if (descriptions.length === 0) {
@@ -103,45 +93,36 @@ function mergeContributions(contributions: SectionContribution[]): PostShootSect
 
 function collectContributions(
   items: InspectPackageItem[],
-  categories: InspectCategory[],
+  serviceAreas: ServiceAreaData[],
   kind: PostShootSectionKind,
 ): SectionContribution[] {
   const contributions: SectionContribution[] = [];
 
   for (const item of items) {
-    const category = categories.find((entry) =>
-      entry.options?.some((option) => option.id === item.packageOptionId),
-    );
-    if (!category) continue;
-
-    const option = category.options?.find(
-      (entry) => entry.id === item.packageOptionId,
-    );
+    const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+    if (!context) continue;
 
     if (kind === "printing") {
-      const stages = resolveWorkflowStagesForOption(
-        category.content,
-        item.packageOptionId,
-        option?.label,
+      const stages = resolveWorkflowStages(
+        context.shootType,
+        context.serviceArea.scheduleType,
       );
       if (!packageHasPrintingStage(stages)) continue;
     }
-    const sections = getDetailSectionsForOption(
-      category.content,
-      item.packageOptionId,
-      option?.label,
-    );
+
+    const sections = getShootTypeDetailSections(context.shootType);
 
     for (const section of sections) {
       const mapped = normalizePostShootSectionTitle(section.title);
       if (mapped !== kind) continue;
 
       const mappedSection = detailSectionToPostShoot(section);
-      if (!mappedSection.description && mappedSection.pills.length === 0) continue;
+      if (!mappedSection.description && mappedSection.pills.length === 0)
+        continue;
 
       contributions.push({
-        packageTitle: item.categoryTitle?.trim() || category.title,
-        categorySlug: category.slug,
+        displayTitle:
+          item.serviceAreaTitle?.trim() || context.serviceArea.title,
         pills: mappedSection.pills,
         description: mappedSection.description,
       });
@@ -153,42 +134,32 @@ function collectContributions(
 
 export function buildPostShootFromInspect(
   items: InspectPackageItem[],
-  categories: InspectCategory[],
+  serviceAreas: ServiceAreaData[],
 ): PostShootSnapshot {
-  const digital = mergeContributions(
-    collectContributions(items, categories, "digital"),
-  );
-  const editing = mergeContributions(
-    collectContributions(items, categories, "editing"),
-  );
-  const printing = mergeContributions(
-    collectContributions(items, categories, "printing"),
-  );
-
   return {
-    digital,
-    editing,
-    printing,
+    digital: mergeContributions(
+      collectContributions(items, serviceAreas, "digital"),
+    ),
+    editing: mergeContributions(
+      collectContributions(items, serviceAreas, "editing"),
+    ),
+    printing: mergeContributions(
+      collectContributions(items, serviceAreas, "printing"),
+    ),
     source: "inspect",
   };
 }
 
 export function reservationHasPrintingPackage(
   items: InspectPackageItem[],
-  categories: InspectCategory[],
+  serviceAreas: ServiceAreaData[],
 ): boolean {
   return items.some((item) => {
-    const category = categories.find((entry) =>
-      entry.options?.some((option) => option.id === item.packageOptionId),
-    );
-    if (!category) return false;
-    const option = category.options?.find(
-      (entry) => entry.id === item.packageOptionId,
-    );
-    const stages = resolveWorkflowStagesForOption(
-      category.content,
-      item.packageOptionId,
-      option?.label,
+    const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+    if (!context) return false;
+    const stages = resolveWorkflowStages(
+      context.shootType,
+      context.serviceArea.scheduleType,
     );
     return packageHasPrintingStage(stages);
   });
@@ -197,22 +168,21 @@ export function reservationHasPrintingPackage(
 export function syncPostShootWithInspectItems(
   current: PostShootSnapshot,
   items: InspectPackageItem[],
-  categories: InspectCategory[],
+  serviceAreas: ServiceAreaData[],
   options?: { forceReset?: boolean },
 ): PostShootSnapshot {
   if (current.source === "manual" && !options?.forceReset) {
     return current;
   }
 
-  const built = buildPostShootFromInspect(items, categories);
+  const built = buildPostShootFromInspect(items, serviceAreas);
   const itemKeys = items
     .filter((item): item is InspectPackageItem & { itemKey: string } =>
       Boolean(item.itemKey),
     )
     .map((item) => ({
       itemKey: item.itemKey,
-      packageOptionId: item.packageOptionId,
-      categoryTitle: item.categoryTitle ?? "",
+      shootTypeId: item.shootTypeId,
     }));
 
   const itemStageTags =
@@ -220,7 +190,7 @@ export function syncPostShootWithInspectItems(
       ? syncItemStageTagsForItems(
           current.itemStageTags,
           itemKeys,
-          categories,
+          serviceAreas,
           options,
         )
       : current.itemStageTags;

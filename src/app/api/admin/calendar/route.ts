@@ -2,10 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { parseDateOnlyInput } from "@/lib/date-only";
-import { isOutdoorCategory } from "@/lib/post-shoot";
-import {
-  formatCoupleFirstNames,
-} from "@/lib/reservation-utils";
+import { formatCoupleFirstNames } from "@/lib/reservation-utils";
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -30,23 +27,19 @@ export async function GET(request: Request) {
       },
       orderBy: { shootDate: "asc" },
       include: {
-        packageOption: { include: { category: true } },
+        shootType: { include: { package: { include: { serviceArea: true } } } },
         reservation: true,
       },
     });
 
     const events = items.map((item) => {
-      const category = item.packageOption.category;
-      const content =
-        category.content && typeof category.content === "object"
-          ? (category.content as Record<string, unknown>)
-          : {};
-      const outdoor = isOutdoorCategory(category.slug, content);
+      const pkg = item.shootType.package;
+      const serviceArea = pkg.serviceArea;
       const reservation = item.reservation;
 
       return {
         id: item.id,
-        title: `${category.title} (${formatCoupleFirstNames(
+        title: `${serviceArea.title} · ${pkg.title} (${formatCoupleFirstNames(
           reservation.brideFirstName,
           reservation.brideName,
           reservation.groomFirstName,
@@ -62,13 +55,17 @@ export async function GET(request: Request) {
             arrivalTime: item.arrivalTime,
             startTime: item.startTime,
             endTime: item.endTime,
-            isOutdoor: outdoor,
-            packageOption: {
-              label: item.packageOption.label,
-              category: {
-                title: category.title,
-                slug: category.slug,
-                accentColor: category.accentColor,
+            isOutdoor: serviceArea.scheduleType === "outdoor",
+            shootType: {
+              label: item.shootType.label,
+              package: {
+                title: pkg.title,
+                slug: pkg.slug,
+              },
+              serviceArea: {
+                title: serviceArea.title,
+                slug: serviceArea.slug,
+                accentColor: serviceArea.accentColor,
               },
             },
             reservation: {

@@ -19,24 +19,34 @@ export function ReorderableTagsEditor({
   tags,
   onChange,
   placeholder = "Etiket ekle...",
+  maxTags,
 }: {
   title: string;
   tags: string[];
   onChange: (tags: string[]) => void;
   placeholder?: string;
+  maxTags?: number;
 }) {
   const [input, setInput] = useState("");
+  const limitReached = maxTags !== undefined && tags.length >= maxTags;
 
   function addTag() {
     const value = input.trim();
-    if (!value) return;
+    if (!value || limitReached) return;
     onChange([...tags, value]);
     setInput("");
   }
 
   return (
     <div className="space-y-3 rounded-xl border border-white/5 bg-white/5 p-4">
-      <h3 className="text-sm font-medium text-white">{title}</h3>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-sm font-medium text-white">{title}</h3>
+        {maxTags !== undefined ? (
+          <span className="text-xs text-zinc-500">
+            {tags.length}/{maxTags}
+          </span>
+        ) : null}
+      </div>
       {tags.length > 0 ? (
         <ul className="space-y-2">
           {tags.map((tag, index) => (
@@ -90,16 +100,23 @@ export function ReorderableTagsEditor({
             }
           }}
           placeholder={placeholder}
-          className={`${inputClass} min-w-0 flex-1`}
+          disabled={limitReached}
+          className={`${inputClass} min-w-0 flex-1 disabled:cursor-not-allowed disabled:opacity-50`}
         />
         <button
           type="button"
           onClick={addTag}
-          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white"
+          disabled={limitReached}
+          className="shrink-0 rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           Ekle
         </button>
       </div>
+      {limitReached ? (
+        <p className="text-xs text-amber-400">
+          En fazla {maxTags} etiket girebilirsiniz.
+        </p>
+      ) : null}
     </div>
   );
 }

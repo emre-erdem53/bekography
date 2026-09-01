@@ -1,15 +1,13 @@
-import type {
-  PackageCategoryContent,
-  PackageDetailSection,
-} from "@/lib/package-seed-data";
-import { resolveDetailSectionsForOption } from "@/lib/package-detail-section";
+import type { PackageDetailSection } from "@/lib/package-seed-data";
+import type { ScheduleType, ShootTypeData } from "@/lib/package-types";
+import { getShootTypeDetailSections } from "@/lib/package-detail-section";
 import {
   buildPackageInspectSections,
   hasRichInspectSections,
 } from "@/lib/package-inspect-templates";
 import {
   hasAnyWorkflowStageTags,
-  resolvePackageWorkflowStageTags,
+  resolveShootTypeWorkflowStageTags,
 } from "@/lib/package-workflow-stage-tags";
 import { normalizePostShootSectionTitle } from "@/lib/post-shoot-from-inspect";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
@@ -42,12 +40,6 @@ function mapSectionTitleToWorkflowStage(
 }
 
 export { mapSectionTitleToWorkflowStage };
-
-type PackageInspectContextScheduleType = "outdoor" | "indoor";
-
-function scheduleTypeForSlug(slug: string): PackageInspectContextScheduleType {
-  return slug === "dis-cekim" ? "outdoor" : "indoor";
-}
 
 function mergeSnapshotSectionTags(
   base: PackageDetailSection[],
@@ -93,21 +85,12 @@ function pickInspectSectionBase(
 /** Satın alınan ürün detayı için inceleme metinlerini tamamlar. */
 export function resolveDetailSectionsForStageTags(input: {
   detailSections: PackageDetailSection[];
-  categorySlug: string;
-  categoryTitle: string;
-  optionLabel: string;
-  packageOptionId?: string;
-  categoryContent?: Partial<PackageCategoryContent>;
+  serviceAreaSlug: string;
+  serviceAreaTitle: string;
+  shootTypeLabel: string;
+  scheduleType?: ScheduleType;
+  shootType?: Pick<ShootTypeData, "content">;
 }): PackageDetailSection[] {
-  const fromLivePackage =
-    input.categoryContent && input.packageOptionId
-      ? resolveDetailSectionsForOption(
-          input.categoryContent,
-          input.packageOptionId,
-          input.optionLabel,
-        )
-      : [];
-
   if (
     hasRichInspectSections(input.detailSections) &&
     sectionsHaveBodyText(input.detailSections)
@@ -115,11 +98,15 @@ export function resolveDetailSectionsForStageTags(input: {
     return input.detailSections;
   }
 
+  const fromLivePackage = input.shootType
+    ? getShootTypeDetailSections(input.shootType)
+    : [];
+
   const fromTemplate = buildPackageInspectSections({
-    slug: input.categorySlug,
-    categoryTitle: input.categoryTitle,
-    optionLabel: input.optionLabel,
-    scheduleType: scheduleTypeForSlug(input.categorySlug),
+    slug: input.serviceAreaSlug,
+    categoryTitle: input.serviceAreaTitle,
+    optionLabel: input.shootTypeLabel,
+    scheduleType: input.scheduleType ?? "indoor",
   });
 
   const base = pickInspectSectionBase(fromLivePackage, fromTemplate);
@@ -131,17 +118,10 @@ export function resolveDetailSectionsForStageTags(input: {
   return mergeSnapshotSectionTags(base, input.detailSections);
 }
 
-/** Rezervasyon / paket tanımından süreç etiketlerini çözümler. */
+/** Rezervasyon / çekim türü tanımından süreç etiketlerini çözümler. */
 export function buildWorkflowStageTags(
-  _detailSections: unknown,
   postShoot?: PostShootSnapshot,
-  context?: {
-    categorySlug: string;
-    categoryTitle: string;
-    optionLabel: string;
-    packageOptionId?: string;
-    categoryContent?: Partial<PackageCategoryContent>;
-  },
+  shootType?: Pick<ShootTypeData, "content">,
   itemId?: string,
 ): Record<string, string[]> {
   if (itemId && postShoot?.itemStageTags?.[itemId]) {
@@ -150,14 +130,10 @@ export function buildWorkflowStageTags(
     if (hasAnyWorkflowStageTags(tags)) return tags;
   }
 
-  if (context?.categoryContent && context.packageOptionId) {
-    const fromPackage = resolvePackageWorkflowStageTags(
-      context.categoryContent,
-      context.packageOptionId,
-      context.optionLabel,
-    );
-    if (hasAnyWorkflowStageTags(fromPackage)) {
-      return fromPackage;
+  if (shootType) {
+    const fromShootType = resolveShootTypeWorkflowStageTags(shootType);
+    if (hasAnyWorkflowStageTags(fromShootType)) {
+      return fromShootType;
     }
   }
 

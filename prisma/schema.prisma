@@ -31,38 +31,68 @@ enum ReservationStatus {
   iptal
 }
 
-model PackageCategory {
-  id                 String          @id @default(cuid())
-  slug               String          @unique
+enum ScheduleType {
+  indoor
+  outdoor
+}
+
+model ServiceArea {
+  id                 String       @id @default(cuid())
+  slug               String       @unique
   title              String
   accentColor        String
   iconKey            String
-  highlight          Boolean         @default(false)
+  highlight          Boolean      @default(false)
   backgroundImageUrl String?
   heroImageUrl       String?
-  sortOrder          Int             @default(0)
-  isActive           Boolean         @default(true)
-  content            Json            @default("{}")
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  options            PackageOption[]
+  sortOrder          Int          @default(0)
+  isActive           Boolean      @default(true)
+  scheduleType       ScheduleType @default(indoor)
+  isCompanionOnly    Boolean      @default(false)
+  tags               String[]     @default([])
+  content            Json         @default("{}")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  packages           Package[]
 }
 
-model PackageOption {
+model Package {
+  id            String      @id @default(cuid())
+  serviceAreaId String
+  slug          String
+  title         String
+  accentColor   String?
+  iconKey       String?
+  sortOrder     Int         @default(0)
+  isActive      Boolean     @default(true)
+  tags          String[]    @default([])
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  serviceArea   ServiceArea @relation(fields: [serviceAreaId], references: [id], onDelete: Cascade)
+  shootTypes    ShootType[]
+
+  @@unique([serviceAreaId, slug])
+  @@index([serviceAreaId])
+}
+
+model ShootType {
   id               String            @id @default(cuid())
-  categoryId       String
+  packageId        String
   label            String
   cashPrice        Int
   installmentPrice Int
+  iconKey          String?
   sortOrder        Int               @default(0)
   isActive         Boolean           @default(true)
+  tags             String[]          @default([])
+  content          Json              @default("{}")
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
-  category         PackageCategory   @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  package          Package           @relation(fields: [packageId], references: [id], onDelete: Cascade)
   requestItems     RequestItem[]
   reservationItems ReservationItem[]
 
-  @@index([categoryId])
+  @@index([packageId])
 }
 
 model Request {
@@ -84,15 +114,15 @@ model Request {
 }
 
 model RequestItem {
-  id              String        @id @default(cuid())
-  requestId       String
-  packageOptionId String
-  paymentType     PaymentType
-  unitPrice       Int
-  shootDate       DateTime?     @db.Date
-  city            String?
-  request         Request       @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
+  id          String      @id @default(cuid())
+  requestId   String
+  shootTypeId String
+  paymentType PaymentType
+  unitPrice   Int
+  shootDate   DateTime?   @db.Date
+  city        String?
+  request     Request     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  shootType   ShootType   @relation(fields: [shootTypeId], references: [id])
 
   @@index([requestId])
 }
@@ -131,23 +161,23 @@ model Reservation {
 }
 
 model ReservationItem {
-  id              String        @id @default(cuid())
+  id              String      @id @default(cuid())
   reservationId   String
-  packageOptionId String
+  shootTypeId     String
   paymentType     PaymentType
   unitPrice       Int
-  shootDate       DateTime      @db.Date
+  shootDate       DateTime    @db.Date
   shootContent    String
-  readyTime       String        @default("")
-  location        String        @default("")
+  readyTime       String      @default("")
+  location        String      @default("")
   agreedUnitPrice Int
   departureTime   String?
   arrivalTime     String?
   startTime       String?
   endTime         String?
-  productSnapshot Json          @default("{}")
-  reservation     Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  packageOption   PackageOption @relation(fields: [packageOptionId], references: [id])
+  productSnapshot Json        @default("{}")
+  reservation     Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  shootType       ShootType   @relation(fields: [shootTypeId], references: [id])
 
   @@index([reservationId])
   @@index([shootDate])

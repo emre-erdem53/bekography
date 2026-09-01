@@ -59,8 +59,11 @@ export function PurchasedProductInspectSheet({
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div className="mx-auto w-full max-w-lg px-4 pt-2 pb-[max(env(safe-area-inset-bottom),1.5rem)] sm:px-6 sm:pb-8">
               <PackageOptionDetailBody
-                categoryTitle={product.categoryTitle}
-                optionLabel={product.optionLabel}
+                serviceAreaTitle={product.serviceAreaTitle}
+                packageTitle={product.packageTitle}
+                shootTypeLabel={
+                  product.shootTypeLabelRaw || product.shootTypeLabel
+                }
                 highlightTags={product.highlightTags}
                 cashPrice={product.cashPrice}
                 installmentPrice={product.installmentPrice}
