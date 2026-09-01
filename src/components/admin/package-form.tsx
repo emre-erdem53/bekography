@@ -31,6 +31,12 @@ import { normalizeDetailSections, resolveDetailSectionsForOption } from "@/lib/p
 import { HexColorInput } from "@/components/admin/hex-color-input";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
 import { BlobMediaPickerModal } from "@/components/admin/blob-media-picker-modal";
+import {
+  BLOB_MEDIA_ACCEPT,
+  BLOB_MEDIA_UPLOAD_SIZE_HINT,
+  getBlobMediaKind,
+  validateBlobUploadFile,
+} from "@/lib/blob-media";
 import { isCustomPackageIcon, PackageIconDisplay } from "@/components/packages/package-icon";
 import { packageMediaUrl } from "@/lib/package-media";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
@@ -399,6 +405,29 @@ export function PackageForm({
 
     const url = await uploadFile(file);
     if (url) setIconKey(url);
+  }
+
+  async function handleOptionMediaUploadBatch(
+    optionKey: string,
+    files: File[],
+  ) {
+    if (files.length === 0) return;
+
+    for (const file of files) {
+      const validationError = validateBlobUploadFile(file);
+      if (validationError) {
+        setError(validationError);
+        continue;
+      }
+
+      const mediaType = getBlobMediaKind(file.name);
+      if (!mediaType) {
+        setError(`"${file.name}" desteklenmeyen bir dosya formatı.`);
+        continue;
+      }
+
+      await handleOptionMediaUpload(optionKey, file, mediaType);
+    }
   }
 
   async function handleOptionMediaUpload(
@@ -1132,21 +1161,17 @@ export function PackageForm({
                     >
                       Fotoğraf / Video Ekle (Blob Kütüphanesi)
                     </button>
-                    <div className="grid-safe grid gap-3 sm:grid-cols-2">
+                    <div className="grid-safe grid gap-3">
                       <AdminFileUpload
-                        accept="image/jpeg,image/webp,image/png"
-                        label="Yeni Görsel Yükle"
-                        hint="1:1 kare oran zorunludur. Önerilen 1080×1080 px, max 2 MB."
-                        onFileSelect={(file) =>
-                          handleOptionMediaUpload(key, file, "image")
+                        accept={BLOB_MEDIA_ACCEPT}
+                        multiple
+                        label="Bilgisayardan Yükle"
+                        hint={`1:1 kare oran zorunludur. ${BLOB_MEDIA_UPLOAD_SIZE_HINT} Birden fazla dosya seçebilirsiniz.`}
+                        onFilesSelect={(files) =>
+                          void handleOptionMediaUploadBatch(key, files)
                         }
-                      />
-                      <AdminFileUpload
-                        accept="video/mp4,video/webm"
-                        label="Yeni Video Yükle"
-                        hint="1:1 kare oran zorunludur. MP4 veya WebM formatında video."
                         onFileSelect={(file) =>
-                          handleOptionMediaUpload(key, file, "video")
+                          void handleOptionMediaUploadBatch(key, [file])
                         }
                       />
                     </div>

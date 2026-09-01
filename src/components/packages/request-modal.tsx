@@ -25,7 +25,7 @@ import {
   canCreateRequestForItems,
   getCompanionRequirementMessage,
 } from "@/lib/cart-companion-rules";
-import { PersonNameInput } from "@/components/forms/person-name-input";
+import { getCartTotalsWithDiscount } from "@/lib/cart-bundle-discount";
 
 type RequestModalProps = {
   open: boolean;
@@ -143,11 +143,27 @@ export function RequestModal({
   }, [items]);
 
   const totalCash = useMemo(
-    () => items.reduce((sum, item) => sum + item.cashPrice, 0),
+    () =>
+      getCartTotalsWithDiscount(
+        items.map((item) => ({
+          cashPrice: item.cashPrice,
+          installmentPrice: item.installmentPrice,
+          scheduleType: item.scheduleType,
+          areaSlug: item.categorySlug,
+        })),
+      ).cash,
     [items],
   );
   const totalInstallment = useMemo(
-    () => items.reduce((sum, item) => sum + item.installmentPrice, 0),
+    () =>
+      getCartTotalsWithDiscount(
+        items.map((item) => ({
+          cashPrice: item.cashPrice,
+          installmentPrice: item.installmentPrice,
+          scheduleType: item.scheduleType,
+          areaSlug: item.categorySlug,
+        })),
+      ).installment,
     [items],
   );
   const requestAllowed = canCreateRequestForItems(items);

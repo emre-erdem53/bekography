@@ -1,9 +1,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { PackageCategoryData } from "@/lib/package-types";
+import type { PackageCategoryData, ScheduleType } from "@/lib/package-types";
 import type { PackageCategoryContent } from "@/lib/package-seed-data";
 import { defaultRequestFieldLabels } from "@/lib/package-seed-data";
 import { getOptionGalleryPreviewUrl } from "@/lib/package-media";
+import {
+  getCartItemEffectivePrices,
+  getCartTotalsWithDiscount,
+  type CartDiscountItem,
+} from "@/lib/cart-bundle-discount";
 
 export type CartItem = {
   packageOptionId: string;
@@ -11,6 +16,7 @@ export type CartItem = {
   categorySlug: string;
   categoryTitle: string;
   optionLabel: string;
+  scheduleType: ScheduleType;
   cashPrice: number;
   installmentPrice: number;
   accentColor: string;
@@ -52,6 +58,7 @@ export function buildCartItemFromCategory(
     categorySlug: category.slug,
     categoryTitle: category.title,
     optionLabel: option.label,
+    scheduleType: content.scheduleType ?? "indoor",
     cashPrice: option.cashPrice,
     installmentPrice: option.installmentPrice,
     accentColor: category.accentColor,
@@ -101,18 +108,36 @@ export const useCartStore = create<CartState>()(
         })),
       clearCart: () => set({ items: [] }),
       getTotalCash: () =>
-        get()
-          .items.filter((item) => item.selected)
-          .reduce((sum, item) => sum + item.cashPrice, 0),
+        getCartTotalsWithDiscount(getSelectedDiscountItems(get().items)).cash,
       getTotalInstallment: () =>
-        get()
-          .items.filter((item) => item.selected)
-          .reduce((sum, item) => sum + item.installmentPrice, 0),
+        getCartTotalsWithDiscount(getSelectedDiscountItems(get().items))
+          .installment,
       getSelectedItems: () => get().items.filter((item) => item.selected),
     }),
     {
-      name: "bekography-cart-v3",
+      name: "bekography-cart-v4",
       skipHydration: true,
     },
   ),
 );
+
+function toDiscountItem(item: CartItem): CartDiscountItem {
+  return {
+    cashPrice: item.cashPrice,
+    installmentPrice: item.installmentPrice,
+    scheduleType: item.scheduleType,
+    areaSlug: item.categorySlug,
+  };
+}
+
+function getSelectedDiscountItems(items: CartItem[]): CartDiscountItem[] {
+  return items.filter((item) => item.selected).map(toDiscountItem);
+}
+
+export function getCartItemDiscountPrices(item: CartItem, items: CartItem[]) {
+  const discountItems = items.map(toDiscountItem);
+  const index = items.findIndex(
+    (entry) => entry.packageOptionId === item.packageOptionId,
+  );
+  return getCartItemEffectivePrices(toDiscountItem(item), index, discountItems);
+}

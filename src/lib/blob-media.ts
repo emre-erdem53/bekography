@@ -3,6 +3,34 @@ export type BlobMediaKind = "image" | "video";
 export const BLOB_MEDIA_ACCEPT =
   "image/jpeg,image/jpg,image/pjpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif,video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov";
 
+export const BLOB_MEDIA_MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+export const BLOB_MEDIA_MAX_VIDEO_BYTES = 4 * 1024 * 1024;
+
+export function formatBlobMediaMaxSize(bytes: number): string {
+  if (bytes >= 1024 * 1024) {
+    return `${bytes / (1024 * 1024)} MB`;
+  }
+  return `${Math.round(bytes / 1024)} KB`;
+}
+
+export const BLOB_MEDIA_UPLOAD_SIZE_HINT = `Görseller en fazla ${formatBlobMediaMaxSize(BLOB_MEDIA_MAX_IMAGE_BYTES)}, videolar en fazla ${formatBlobMediaMaxSize(BLOB_MEDIA_MAX_VIDEO_BYTES)}.`;
+
+export function validateBlobUploadFile(file: File): string | null {
+  const kind = getBlobMediaKind(file.name);
+  if (!kind) {
+    return `"${file.name}" desteklenmeyen bir dosya formatı.`;
+  }
+
+  const maxBytes =
+    kind === "image" ? BLOB_MEDIA_MAX_IMAGE_BYTES : BLOB_MEDIA_MAX_VIDEO_BYTES;
+
+  if (file.size > maxBytes) {
+    return `"${file.name}" çok büyük (maks. ${formatBlobMediaMaxSize(maxBytes)}).`;
+  }
+
+  return null;
+}
+
 export type BlobMediaItem = {
   url: string;
   pathname: string;

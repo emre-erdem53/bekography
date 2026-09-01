@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { PackageCategoryData, PackageOptionData } from "@/lib/package-types";
 import { PackageDetailSheet } from "@/components/packages/package-detail-sheet";
 import { PackagesCategoryAccordion } from "@/components/packages/packages-category-accordion";
+import { PackagesBundleDiscountNote } from "@/components/packages/packages-bundle-discount-note";
 
 const pageMainClass = "flex-1 bg-black pt-24 pb-10 text-white";
 const sectionClass = "scroll-mt-24 bg-black pb-6 text-white";
@@ -78,6 +79,7 @@ export function PackagesHero({
           onToggleCategory={handleToggleCategory}
           onSelectOption={handleSelectOption}
         />
+        <PackagesBundleDiscountNote />
       </motion.div>
 
       <PackageDetailSheet

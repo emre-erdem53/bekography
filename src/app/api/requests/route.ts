@@ -8,6 +8,11 @@ import {
   cartRequiresAdditionalPackage,
   getCompanionRequirementMessage,
 } from "@/lib/cart-companion-rules";
+import {
+  resolveRequestUnitPrice,
+  type CartDiscountItem,
+} from "@/lib/cart-bundle-discount";
+import type { PackageCategoryContent } from "@/lib/package-seed-data";
 
 export async function POST(request: Request) {
   try {
@@ -60,6 +65,19 @@ export async function POST(request: Request) {
     );
     const citySummary = [...new Set(items.map((item) => item.city))].join(", ");
 
+    const discountItems: CartDiscountItem[] = items.map((item) => {
+      const option = options.find(
+        (candidate) => candidate.id === item.packageOptionId,
+      )!;
+      const content = option.category.content as PackageCategoryContent | null;
+      return {
+        cashPrice: option.cashPrice,
+        installmentPrice: option.installmentPrice,
+        scheduleType: content?.scheduleType ?? "indoor",
+        areaSlug: option.category.slug,
+      };
+    });
+
     const requestRecord = await prisma.request.create({
       data: {
         publicId: nanoid(8).toUpperCase(),
@@ -71,12 +89,17 @@ export async function POST(request: Request) {
         city: citySummary,
         shootDate: earliestDate,
         items: {
-          create: items.map((item) => {
+          create: items.map((item, itemIndex) => {
             const option = options.find((o) => o.id === item.packageOptionId)!;
-            const unitPrice =
+            const basePrice =
               item.paymentType === "pesin"
                 ? option.cashPrice
                 : option.installmentPrice;
+            const unitPrice = resolveRequestUnitPrice(
+              basePrice,
+              itemIndex,
+              discountItems,
+            );
             return {
               packageOptionId: item.packageOptionId,
               paymentType: item.paymentType,
