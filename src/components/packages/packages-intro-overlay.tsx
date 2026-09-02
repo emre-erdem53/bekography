@@ -63,49 +63,63 @@ export function PackagesIntroOverlay({
       }}
       aria-hidden={isExiting}
     >
-      <div className="flex min-h-[100dvh] flex-col justify-between px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-14 sm:pt-16">
-        <motion.header
-          className="flex shrink-0 flex-col items-center"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{
-            opacity: isExiting ? 0 : 1,
-            y: isExiting ? -8 : 0,
-          }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <BekographyBrand href={null} size="sm" className="justify-center" />
-          <p className="mt-4 max-w-sm text-base italic leading-relaxed text-white sm:mt-5 sm:text-lg">
-            {PACKAGES_TAGLINE}
-          </p>
-        </motion.header>
-
+      <div className="flex min-h-[100dvh] items-center justify-center px-6 py-10">
         <motion.div
-          className="flex shrink-0 flex-col items-center justify-center py-4 sm:py-6"
-          initial={{ opacity: 0, y: 12 }}
+          className="flex w-full max-w-md -translate-y-4 flex-col items-center text-center sm:-translate-y-6"
+          initial={{ opacity: 0, y: 14 }}
           animate={{
             opacity: isExiting ? 0 : 1,
-            y: isExiting ? -6 : 0,
+            y: isExiting ? -10 : 0,
+            scale: isExiting ? 0.98 : 1,
           }}
           transition={{
-            delay: 0.18,
-            duration: 0.75,
+            duration: isExiting ? 0.55 : 0.8,
             ease: [0.22, 1, 0.36, 1],
           }}
         >
-          <ul className="w-full max-w-md space-y-6 sm:space-y-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <BekographyBrand href={null} size="sm" className="justify-center" />
+          </motion.div>
+
+          <motion.p
+            className="mt-5 max-w-sm text-base italic leading-relaxed text-white sm:mt-6 sm:text-lg"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: 0.2,
+              duration: 0.7,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
+            {PACKAGES_TAGLINE}
+          </motion.p>
+
+          <motion.ul
+            className="mt-10 w-full space-y-7 sm:mt-12 sm:space-y-8"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: 0.35,
+              duration: 0.7,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          >
             {PACKAGES_CAMPAIGN_ITEMS.map((campaign, index) => (
               <motion.li
                 key={campaign.id}
-                className="text-center"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  delay: 0.28 + index * 0.12,
-                  duration: 0.65,
+                  delay: 0.42 + index * 0.1,
+                  duration: 0.6,
                   ease: [0.22, 1, 0.36, 1],
                 }}
               >
-                <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-500 sm:mb-3 sm:text-[11px]">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-500 sm:text-[11px]">
                   {campaign.title}
                 </p>
                 <p className="packages-campaign-pulse text-sm font-semibold leading-snug sm:text-base">
@@ -113,32 +127,39 @@ export function PackagesIntroOverlay({
                 </p>
               </motion.li>
             ))}
-          </ul>
-        </motion.div>
+          </motion.ul>
 
-        <motion.footer
-          className="sticky bottom-0 z-10 mx-auto w-full max-w-md shrink-0 bg-black pt-3"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{
-            opacity: isExiting ? 0 : 1,
-            y: isExiting ? 8 : 0,
-          }}
-          transition={{
-            delay: isExiting ? 0 : 0.52,
-            duration: 0.65,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-        >
-          <div className="mx-auto mb-6 h-px w-12 bg-white/20 sm:mb-7" />
-          <button
-            type="button"
-            onClick={onDismiss}
-            disabled={isExiting}
-            className="w-full rounded-2xl bg-[#93f8b6] px-6 py-3.5 text-sm font-semibold text-black transition-opacity hover:bg-[#b8ffd0] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
+          <motion.div
+            className="mt-8 h-px w-12 bg-white/20 sm:mt-10"
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{
+              delay: 0.7,
+              duration: 0.4,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+          />
+
+          <motion.div
+            className="mt-7 w-full sm:mt-8"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              delay: 0.78,
+              duration: 0.6,
+              ease: [0.22, 1, 0.36, 1],
+            }}
           >
-            Paketleri Gör
-          </button>
-        </motion.footer>
+            <button
+              type="button"
+              onClick={onDismiss}
+              disabled={isExiting}
+              className="w-full rounded-2xl bg-[#93f8b6] px-6 py-3.5 text-sm font-semibold text-black transition-opacity hover:bg-[#b8ffd0] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
+            >
+              Paketleri Gör
+            </button>
+          </motion.div>
+        </motion.div>
       </div>
     </motion.div>
   );
