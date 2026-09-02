@@ -63,9 +63,9 @@ export function PackagesIntroOverlay({
       }}
       aria-hidden={isExiting}
     >
-      <div className="flex min-h-[100dvh] flex-col px-6">
+      <div className="flex min-h-[100dvh] flex-col justify-between px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-14 sm:pt-16">
         <motion.header
-          className="flex shrink-0 flex-col items-center pt-6 sm:pt-8"
+          className="flex shrink-0 flex-col items-center"
           initial={{ opacity: 0, y: 10 }}
           animate={{
             opacity: isExiting ? 0 : 1,
@@ -80,7 +80,7 @@ export function PackagesIntroOverlay({
         </motion.header>
 
         <motion.div
-          className="flex flex-1 flex-col items-center justify-center py-6 sm:py-8"
+          className="flex shrink-0 flex-col items-center justify-center py-4 sm:py-6"
           initial={{ opacity: 0, y: 12 }}
           animate={{
             opacity: isExiting ? 0 : 1,
@@ -92,7 +92,7 @@ export function PackagesIntroOverlay({
             ease: [0.22, 1, 0.36, 1],
           }}
         >
-          <ul className="w-full max-w-md space-y-8 sm:space-y-10">
+          <ul className="w-full max-w-md space-y-6 sm:space-y-8">
             {PACKAGES_CAMPAIGN_ITEMS.map((campaign, index) => (
               <motion.li
                 key={campaign.id}
@@ -117,11 +117,14 @@ export function PackagesIntroOverlay({
         </motion.div>
 
         <motion.footer
-          className="mx-auto w-full max-w-md shrink-0 pb-8 pt-2"
+          className="sticky bottom-0 z-10 mx-auto w-full max-w-md shrink-0 bg-black pt-3"
           initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          animate={{
+            opacity: isExiting ? 0 : 1,
+            y: isExiting ? 8 : 0,
+          }}
           transition={{
-            delay: 0.52,
+            delay: isExiting ? 0 : 0.52,
             duration: 0.65,
             ease: [0.22, 1, 0.36, 1],
           }}
