@@ -72,13 +72,13 @@ export function isSecondPackageDiscountAnchor(item: CartDiscountItem): boolean {
   );
 }
 
-/** İlk paket dış çekim/düğün salonu ise ikinci paket (index 1) indirimli. */
-export function getSecondPackageDiscountIndex(
+/** İlk paket dış çekim/düğün salonu ise sonraki tüm paketler indirimli. */
+export function isAdditionalPackageBundleDiscountEligible(
+  index: number,
   items: CartDiscountItem[],
-): number | null {
-  if (items.length < 2) return null;
-  if (!isSecondPackageDiscountAnchor(items[0])) return null;
-  return 1;
+): boolean {
+  if (index <= 0 || items.length < 2) return false;
+  return isSecondPackageDiscountAnchor(items[0]);
 }
 
 export function applySecondPackageDiscount(price: number): number {
@@ -111,7 +111,10 @@ export function getCartItemEffectivePrices(
   index: number,
   items: CartDiscountItem[],
 ): CartItemEffectivePrices {
-  const bundleDiscount = getSecondPackageDiscountIndex(items) === index;
+  const bundleDiscount = isAdditionalPackageBundleDiscountEligible(
+    index,
+    items,
+  );
   const seasonalDiscount = isSeasonalCampaignDate(item.shootDate);
 
   if (!bundleDiscount && !seasonalDiscount) {
@@ -169,7 +172,10 @@ export function resolveRequestUnitPrice(
   const item = discountItems[itemIndex];
   if (!item) return basePrice;
 
-  const bundleDiscount = getSecondPackageDiscountIndex(discountItems) === itemIndex;
+  const bundleDiscount = isAdditionalPackageBundleDiscountEligible(
+    itemIndex,
+    discountItems,
+  );
   const seasonalDiscount = isSeasonalCampaignDate(item.shootDate);
 
   return applyItemDiscounts(basePrice, { bundleDiscount, seasonalDiscount });

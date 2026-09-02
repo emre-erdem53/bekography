@@ -33,12 +33,12 @@ function ShootTypeRow({
   const { labels: paymentLabels } = usePaymentTypeCopy();
 
   return (
-    <div className="flex items-start gap-2 border-t border-white/[0.06] py-1.5 first:border-t-0 sm:gap-3 sm:py-2">
-      <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-white">
+    <div className="flex items-center gap-2 border-t border-white/[0.06] py-1.5 first:border-t-0 sm:gap-3 sm:py-2">
+      <p className="min-w-0 flex-1 self-center text-sm font-medium leading-snug text-white">
         {shootType.label}
       </p>
 
-      <div className="flex shrink-0 items-end gap-2.5 sm:gap-3.5">
+      <div className="flex shrink-0 items-center gap-2.5 sm:gap-3.5">
         <div className="text-right leading-none">
           <p className="text-[9px] text-zinc-500 sm:text-[10px]">
             {paymentLabels.pesin}
@@ -90,7 +90,7 @@ export function PackageAccordion({
   const packageCount = serviceArea.packages.length;
 
   return (
-    <div className={nested ? "mt-1.5 space-y-2" : "mt-8 space-y-3"}>
+    <div className={nested ? "mt-1.5 space-y-3" : "mt-8 space-y-4"}>
       {serviceArea.packages.map((pkg, index) => {
         const accentColor = resolveNestedPackageAccentColor(
           serviceArea,
