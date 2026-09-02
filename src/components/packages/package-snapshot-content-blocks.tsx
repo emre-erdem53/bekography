@@ -68,7 +68,7 @@ export function PackageInspectSections({
               {section.tags.map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-white/80 px-2.5 py-0.5 text-[11px] text-white"
+                  className="inline-flex items-center justify-center rounded-full border border-white/80 px-2.5 py-1 text-[11px] font-medium leading-none text-white"
                 >
                   {tag}
                 </span>

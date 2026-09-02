@@ -18,6 +18,7 @@ import {
 } from "@/lib/reservation-utils";
 import { TrackingWorkflowTimeline } from "@/components/tracking/tracking-workflow-timeline";
 import { TrackingPurchasedProducts } from "@/components/tracking/tracking-purchased-products";
+import { ReservationProductPdfDetail } from "@/components/tracking/reservation-product-pdf-detail";
 import {
   ContractLinkButton,
   ContractPdfModal,
@@ -44,9 +45,21 @@ export function TrackingPageShell({
 
 export const ReservationOrderDocument = forwardRef<
   HTMLDivElement,
-  { data: TrackingData; showCoupleHeader?: boolean; sectionsTagsOnly?: boolean }
+  {
+    data: TrackingData;
+    showCoupleHeader?: boolean;
+    sectionsTagsOnly?: boolean;
+    includeProductDetails?: boolean;
+    hideContractLink?: boolean;
+  }
 >(function ReservationOrderDocument(
-  { data, showCoupleHeader = true, sectionsTagsOnly = false },
+  {
+    data,
+    showCoupleHeader = true,
+    sectionsTagsOnly = false,
+    includeProductDetails = false,
+    hideContractLink = false,
+  },
   ref,
 ) {
   const contractModal = useContractPdfModal();
@@ -140,9 +153,26 @@ export const ReservationOrderDocument = forwardRef<
         <TrackingPurchasedProducts
           products={data.purchasedProducts}
           sectionsTagsOnly={sectionsTagsOnly}
+          staticMode={includeProductDetails}
         />
 
-        <ContractLinkButton onClick={contractModal.openModal} />
+        {includeProductDetails && data.purchasedProducts.length > 0 ? (
+          <section className="mt-10">
+            <SectionHeading>Ürün Detayları</SectionHeading>
+            <div className="mt-5 space-y-8 sm:space-y-10">
+              {data.purchasedProducts.map((product) => (
+                <ReservationProductPdfDetail
+                  key={product.shootTypeId}
+                  product={product}
+                />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {hideContractLink ? null : (
+          <ContractLinkButton onClick={contractModal.openModal} />
+        )}
       </div>
 
       <ContractPdfModal open={contractModal.open} onClose={contractModal.closeModal} />
@@ -227,10 +257,12 @@ export function TrackingOrderView({
   data,
   exportRef,
   sectionsTagsOnly = false,
+  includeProductDetails = false,
 }: {
   data: TrackingData;
   exportRef?: Ref<HTMLDivElement>;
   sectionsTagsOnly?: boolean;
+  includeProductDetails?: boolean;
 }) {
   return (
     <TrackingPageShell>
@@ -238,6 +270,7 @@ export function TrackingOrderView({
         data={data}
         exportRef={exportRef}
         sectionsTagsOnly={sectionsTagsOnly}
+        includeProductDetails={includeProductDetails}
       />
     </TrackingPageShell>
   );
@@ -247,10 +280,12 @@ function TrackingOrderBody({
   data,
   exportRef,
   sectionsTagsOnly = false,
+  includeProductDetails = false,
 }: {
   data: TrackingData;
   exportRef?: Ref<HTMLDivElement>;
   sectionsTagsOnly?: boolean;
+  includeProductDetails?: boolean;
 }) {
   const trackingData = normalizeTrackingData(data);
 
@@ -261,6 +296,8 @@ function TrackingOrderBody({
         data={trackingData}
         showCoupleHeader={false}
         sectionsTagsOnly={sectionsTagsOnly}
+        includeProductDetails={includeProductDetails}
+        hideContractLink={includeProductDetails}
       />
     </div>
   );

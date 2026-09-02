@@ -12,9 +12,12 @@ const previewClassName =
 export function TrackingPurchasedProducts({
   products,
   sectionsTagsOnly = false,
+  staticMode = false,
 }: {
   products: ReservationProductSnapshot[];
   sectionsTagsOnly?: boolean;
+  /** PDF / statik önizleme: tıklanabilir kart yerine özet liste. */
+  staticMode?: boolean;
 }) {
   const [selectedProduct, setSelectedProduct] =
     useState<ReservationProductSnapshot | null>(null);
@@ -26,17 +29,9 @@ export function TrackingPurchasedProducts({
       <section className="mt-10">
         <SectionHeading>Satın Alınan Ürünler</SectionHeading>
         <ul className="mt-5 space-y-4">
-          {products.map((product) => (
-            <li key={product.shootTypeId}>
-              <button
-                type="button"
-                onClick={() => setSelectedProduct(product)}
-                className="w-full rounded-2xl border p-4 text-left transition hover:brightness-110 sm:p-5"
-                style={{
-                  borderColor: `${product.accentColor}55`,
-                  backgroundColor: `${product.accentColor}0c`,
-                }}
-              >
+          {products.map((product) => {
+            const cardBody = (
+              <>
                 <div className="flex gap-3 sm:gap-4">
                   <CartItemThumbnail
                     imageUrl={product.previewImageUrl}
@@ -85,20 +80,55 @@ export function TrackingPurchasedProducts({
                   />
                 </div>
 
-                <p className="mt-4 text-center text-[11px] text-zinc-500 sm:text-xs">
-                  Detaylar için dokunun
-                </p>
-              </button>
-            </li>
-          ))}
+                {staticMode ? null : (
+                  <p className="mt-4 text-center text-[11px] text-zinc-500 sm:text-xs">
+                    Detaylar için dokunun
+                  </p>
+                )}
+              </>
+            );
+
+            if (staticMode) {
+              return (
+                <li
+                  key={product.shootTypeId}
+                  className="rounded-2xl border p-4 sm:p-5"
+                  style={{
+                    borderColor: `${product.accentColor}55`,
+                    backgroundColor: `${product.accentColor}0c`,
+                  }}
+                >
+                  {cardBody}
+                </li>
+              );
+            }
+
+            return (
+              <li key={product.shootTypeId}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProduct(product)}
+                  className="w-full rounded-2xl border p-4 text-left transition hover:brightness-110 sm:p-5"
+                  style={{
+                    borderColor: `${product.accentColor}55`,
+                    backgroundColor: `${product.accentColor}0c`,
+                  }}
+                >
+                  {cardBody}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
 
-      <PurchasedProductInspectSheet
-        product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
-        sectionsTagsOnly={sectionsTagsOnly}
-      />
+      {staticMode ? null : (
+        <PurchasedProductInspectSheet
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          sectionsTagsOnly={sectionsTagsOnly}
+        />
+      )}
     </>
   );
 }

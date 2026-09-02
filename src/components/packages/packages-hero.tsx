@@ -219,7 +219,7 @@ export function PackagesHero({
 
   return (
     <main
-      className={`flex-1 bg-black pb-10 text-white ${
+      className={`bg-black pb-10 text-white ${
         isPackagesListPage ? PACKAGES_PAGE_MAIN_OFFSET_CLASS : "pt-24"
       }`}
     >

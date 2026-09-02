@@ -9,6 +9,11 @@ import {
 } from "../src/lib/package-seed-data";
 import { getCatalogInspectSections } from "../src/lib/package-inspect-catalog";
 import { buildPackageInspectSections } from "../src/lib/package-inspect-templates";
+import {
+  ensureWorkflowStageTags,
+  type WorkflowStageTagsMap,
+} from "../src/lib/default-workflow-stage-tags";
+import { hasAnyWorkflowStageTags } from "../src/lib/package-workflow-stage-tags";
 
 const prisma = new PrismaClient();
 
@@ -82,11 +87,16 @@ function shootTypeContent(
     workflowStages: Array.isArray(previous.workflowStages)
       ? (previous.workflowStages as ShootTypeContent["workflowStages"])
       : undefined,
-    workflowStageTags:
-      previous.workflowStageTags &&
-      typeof previous.workflowStageTags === "object"
-        ? (previous.workflowStageTags as ShootTypeContent["workflowStageTags"])
-        : undefined,
+    workflowStageTags: (() => {
+      const stored =
+        previous.workflowStageTags &&
+        typeof previous.workflowStageTags === "object"
+          ? (previous.workflowStageTags as WorkflowStageTagsMap)
+          : undefined;
+      return stored && hasAnyWorkflowStageTags(stored)
+        ? stored
+        : ensureWorkflowStageTags(undefined, area.scheduleType);
+    })(),
   };
   return jsonValue(content);
 }

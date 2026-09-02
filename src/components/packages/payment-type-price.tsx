@@ -90,12 +90,14 @@ export function PaymentTypePrice({
   }
 
   return (
-    <div className={`${alignClass} ${className}`}>
-      <p className="text-[11px] font-medium text-zinc-400 sm:text-xs">{label}</p>
-      <p className={`mt-0.5 text-lg sm:text-xl ${priceClass}`}>
+    <div className={`flex flex-col gap-0.5 ${alignClass} ${className}`}>
+      <p className="text-[11px] font-medium leading-none text-zinc-400 sm:text-xs">
+        {label}
+      </p>
+      <p className={`text-lg leading-none sm:text-xl ${priceClass}`}>
         {formatPrice(price)}
       </p>
-      <p className="mt-0.5 text-[10px] leading-snug text-zinc-600 sm:text-[11px]">
+      <p className="text-[10px] leading-tight text-zinc-600 sm:text-[11px]">
         {note}
       </p>
     </div>

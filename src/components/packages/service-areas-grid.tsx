@@ -60,7 +60,7 @@ export function ServiceAreasGrid({
   }
 
   return (
-    <div className="mt-6 flex w-full flex-col gap-2.5 [overflow-anchor:none] sm:mt-8 sm:gap-3">
+    <div className="mt-4 flex w-full flex-col gap-2.5 [overflow-anchor:none] sm:mt-5 sm:gap-3">
       {serviceAreas.map((serviceArea) => {
         const isOpen = expandedServiceAreaId === serviceArea.id;
         const subtitle = resolveServiceAreaSubtitle(serviceArea);
@@ -83,10 +83,10 @@ export function ServiceAreasGrid({
                 )
               }
               aria-expanded={isOpen}
-              className="group flex min-h-14 w-full min-w-0 items-center gap-3 px-3.5 py-3 text-left transition-colors hover:bg-[#111] active:bg-[#141414] sm:min-h-16 sm:gap-4 sm:px-5 sm:py-4"
+              className="group flex min-h-12 w-full min-w-0 items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-[#111] active:bg-[#141414] sm:min-h-14 sm:gap-4 sm:px-5 sm:py-3"
             >
               <span
-                className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl sm:h-16 sm:w-16"
+                className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl sm:h-14 sm:w-14"
                 style={
                   usesPhotoIcon
                     ? undefined
@@ -113,7 +113,7 @@ export function ServiceAreasGrid({
                   {serviceArea.title}
                 </span>
                 {subtitle ? (
-                  <span className="mt-1.5 block truncate text-xs italic leading-snug text-zinc-500 sm:text-sm">
+                  <span className="mt-0.5 block truncate text-xs italic leading-tight text-zinc-500 sm:text-sm">
                     {subtitle}
                   </span>
                 ) : null}

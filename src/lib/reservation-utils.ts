@@ -111,6 +111,31 @@ export function firstNameFromFullName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name.trim();
 }
 
+function slugifyFileNamePart(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9ğüşıöç&]+/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+/** Rezervasyon PDF dosya adı: gelin(ad)-damat(ad-soyad).pdf */
+export function buildReservationPdfFileName(
+  brideName: string,
+  groomName: string,
+  brideFirstName?: string | null,
+) {
+  const bridePart = slugifyFileNamePart(
+    resolvePersonFirstName(brideFirstName, brideName),
+  );
+  const groomPart = slugifyFileNamePart(groomName.trim());
+
+  if (bridePart && groomPart) return `${bridePart}-${groomPart}.pdf`;
+  if (bridePart) return `${bridePart}.pdf`;
+  if (groomPart) return `${groomPart}.pdf`;
+  return "rezervasyon.pdf";
+}
+
 export function reservationTcMatches(
   inputTc: string,
   brideTc: string,

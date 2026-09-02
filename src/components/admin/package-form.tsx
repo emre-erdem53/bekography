@@ -21,6 +21,7 @@ import {
   mergeDefaultPostShootSections,
   STANDARD_INSPECT_SECTION_TITLES,
 } from "@/lib/default-inspect-sections";
+import { ensureWorkflowStageTags } from "@/lib/default-workflow-stage-tags";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
 import type { ScheduleType } from "@/lib/package-types";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
@@ -118,7 +119,24 @@ function nextPackageKey() {
   return `pkg-${packageKeyCounter}`;
 }
 
-function emptyShootType(): ShootTypeForm {
+function normalizeShootTypeContent(
+  content: ShootTypeContent | null | undefined,
+  scheduleType: ScheduleType = "indoor",
+): ShootTypeContent {
+  const base = (content ?? {}) as ShootTypeContent;
+  return {
+    galleryMedia: base.galleryMedia ?? [],
+    detailSections: base.detailSections ?? [],
+    inspectEnabled: base.inspectEnabled ?? true,
+    ...(base.workflowStages ? { workflowStages: base.workflowStages } : {}),
+    workflowStageTags: ensureWorkflowStageTags(
+      base.workflowStageTags,
+      scheduleType,
+    ),
+  };
+}
+
+function emptyShootType(scheduleType: ScheduleType = "indoor"): ShootTypeForm {
   return {
     key: nextShootTypeKey(),
     label: "",
@@ -126,11 +144,14 @@ function emptyShootType(): ShootTypeForm {
     installmentPrice: 0,
     iconKey: "",
     tags: [],
-    content: { galleryMedia: [], detailSections: [], inspectEnabled: true },
+    content: normalizeShootTypeContent(null, scheduleType),
   };
 }
 
-function emptyPackage(accentColor = "#ffffff"): PackageFormEntry {
+function emptyPackage(
+  accentColor = "#ffffff",
+  scheduleType: ScheduleType = "indoor",
+): PackageFormEntry {
   return {
     key: nextPackageKey(),
     title: "",
@@ -140,13 +161,14 @@ function emptyPackage(accentColor = "#ffffff"): PackageFormEntry {
     sortOrder: 0,
     isActive: true,
     tags: [],
-    shootTypes: [emptyShootType()],
+    shootTypes: [emptyShootType(scheduleType)],
   };
 }
 
 function mapApiPackage(
   pkg: ApiPackage,
   fallbackAccentColor = "#ffffff",
+  scheduleType: ScheduleType = "indoor",
 ): PackageFormEntry {
   return {
     id: pkg.id,
@@ -171,9 +193,9 @@ function mapApiPackage(
             installmentPrice: shootType.installmentPrice,
             iconKey: shootType.iconKey ?? "",
             tags: shootType.tags ?? [],
-            content: (shootType.content ?? {}) as ShootTypeContent,
+            content: normalizeShootTypeContent(shootType.content, scheduleType),
           }))
-        : [emptyShootType()],
+        : [emptyShootType(scheduleType)],
   };
 }
 
@@ -194,9 +216,7 @@ function serializeShootTypes(shootTypes: ShootTypeForm[]) {
       ...(shootType.content.workflowStages
         ? { workflowStages: shootType.content.workflowStages }
         : {}),
-      ...(shootType.content.workflowStageTags
-        ? { workflowStageTags: shootType.content.workflowStageTags }
-        : {}),
+      workflowStageTags: shootType.content.workflowStageTags,
     },
   }));
 }
@@ -352,8 +372,10 @@ export function PackageForm({
           normalizeHexColor(areaData.accentColor) ??
           areaData.accentColor ??
           "#ffffff";
+        const areaScheduleType: ScheduleType =
+          areaData.scheduleType === "outdoor" ? "outdoor" : "indoor";
         const loaded = ((areaData.packages ?? []) as ApiPackage[]).map((pkg) =>
-          mapApiPackage(pkg, areaAccent),
+          mapApiPackage(pkg, areaAccent, areaScheduleType),
         );
         const nextPackages = copiedPackage
           ? [
@@ -365,7 +387,7 @@ export function PackageForm({
             ]
           : loaded.length > 0
             ? loaded
-            : [emptyPackage(areaAccent)];
+            : [emptyPackage(areaAccent, areaScheduleType)];
 
         if (cancelled) return;
         setServiceAreaId(areaId);
@@ -413,10 +435,16 @@ export function PackageForm({
       }
       const areaAccent =
         normalizeHexColor(data.accentColor) ?? data.accentColor ?? "#ffffff";
+      const areaScheduleType: ScheduleType =
+        data.scheduleType === "outdoor" ? "outdoor" : "indoor";
       const loaded = ((data.packages ?? []) as ApiPackage[]).map((pkg) =>
-        mapApiPackage(pkg, areaAccent),
+        mapApiPackage(pkg, areaAccent, areaScheduleType),
       );
-      setPackages(loaded.length > 0 ? loaded : [emptyPackage(areaAccent)]);
+      setPackages(
+        loaded.length > 0
+          ? loaded
+          : [emptyPackage(areaAccent, areaScheduleType)],
+      );
       setExpandedPackages({});
       setExpandedShootTypes({});
     } catch {
@@ -758,6 +786,7 @@ export function PackageForm({
               onClick={() => {
                 const next = emptyPackage(
                   selectedServiceArea?.accentColor ?? "#ffffff",
+                  scheduleType,
                 );
                 setPackages((prev) => [...prev, next]);
                 setExpandedPackages((prev) => ({ ...prev, [next.key]: true }));
@@ -951,7 +980,7 @@ export function PackageForm({
               type="button"
               onClick={() =>
                 updatePackage(pkg.key, {
-                  shootTypes: [...pkg.shootTypes, emptyShootType()],
+                  shootTypes: [...pkg.shootTypes, emptyShootType(scheduleType)],
                 })
               }
               className="shrink-0 text-sm text-zinc-400 hover:text-white"

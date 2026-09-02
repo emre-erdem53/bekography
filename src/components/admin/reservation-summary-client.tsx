@@ -6,15 +6,8 @@ import { Download, ArrowLeft, Pencil } from "lucide-react";
 import { TrackingOrderView } from "@/components/tracking/tracking-order-view";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import { exportElementToPdf } from "@/lib/export-tracking-pdf";
+import { buildReservationPdfFileName } from "@/lib/reservation-utils";
 import type { TrackingData } from "@/lib/tracking-types";
-
-function slugifyFileName(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9ğüşıöç&]+/gi, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 export function ReservationSummaryClient({
   reservationId,
@@ -39,7 +32,7 @@ export function ReservationSummaryClient({
     try {
       await exportElementToPdf(
         exportRef.current,
-        `${slugifyFileName(data.coupleName) || "rezervasyon"}-siparis-formu.pdf`,
+        buildReservationPdfFileName(data.brideName, data.groomName),
       );
     } catch (exportError) {
       console.error("PDF export failed", exportError);
@@ -83,7 +76,11 @@ export function ReservationSummaryClient({
         </p>
       ) : null}
 
-      <TrackingOrderView data={trackingData} exportRef={exportRef} />
+      <TrackingOrderView
+        data={trackingData}
+        exportRef={exportRef}
+        includeProductDetails
+      />
     </div>
   );
 }

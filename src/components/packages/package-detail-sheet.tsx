@@ -145,10 +145,10 @@ export function PackageDetailSheet({
               href={backHref}
               onClick={onClose}
               className="inline-flex items-center gap-1.5 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-              aria-label={`${serviceArea.title} paketlerine dön`}
+              aria-label="Paketlere dön"
             >
               <ChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
-              {serviceArea.title}
+              Paketler
             </Link>
             <BekographyBrand size="sm" className="hover:opacity-100" />
           </div>

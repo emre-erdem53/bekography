@@ -120,7 +120,7 @@ export function PackageAccordion({
                   {pkg.tags.slice(0, 5).map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full border px-2 py-0.5 text-[10px] leading-none"
+                      className="inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-medium leading-none sm:text-xs"
                       style={{
                         borderColor: `${accentColor}44`,
                         color: `${accentColor}`,

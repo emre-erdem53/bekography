@@ -81,6 +81,7 @@ export async function POST(request: Request) {
           | "outdoor",
         areaSlug: shootType.package.serviceArea.slug,
         isCompanionOnly: shootType.package.serviceArea.isCompanionOnly,
+        shootDate: item.shootDate,
       };
     });
 

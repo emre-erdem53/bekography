@@ -15,6 +15,7 @@
     "sync-reviews": "npx tsx scripts/sync-google-reviews.ts",
     "backup-packages": "npx tsx scripts/backup-package-data.ts",
     "migrate-package-content": "npx tsx scripts/migrate-package-content.ts",
+    "backfill-workflow-stage-tags": "npx tsx scripts/backfill-workflow-stage-tags.ts",
     "verify-post-shoot": "npx tsx scripts/verify-post-shoot-mapping.ts",
     "postinstall": "prisma generate"
   },

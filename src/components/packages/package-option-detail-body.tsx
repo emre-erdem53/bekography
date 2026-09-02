@@ -57,7 +57,7 @@ export function PackageOptionDetailBody({
             {highlightTags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full border border-white/80 px-2.5 py-0.5 text-[11px] text-white sm:px-3 sm:py-1 sm:text-xs"
+                className="inline-flex items-center justify-center rounded-full border border-white/80 px-2.5 py-1 text-[11px] font-medium leading-none text-white sm:px-3 sm:text-xs"
               >
                 {tag}
               </span>

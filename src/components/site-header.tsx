@@ -11,6 +11,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { BekographyBrand } from "@/components/bekography-brand";
+import { PackagesCampaignTicker } from "@/components/packages/packages-campaign-ticker";
 import { EASE_OUT, duration } from "@/lib/motion";
 import { PACKAGES_PAGE_HEADER_CLASS } from "@/lib/packages-page-layout";
 
@@ -54,8 +55,15 @@ export function SiteHeader() {
   const lastScrollYRef = useRef(0);
 
   useLayoutEffect(() => {
-    setShowPackagesChrome(pathname === "/paketler");
-  }, [pathname]);
+    const isPackagesPage = pathname === "/paketler";
+    setShowPackagesChrome(isPackagesPage);
+
+    if (isPackagesPage) {
+      hideOffsetRef.current = 0;
+      lastScrollYRef.current = 0;
+      headerY.set(0);
+    }
+  }, [pathname, headerY]);
 
   useEffect(() => {
     lastScrollYRef.current = window.scrollY;
@@ -91,7 +99,9 @@ export function SiteHeader() {
   return (
     <motion.header
       id="site-header"
-      className="fixed top-0 z-50 w-full border-b border-white/10 bg-zinc-950/90 backdrop-blur-md"
+      className={`fixed top-0 z-50 w-full bg-zinc-950/90 backdrop-blur-md ${
+        showPackagesChrome ? "" : "border-b border-white/10"
+      }`}
       style={{ y: headerY }}
       initial={reduce || showPackagesChrome ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -104,7 +114,9 @@ export function SiteHeader() {
     >
       <div
         className={`relative mx-auto flex max-w-7xl items-center justify-between gap-4 px-8 md:px-10 ${
-          showPackagesChrome ? `${PACKAGES_PAGE_HEADER_CLASS} py-2.5` : "h-24"
+          showPackagesChrome
+            ? `${PACKAGES_PAGE_HEADER_CLASS} border-b border-white/10 py-2.5`
+            : "h-24"
         }`}
       >
         <motion.div
@@ -171,6 +183,7 @@ export function SiteHeader() {
           </motion.button>
         </div>
       </div>
+      {showPackagesChrome && !open ? <PackagesCampaignTicker /> : null}
       <AnimatePresence>
         {open ? (
           <motion.div

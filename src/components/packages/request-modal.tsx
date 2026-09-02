@@ -25,7 +25,12 @@ import {
   canCreateRequestForItems,
   getCompanionRequirementMessage,
 } from "@/lib/cart-companion-rules";
-import { getCartTotalsWithDiscount } from "@/lib/cart-bundle-discount";
+import {
+  getCartTotalsWithDiscount,
+  SEASONAL_CAMPAIGN_NOTE,
+  SECOND_PACKAGE_DISCOUNT_NOTE,
+  type CartDiscountItem,
+} from "@/lib/cart-bundle-discount";
 import { PersonNameInput } from "@/components/forms/person-name-input";
 
 type RequestModalProps = {
@@ -100,6 +105,31 @@ function CityPicker({
   );
 }
 
+function buildRequestDiscountItems(
+  items: CartItem[],
+  serviceAreaFields: ServiceAreaFields,
+  hasMultipleItems: boolean,
+  sameDay: boolean,
+  globalShootDate: string,
+): CartDiscountItem[] {
+  return items.map((item) => {
+    const fields = serviceAreaFields[item.serviceAreaId];
+    const shootDate =
+      hasMultipleItems && sameDay
+        ? globalShootDate
+        : (fields?.shootDate ?? "");
+
+    return {
+      cashPrice: item.cashPrice,
+      installmentPrice: item.installmentPrice,
+      scheduleType: item.scheduleType,
+      areaSlug: item.serviceAreaSlug,
+      isCompanionOnly: item.isCompanionOnly,
+      shootDate: shootDate || undefined,
+    };
+  });
+}
+
 export function RequestModal({
   open,
   onClose,
@@ -151,34 +181,8 @@ export function RequestModal({
     return [...map.values()];
   }, [items]);
 
-  const totalCash = useMemo(
-    () =>
-      getCartTotalsWithDiscount(
-        items.map((item) => ({
-          cashPrice: item.cashPrice,
-          installmentPrice: item.installmentPrice,
-          scheduleType: item.scheduleType,
-          areaSlug: item.serviceAreaSlug,
-          isCompanionOnly: item.isCompanionOnly,
-        })),
-      ).cash,
-    [items],
-  );
-  const totalInstallment = useMemo(
-    () =>
-      getCartTotalsWithDiscount(
-        items.map((item) => ({
-          cashPrice: item.cashPrice,
-          installmentPrice: item.installmentPrice,
-          scheduleType: item.scheduleType,
-          areaSlug: item.serviceAreaSlug,
-          isCompanionOnly: item.isCompanionOnly,
-        })),
-      ).installment,
-    [items],
-  );
-  const requestAllowed = canCreateRequestForItems(items);
   const hasMultipleItems = items.length > 1;
+  const requestAllowed = canCreateRequestForItems(items);
 
   const [contactFirstName, setContactFirstName] = useState("");
   const [contactLastName, setContactLastName] = useState("");
@@ -195,6 +199,32 @@ export function RequestModal({
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  const discountItems = useMemo(
+    () =>
+      buildRequestDiscountItems(
+        items,
+        serviceAreaFields,
+        hasMultipleItems,
+        sameDay,
+        globalShootDate,
+      ),
+    [
+      items,
+      serviceAreaFields,
+      hasMultipleItems,
+      sameDay,
+      globalShootDate,
+    ],
+  );
+
+  const cartTotals = useMemo(
+    () => getCartTotalsWithDiscount(discountItems),
+    [discountItems],
+  );
+
+  const totalCash = cartTotals.cash;
+  const totalInstallment = cartTotals.installment;
 
   useEffect(() => {
     if (!open) return;
@@ -552,6 +582,18 @@ export function RequestModal({
                       onSelect={() => setPaymentType("taksitli")}
                     />
                   </div>
+                  {cartTotals.seasonalDiscountAppliedCount > 0 ? (
+                    <p className="text-xs leading-relaxed text-[#93f8b6]">
+                      {SEASONAL_CAMPAIGN_NOTE}
+                    </p>
+                  ) : null}
+                  {cartTotals.discountAppliedCount > 0 &&
+                  cartTotals.seasonalDiscountAppliedCount <
+                    cartTotals.discountAppliedCount ? (
+                    <p className="text-xs leading-relaxed text-zinc-500">
+                      {SECOND_PACKAGE_DISCOUNT_NOTE}
+                    </p>
+                  ) : null}
                 </FormSection>
 
                 {!requestAllowed ? (

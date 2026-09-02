@@ -8,6 +8,7 @@ import {
   hasAnyWorkflowStageTags,
   resolveShootTypeWorkflowStageTags,
 } from "@/lib/package-workflow-stage-tags";
+import { ensureWorkflowStageTags } from "@/lib/default-workflow-stage-tags";
 import {
   adminOptionsFromStageDefinitions,
   resolveWorkflowStages,
@@ -78,7 +79,10 @@ export function buildItemStageTagsFromShootType(
     return fromShootType;
   }
 
-  return emptyItemWorkflowStageTags();
+  return ensureWorkflowStageTags(
+    undefined,
+    context.serviceArea.scheduleType,
+  );
 }
 
 export function getEditableStagesForScheduleType(

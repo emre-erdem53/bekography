@@ -8,7 +8,7 @@ export default function PaketlerLayout({
   return (
     <>
       <Script id="packages-intro-pending" strategy="beforeInteractive">
-        {`if(window.location.pathname==="/paketler"){document.documentElement.classList.add("packages-intro-pending");}`}
+        {`if(window.location.pathname==="/paketler"){document.documentElement.classList.add("packages-intro-pending");if("scrollRestoration"in history){history.scrollRestoration="manual";}window.scrollTo(0,0);}`}
       </Script>
       {children}
     </>
