@@ -11,10 +11,26 @@ import {
 export const PACKAGES_TAGLINE =
   "Her an yanınızda olan profesyonel bir çiftle çalışmanın konforunu yaşayın.";
 
-export const PACKAGES_CAMPAIGNS = [
-  SECOND_PACKAGE_DISCOUNT_NOTE,
-  SEASONAL_CAMPAIGN_NOTE,
+export const PACKAGES_CAMPAIGN_ITEMS = [
+  {
+    id: "extra-package",
+    title: "Ek Paket Kampanyası",
+    body: SECOND_PACKAGE_DISCOUNT_NOTE,
+  },
+  {
+    id: "winter",
+    title: "Kış Kampanyası",
+    body: SEASONAL_CAMPAIGN_NOTE,
+  },
 ] as const;
+
+export const PACKAGES_CAMPAIGNS = PACKAGES_CAMPAIGN_ITEMS.map(
+  (campaign) => campaign.body,
+);
+
+function formatCampaignBody(body: string) {
+  return body.replace(/^\.\s*/, "");
+}
 
 type PackagesIntroOverlayProps = {
   phase: "intro" | "exiting";
@@ -47,95 +63,79 @@ export function PackagesIntroOverlay({
       }}
       aria-hidden={isExiting}
     >
-      <div className="flex min-h-full items-center justify-center px-6 py-10">
-        <motion.div
-          className="flex w-full max-w-md flex-col items-center text-center"
-          initial={{ opacity: 0, y: 14 }}
+      <div className="flex min-h-[100dvh] flex-col px-6">
+        <motion.header
+          className="flex shrink-0 flex-col items-center pt-6 sm:pt-8"
+          initial={{ opacity: 0, y: 10 }}
           animate={{
             opacity: isExiting ? 0 : 1,
-            y: isExiting ? -10 : 0,
-            scale: isExiting ? 0.98 : 1,
+            y: isExiting ? -8 : 0,
+          }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <BekographyBrand href={null} size="sm" className="justify-center" />
+          <p className="mt-4 max-w-sm text-base italic leading-relaxed text-white sm:mt-5 sm:text-lg">
+            {PACKAGES_TAGLINE}
+          </p>
+        </motion.header>
+
+        <motion.div
+          className="flex flex-1 flex-col items-center justify-center py-6 sm:py-8"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{
+            opacity: isExiting ? 0 : 1,
+            y: isExiting ? -6 : 0,
           }}
           transition={{
-            duration: isExiting ? 0.55 : 0.8,
+            delay: 0.18,
+            duration: 0.75,
             ease: [0.22, 1, 0.36, 1],
           }}
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.94 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <BekographyBrand href={null} size="md" className="justify-center" />
-          </motion.div>
-
-          <motion.p
-            className="mt-8 text-lg italic leading-relaxed text-white sm:mt-10 sm:text-xl"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: 0.28,
-              duration: 0.75,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
-            {PACKAGES_TAGLINE}
-          </motion.p>
-
-          <motion.ul
-            className="mt-6 space-y-3 sm:mt-7"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: 0.45,
-              duration: 0.7,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
-            {PACKAGES_CAMPAIGNS.map((campaign, index) => (
+          <ul className="w-full max-w-md space-y-8 sm:space-y-10">
+            {PACKAGES_CAMPAIGN_ITEMS.map((campaign, index) => (
               <motion.li
-                key={campaign}
-                className="packages-campaign-pulse text-sm font-semibold leading-snug sm:text-base"
+                key={campaign.id}
+                className="text-center"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
-                  delay: 0.52 + index * 0.1,
+                  delay: 0.28 + index * 0.12,
                   duration: 0.65,
                   ease: [0.22, 1, 0.36, 1],
                 }}
               >
-                {campaign}
+                <p className="mb-2.5 text-[10px] font-semibold uppercase tracking-[0.28em] text-zinc-500 sm:mb-3 sm:text-[11px]">
+                  {campaign.title}
+                </p>
+                <p className="packages-campaign-pulse text-sm font-semibold leading-snug sm:text-base">
+                  {formatCampaignBody(campaign.body)}
+                </p>
               </motion.li>
             ))}
-          </motion.ul>
-
-          <motion.div
-            className="mt-7 h-px w-12 bg-white/20 sm:mt-8"
-            initial={{ opacity: 0, scaleX: 0 }}
-            animate={{ opacity: 1, scaleX: 1 }}
-            transition={{ delay: 0.75, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          />
-
-          <motion.div
-            className="mt-7 w-full sm:mt-8"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: 0.82,
-              duration: 0.65,
-              ease: [0.22, 1, 0.36, 1],
-            }}
-          >
-            <button
-              type="button"
-              onClick={onDismiss}
-              disabled={isExiting}
-              className="w-full rounded-2xl bg-[#93f8b6] px-6 py-3.5 text-sm font-semibold text-black transition-opacity hover:bg-[#b8ffd0] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
-            >
-              Paketleri Gör
-            </button>
-          </motion.div>
+          </ul>
         </motion.div>
+
+        <motion.footer
+          className="mx-auto w-full max-w-md shrink-0 pb-8 pt-2"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            delay: 0.52,
+            duration: 0.65,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+        >
+          <div className="mx-auto mb-6 h-px w-12 bg-white/20 sm:mb-7" />
+          <button
+            type="button"
+            onClick={onDismiss}
+            disabled={isExiting}
+            className="w-full rounded-2xl bg-[#93f8b6] px-6 py-3.5 text-sm font-semibold text-black transition-opacity hover:bg-[#b8ffd0] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
+          >
+            Paketleri Gör
+          </button>
+        </motion.footer>
       </div>
     </motion.div>
   );

@@ -1,5 +1,5 @@
 const PACKAGES_LIST_NOTE =
-  "Rize Merkeze 100 km dışında yapılacak hizmetlerde ekstra yol ve konaklama masrafları eklenir.";
+  "Rize Merkez'in 100km dışındaki çekimlerde ekstra 10.000₺-20.000₺ arasında değişen yol ve konaklama ücretleri uygulanmaktadır. Detaylı bilgi için iletişime geçiniz.";
 
 export function PackagesBundleDiscountNote() {
   return (

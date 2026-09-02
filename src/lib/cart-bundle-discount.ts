@@ -4,7 +4,7 @@ import type { ScheduleType } from "@/lib/package-types";
 export const SECOND_PACKAGE_DISCOUNT_RATE = 0.1;
 
 export const SECOND_PACKAGE_DISCOUNT_NOTE =
-  "Dış çekim veya düğün salon paketlerine ek olarak tercih edilen ikinci pakette %10 indirim.";
+  ". Dış Çekim veya Salon Paketlerine eklenen her paket için %10 indirim";
 
 export const SEASONAL_CAMPAIGN_DISCOUNT_RATE = 0.2;
 
@@ -12,7 +12,7 @@ export const SEASONAL_CAMPAIGN_START = "2026-12-01";
 export const SEASONAL_CAMPAIGN_END = "2027-03-01";
 
 export const SEASONAL_CAMPAIGN_NOTE =
-  "1 Aralık - 1 Mart tarihleri arasındaki çekimlerde +%20 İndirim.";
+  ". 1 Aralık - 1 Mart tarihleri arasındaki çekimlerde +%20 İndirim";
 
 const OUTDOOR_AREA_SLUGS = new Set(["dis-cekim"]);
 const WEDDING_VENUE_AREA_SLUGS = new Set(["dugun-salon", "dugun"]);

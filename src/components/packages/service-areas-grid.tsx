@@ -60,7 +60,7 @@ export function ServiceAreasGrid({
   }
 
   return (
-    <div className="mt-4 flex w-full flex-col gap-2.5 [overflow-anchor:none] sm:mt-5 sm:gap-3">
+    <div className="mt-2.5 flex w-full flex-col gap-2.5 [overflow-anchor:none] sm:mt-3 sm:gap-3">
       {serviceAreas.map((serviceArea) => {
         const isOpen = expandedServiceAreaId === serviceArea.id;
         const subtitle = resolveServiceAreaSubtitle(serviceArea);
