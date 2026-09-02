@@ -18,14 +18,12 @@ export const PACKAGES_CAMPAIGNS = [
 
 type PackagesIntroOverlayProps = {
   phase: "intro" | "exiting";
-  canDismiss: boolean;
   onDismiss: () => void;
   onExitComplete: () => void;
 };
 
 export function PackagesIntroOverlay({
   phase,
-  canDismiss,
   onDismiss,
   onExitComplete,
 }: PackagesIntroOverlayProps) {
@@ -131,16 +129,11 @@ export function PackagesIntroOverlay({
             <button
               type="button"
               onClick={onDismiss}
-              disabled={!canDismiss || isExiting}
+              disabled={isExiting}
               className="w-full rounded-2xl bg-[#93f8b6] px-6 py-3.5 text-sm font-semibold text-black transition-opacity hover:bg-[#b8ffd0] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
             >
               Paketleri Gör
             </button>
-            {!canDismiss ? (
-              <p className="mt-2 text-[11px] text-zinc-600 sm:text-xs">
-                Kampanyaları inceleyin…
-              </p>
-            ) : null}
           </motion.div>
         </motion.div>
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { createPortal } from "react-dom";
 import type { ServiceAreaData } from "@/lib/package-types";
@@ -10,7 +10,7 @@ import {
   PackagesIntroOverlay,
 } from "@/components/packages/packages-intro-overlay";
 
-const INTRO_MIN_DISPLAY_MS = 20_000;
+const INTRO_AUTO_DISMISS_MS = 20_000;
 const HEADER_REVEAL_DELAY_MS = 480;
 
 type IntroPhase = "intro" | "exiting" | "idle";
@@ -43,8 +43,26 @@ export function PaketlerPageClient({ serviceAreas }: PaketlerPageClientProps) {
   const [phase, setPhase] = useState<IntroPhase>(
     reduceMotion ? "idle" : "intro",
   );
-  const [canDismiss, setCanDismiss] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const phaseRef = useRef(phase);
+  const autoDismissTimerRef = useRef<number | null>(null);
+
+  phaseRef.current = phase;
+
+  function clearAutoDismissTimer() {
+    if (autoDismissTimerRef.current !== null) {
+      window.clearTimeout(autoDismissTimerRef.current);
+      autoDismissTimerRef.current = null;
+    }
+  }
+
+  function dismissIntro() {
+    if (phaseRef.current !== "intro") return;
+    clearAutoDismissTimer();
+    resetPageScroll();
+    setIntroExiting();
+    setPhase("exiting");
+  }
 
   useLayoutEffect(() => {
     setMounted(true);
@@ -63,21 +81,19 @@ export function PaketlerPageClient({ serviceAreas }: PaketlerPageClientProps) {
     setIntroPending(true);
     resetPageScroll();
 
-    const enableTimer = window.setTimeout(() => {
-      setCanDismiss(true);
-    }, INTRO_MIN_DISPLAY_MS);
+    autoDismissTimerRef.current = window.setTimeout(
+      dismissIntro,
+      INTRO_AUTO_DISMISS_MS,
+    );
 
     return () => {
-      window.clearTimeout(enableTimer);
+      clearAutoDismissTimer();
       setIntroPending(false);
     };
   }, [reduceMotion]);
 
   function handleDismiss() {
-    if (!canDismiss || phase !== "intro") return;
-    resetPageScroll();
-    setIntroExiting();
-    setPhase("exiting");
+    dismissIntro();
   }
 
   function handleIntroExitComplete() {
@@ -97,7 +113,6 @@ export function PaketlerPageClient({ serviceAreas }: PaketlerPageClientProps) {
         ? createPortal(
             <PackagesIntroOverlay
               phase={phase === "intro" ? "intro" : "exiting"}
-              canDismiss={canDismiss}
               onDismiss={handleDismiss}
               onExitComplete={handleIntroExitComplete}
             />,
