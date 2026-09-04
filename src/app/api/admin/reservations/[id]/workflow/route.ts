@@ -18,6 +18,8 @@ import {
   parseTrackingWorkflowFlags,
   workflowFlagsForAdminStage,
   type TrackingWorkflowAction,
+  type TrackingWorkflowDeadlineOverrideKey,
+  type TrackingWorkflowFlags,
 } from "@/lib/tracking-workflow";
 import { workflowFlagsForAdminStageFromDefinitions } from "@/lib/tracking-workflow-dynamic";
 
@@ -38,6 +40,41 @@ const workflowActionSchema = z.object({
   ]),
 });
 
+const deadlineOverrideSchema = z.object({
+  itemId: z.string().min(1),
+  deadlineOverrides: z.object({
+    dijital: z.string().nullable().optional(),
+    secim: z.string().nullable().optional(),
+    duzenleme: z.string().nullable().optional(),
+    baski: z.string().nullable().optional(),
+  }),
+});
+
+function mergeDeadlineOverrides(
+  current: TrackingWorkflowFlags["deadlineOverrides"],
+  patch: Record<string, string | null | undefined>,
+): TrackingWorkflowFlags["deadlineOverrides"] {
+  const next = { ...(current ?? {}) };
+  const keys: TrackingWorkflowDeadlineOverrideKey[] = [
+    "dijital",
+    "secim",
+    "duzenleme",
+    "baski",
+  ];
+
+  for (const key of keys) {
+    if (!(key in patch)) continue;
+    const value = patch[key];
+    if (value === null || value === "") {
+      next[key] = null;
+    } else if (typeof value === "string") {
+      next[key] = value.slice(0, 10);
+    }
+  }
+
+  return next;
+}
+
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -50,8 +87,13 @@ export async function POST(
     const body = await request.json();
     const stageParsed = workflowStageSchema.safeParse(body);
     const actionParsed = workflowActionSchema.safeParse(body);
+    const deadlineParsed = deadlineOverrideSchema.safeParse(body);
 
-    if (!stageParsed.success && !actionParsed.success) {
+    if (
+      !stageParsed.success &&
+      !actionParsed.success &&
+      !deadlineParsed.success
+    ) {
       return NextResponse.json({ error: "Geçersiz işlem" }, { status: 400 });
     }
 
@@ -84,7 +126,9 @@ export async function POST(
 
     const itemId = stageParsed.success
       ? stageParsed.data.itemId
-      : actionParsed.data!.itemId;
+      : actionParsed.success
+        ? actionParsed.data.itemId
+        : deadlineParsed.data!.itemId;
 
     const item = reservation.items.find((entry) => entry.id === itemId);
     if (!item) {
@@ -116,8 +160,18 @@ export async function POST(
       postShoot.itemWorkflows?.[itemId],
     );
 
-    const nextFlags = stageParsed.success
-      ? stageDefinitions.length
+    let nextFlags: TrackingWorkflowFlags;
+
+    if (deadlineParsed.success && !stageParsed.success && !actionParsed.success) {
+      nextFlags = {
+        ...currentFlags,
+        deadlineOverrides: mergeDeadlineOverrides(
+          currentFlags.deadlineOverrides,
+          deadlineParsed.data.deadlineOverrides,
+        ),
+      };
+    } else if (stageParsed.success) {
+      const staged = stageDefinitions.length
         ? workflowFlagsForAdminStageFromDefinitions(
             stageParsed.data.stage,
             stageDefinitions,
@@ -127,11 +181,21 @@ export async function POST(
               typeof workflowFlagsForAdminStage
             >[0],
             hasPrinting,
-          )
-      : mergeWorkflowAction(
-          currentFlags,
-          actionParsed.data!.action as TrackingWorkflowAction,
-        );
+          );
+      nextFlags = {
+        ...staged,
+        deadlineOverrides: currentFlags.deadlineOverrides,
+        customCompletedAt: {
+          ...(currentFlags.customCompletedAt ?? {}),
+          ...(staged.customCompletedAt ?? {}),
+        },
+      };
+    } else {
+      nextFlags = mergeWorkflowAction(
+        currentFlags,
+        actionParsed.data!.action as TrackingWorkflowAction,
+      );
+    }
 
     postShoot = setItemWorkflowFlags(postShoot, itemId, nextFlags);
 

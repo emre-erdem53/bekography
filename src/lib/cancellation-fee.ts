@@ -4,8 +4,11 @@ export const CANCELLATION_POLICY =
   "30 günden fazla süre kalan bir çekimi iptal eden taraf karşı tarafa toplam ücretin %50'sini cayma bedeli olarak öder. 30 günden daha az bir süre varsa bu oran %75'tir. Sözleşmedeki mücbir sebeplerle iptal olursa oran %25'tir.";
 
 const CANCELLATION_FEE_THRESHOLD_DAYS = 30;
-const RATE_BEYOND_THRESHOLD = 0.5;
-const RATE_WITHIN_THRESHOLD = 0.75;
+export const CANCELLATION_FEE_RATE_BEYOND_30 = 0.5;
+export const CANCELLATION_FEE_RATE_WITHIN_30 = 0.75;
+
+const RATE_BEYOND_THRESHOLD = CANCELLATION_FEE_RATE_BEYOND_30;
+const RATE_WITHIN_THRESHOLD = CANCELLATION_FEE_RATE_WITHIN_30;
 
 export function getEarliestShootDateInput(
   shootDates: Array<string | null | undefined>,
@@ -36,6 +39,15 @@ export function resolveCancellationFeeRate(
   }
 
   return RATE_WITHIN_THRESHOLD;
+}
+
+export function calculateCancellationFeeAtRate(
+  totalPrice: number,
+  rate: number,
+): number {
+  const safeTotal = Math.max(0, Math.round(totalPrice));
+  if (safeTotal === 0) return 0;
+  return Math.round(safeTotal * rate);
 }
 
 export function calculateCancellationFeeMax(

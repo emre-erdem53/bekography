@@ -30,7 +30,20 @@ export type TrackingWorkflowFlags = {
   adminStage?: string | null;
   /** Özel aşama tamamlanma tarihleri (stage id → ISO). */
   customCompletedAt?: Record<string, string>;
+  /**
+   * Aşama son gün override'ları (YYYY-MM-DD).
+   * Doluysa otomatik hesap yerine bu tarih gösterilir.
+   */
+  deadlineOverrides?: Partial<
+    Record<"dijital" | "secim" | "duzenleme" | "baski", string | null>
+  >;
 };
+
+export type TrackingWorkflowDeadlineOverrideKey =
+  | "dijital"
+  | "secim"
+  | "duzenleme"
+  | "baski";
 
 export type TrackingWorkflowStageId =
   | "rezervasyon"
@@ -52,6 +65,8 @@ export type TrackingWorkflowStageView = {
   tone?: "green" | "red" | "amber" | "default";
   /** Aşamanın hedef / tamamlanma tarihi (ISO). */
   deadlineDate?: string;
+  /** Tarihin üstünde/yanında gösterilen etiket (ör. "Son Gün"). */
+  deadlineLabel?: string;
   /** Tarihin altında gösterilen kısa açıklama. */
   deadlineHint?: string;
   /** true ise deadlineHint, gösterilen tarihten sonra cümleyi sürdürür. */
@@ -87,7 +102,33 @@ export function emptyTrackingWorkflowFlags(): TrackingWorkflowFlags {
     deliveredAt: null,
     adminStage: null,
     customCompletedAt: {},
+    deadlineOverrides: {},
   };
+}
+
+function parseDeadlineOverrides(
+  value: unknown,
+): TrackingWorkflowFlags["deadlineOverrides"] {
+  if (!value || typeof value !== "object") return {};
+
+  const keys: TrackingWorkflowDeadlineOverrideKey[] = [
+    "dijital",
+    "secim",
+    "duzenleme",
+    "baski",
+  ];
+  const result: NonNullable<TrackingWorkflowFlags["deadlineOverrides"]> = {};
+
+  for (const key of keys) {
+    const raw = (value as Record<string, unknown>)[key];
+    if (typeof raw === "string" && raw.trim()) {
+      result[key] = raw.trim().slice(0, 10);
+    } else if (raw === null) {
+      result[key] = null;
+    }
+  }
+
+  return result;
 }
 
 export function parseTrackingWorkflowFlags(
@@ -134,6 +175,7 @@ export function parseTrackingWorkflowFlags(
             ),
           )
         : {},
+    deadlineOverrides: parseDeadlineOverrides(data.deadlineOverrides),
   };
 }
 
@@ -309,12 +351,45 @@ export function computeEffectiveWorkflowDeadlines(
   };
 }
 
+export function resolveStageDeadlineOverride(
+  id: TrackingWorkflowStageId,
+  workflow: TrackingWorkflowFlags,
+): Date | null {
+  if (
+    id !== "dijital" &&
+    id !== "secim" &&
+    id !== "duzenleme" &&
+    id !== "baski"
+  ) {
+    return null;
+  }
+
+  const raw = workflow.deadlineOverrides?.[id];
+  if (!raw) return null;
+
+  const parsed = startOfDay(new Date(`${raw.slice(0, 10)}T12:00:00`));
+  if (Number.isNaN(parsed.getTime())) return null;
+  return endOfDay(parsed);
+}
+
+/** Baskı onayı = düzenleme tamamlandı (veya override girildi). */
+export function isPrintingDeadlineApproved(
+  workflow: TrackingWorkflowFlags,
+): boolean {
+  return Boolean(
+    workflow.editingCompletedAt || workflow.deadlineOverrides?.baski,
+  );
+}
+
 export function resolveStageDeadlineDate(
   id: TrackingWorkflowStageId,
   deadlines: WorkflowDeadlines,
   workflow: TrackingWorkflowFlags,
   reservationCreatedAt?: Date,
 ): Date {
+  const override = resolveStageDeadlineOverride(id, workflow);
+  if (override) return override;
+
   switch (id) {
     case "rezervasyon":
       return reservationCreatedAt
@@ -323,17 +398,13 @@ export function resolveStageDeadlineDate(
     case "cekim":
       return deadlines.shoot;
     case "dijital":
-      return (
-        completionDay(workflow.digitalDeliveredAt) ?? deadlines.digitalSelection
-      );
+      return deadlines.digitalSelection;
     case "secim":
-      return (
-        completionDay(workflow.selectionCompletedAt) ?? deadlines.digitalSelection
-      );
+      return deadlines.digitalSelection;
     case "duzenleme":
-      return completionDay(workflow.editingCompletedAt) ?? deadlines.editing;
+      return deadlines.editing;
     case "baski":
-      return completionDay(workflow.printingCompletedAt) ?? deadlines.printing;
+      return deadlines.printing;
     default:
       return deadlines.shoot;
   }
@@ -449,34 +520,22 @@ export function resolveStageDeadlineHint(
   id: TrackingWorkflowStageId,
   state: TrackingWorkflowStageState,
   dayCounts: { editingDaysAfter: number; printingDaysAfter: number },
-): { hint?: string; continuesDate?: boolean } {
+  workflow: TrackingWorkflowFlags = emptyTrackingWorkflowFlags(),
+): { hint?: string; continuesDate?: boolean; label?: string } {
   if (state === "completed") return {};
 
   switch (id) {
     case "dijital":
-      if (state === "current") {
-        return { hint: "'a kadar teslim alınmalı.", continuesDate: true };
-      }
-      return {};
     case "secim":
-      if (state === "current") {
-        return { hint: "'a kadar seçim yapılmalı.", continuesDate: true };
-      }
-      return {};
     case "duzenleme":
-      if (state === "current") {
-        return { hint: " tarihe kadar bitecek.", continuesDate: true };
-      }
-      return {
-        hint: `Seçimden sonra en fazla ${dayCounts.editingDaysAfter} gün`,
-      };
+      return { label: "Son Gün" };
     case "baski":
-      if (state === "current") {
-        return { hint: " tarihe kadar kargoda", continuesDate: true };
+      if (!isPrintingDeadlineApproved(workflow)) {
+        return {
+          hint: `Onaydan sonra ${dayCounts.printingDaysAfter} günde kargoda`,
+        };
       }
-      return {
-        hint: `Düzenlemeden sonra en fazla ${dayCounts.printingDaysAfter} gün`,
-      };
+      return { label: "Son Gün" };
     default:
       return {};
   }
@@ -484,8 +543,11 @@ export function resolveStageDeadlineHint(
 
 export function stageShowsDeadlineWhenUpcoming(
   id: TrackingWorkflowStageId,
+  workflow: TrackingWorkflowFlags = emptyTrackingWorkflowFlags(),
 ): boolean {
-  return id === "dijital" || id === "secim";
+  if (id === "dijital" || id === "secim" || id === "duzenleme") return true;
+  if (id === "baski") return isPrintingDeadlineApproved(workflow);
+  return false;
 }
 
 function buildStagesFromEffectiveStage(
@@ -524,11 +586,16 @@ function buildStagesFromEffectiveStage(
       shootPassed,
       workflow,
     );
-    const { hint, continuesDate } = resolveStageDeadlineHint(id, state, dayCounts);
+    const { hint, continuesDate, label } = resolveStageDeadlineHint(
+      id,
+      state,
+      dayCounts,
+      workflow,
+    );
     const showDeadline =
-      state !== "upcoming" || stageShowsDeadlineWhenUpcoming(id);
-    const showHint =
-      Boolean(hint) && (showDeadline || !continuesDate);
+      (state !== "upcoming" || stageShowsDeadlineWhenUpcoming(id, workflow)) &&
+      !(id === "baski" && !isPrintingDeadlineApproved(workflow) && state !== "completed");
+    const showHint = Boolean(hint) && !showDeadline;
     return {
       id,
       label: stageDefaultLabel(id, state),
@@ -542,6 +609,10 @@ function buildStagesFromEffectiveStage(
             reservationCreatedAt,
           ).toISOString()
         : undefined,
+      deadlineLabel:
+        showDeadline && state !== "completed"
+          ? label ?? "Son Gün"
+          : undefined,
       deadlineHint: showHint ? hint : undefined,
       deadlineHintContinuesDate: showDeadline ? continuesDate : undefined,
     };

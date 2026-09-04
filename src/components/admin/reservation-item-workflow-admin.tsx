@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
 import { getItemWorkflowFlags } from "@/lib/post-shoot";
+import { toDateInputValue } from "@/lib/date-only";
 import {
   ADMIN_WORKFLOW_STAGE_OPTIONS,
   getCurrentWorkflowStageId,
   workflowStageOrder,
+  type TrackingWorkflowDeadlineOverrideKey,
   type TrackingWorkflowView,
 } from "@/lib/tracking-workflow";
 import { adminStageOptionsFromDefinitions } from "@/lib/tracking-workflow-dynamic";
@@ -14,6 +16,25 @@ import type { PackageWorkflowStageDefinition } from "@/lib/package-workflow-stag
 import { StatusSelect } from "@/components/admin/status-select";
 
 const DELIVERED_SELECT_VALUE = "__delivered__";
+
+const DEADLINE_FIELDS: Array<{
+  key: TrackingWorkflowDeadlineOverrideKey;
+  label: string;
+}> = [
+  { key: "dijital", label: "Dijital son gün" },
+  { key: "secim", label: "Seçim son gün" },
+  { key: "duzenleme", label: "Düzenleme son gün" },
+  { key: "baski", label: "Baskı son gün" },
+];
+
+function resolveDisplayedDeadline(
+  workflow: TrackingWorkflowView,
+  stageId: string,
+): string {
+  const stage = workflow.stages.find((entry) => entry.id === stageId);
+  if (!stage?.deadlineDate) return "";
+  return toDateInputValue(stage.deadlineDate);
+}
 
 export function ReservationItemWorkflowAdmin({
   reservationId,
@@ -65,6 +86,14 @@ export function ReservationItemWorkflowAdmin({
     },
   ];
 
+  const deadlineFields = useMemo(
+    () =>
+      DEADLINE_FIELDS.filter(
+        (field) => field.key !== "baski" || hasPrinting,
+      ),
+    [hasPrinting],
+  );
+
   async function postWorkflow(body: Record<string, unknown>) {
     const response = await fetch(
       `/api/admin/reservations/${reservationId}/workflow`,
@@ -110,6 +139,29 @@ export function ReservationItemWorkflowAdmin({
     }
   }
 
+  async function updateDeadline(
+    key: TrackingWorkflowDeadlineOverrideKey,
+    value: string,
+  ) {
+    setSaving(true);
+    setError(null);
+
+    try {
+      await postWorkflow({
+        itemId,
+        deadlineOverrides: {
+          [key]: value ? value : null,
+        },
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Son gün tarihi güncellenemedi.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function handleSelectChange(value: string) {
     if (value === DELIVERED_SELECT_VALUE) {
       void toggleDelivered();
@@ -136,6 +188,53 @@ export function ReservationItemWorkflowAdmin({
           onChange={handleSelectChange}
         />
       </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        {deadlineFields.map((field) => {
+          const overrideValue = flags.deadlineOverrides?.[field.key] ?? "";
+          const computedValue = resolveDisplayedDeadline(workflow, field.key);
+          const inputValue = overrideValue || computedValue;
+
+          return (
+            <label key={field.key} className="block text-xs text-zinc-400">
+              <span className="mb-1.5 flex items-center justify-between gap-2 font-medium text-zinc-300">
+                <span>
+                  {field.label}
+                  {overrideValue ? (
+                    <span className="ml-1 text-[10px] text-amber-300/90">
+                      (manuel)
+                    </span>
+                  ) : null}
+                </span>
+                {overrideValue ? (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void updateDeadline(field.key, "")}
+                    className="text-[10px] text-zinc-500 hover:text-white disabled:opacity-50"
+                  >
+                    Otomatiğe dön
+                  </button>
+                ) : null}
+              </span>
+              <input
+                type="date"
+                value={inputValue}
+                disabled={saving}
+                onChange={(event) =>
+                  void updateDeadline(field.key, event.target.value)
+                }
+                className="w-full rounded-lg border border-white/10 bg-black px-3 py-2 text-sm text-white outline-none focus:border-white/30 disabled:opacity-50"
+              />
+            </label>
+          );
+        })}
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+        Son günler otomatik hesaplanır. Tarihi değiştirirseniz manuel olarak
+        kaydedilir; “Otomatiğe dön” ile tekrar hesaba bırakabilirsiniz.
+      </p>
+
       {error ? <p className="mt-2 text-sm text-red-400">{error}</p> : null}
     </div>
   );

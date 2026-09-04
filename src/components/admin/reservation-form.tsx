@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { AlertTriangle, Plus, X } from "lucide-react";
 import { nanoid } from "nanoid";
-import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME } from "@/lib/constants";
+import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME, RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/date-only";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import type { ServiceAreaData } from "@/lib/package-types";
@@ -42,6 +42,10 @@ import {
   parseRequestCustomerName,
   splitPersonName,
 } from "@/lib/reservation-utils";
+import {
+  hasMeaningfulDraftContent,
+  isReservationDraftPayload,
+} from "@/lib/reservation-draft";
 
 const TIME_STEP_SECONDS = 900;
 const DEFAULT_READY_TIME = "12:30";
@@ -182,10 +186,18 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   const [dateConflicts, setDateConflicts] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [loading, setLoading] = useState(true);
   const [totalPriceManual, setTotalPriceManual] = useState(false);
   const [defaultShootDate, setDefaultShootDate] = useState("");
+  const [isDraft, setIsDraft] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const trackedItemsTotalRef = useRef<number | null>(null);
+  const hydrateReadyRef = useRef(false);
+
+  function markDirty() {
+    if (hydrateReadyRef.current) setDirty(true);
+  }
 
   const itemsTotal = useMemo(
     () => items.reduce((sum, item) => sum + item.agreedUnitPrice, 0),
@@ -297,6 +309,31 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           `/api/admin/reservations/${reservationId}`,
         );
         const reservation = await reservationRes.json();
+        setIsDraft(reservation.status === "taslak");
+
+        if (isReservationDraftPayload(reservation.draftPayload)) {
+          const draft = reservation.draftPayload;
+          setBrideFirstName(enforcePersonNamePartInput(draft.brideFirstName));
+          setBrideLastName(enforcePersonNamePartInput(draft.brideLastName));
+          setBrideTc(draft.brideTc ?? "");
+          setBridePhone(normalizeTurkishMobileForStorage(draft.bridePhone));
+          setGroomFirstName(enforcePersonNamePartInput(draft.groomFirstName));
+          setGroomLastName(enforcePersonNamePartInput(draft.groomLastName));
+          setGroomTc(draft.groomTc ?? "");
+          setGroomPhone(normalizeTurkishMobileForStorage(draft.groomPhone));
+          setTotalPrice(draft.totalPrice);
+          setTotalPriceManual(true);
+          setDiscountAmount(draft.discountAmount);
+          setDiscountEnabled(draft.discountEnabled);
+          setNotes(draft.notes ?? "");
+          setPostShoot(parsePostShootSnapshot(draft.postShoot));
+          setItems(draft.items);
+          setInstallments(
+            draft.installments.length > 0
+              ? draft.installments
+              : [{ amount: 0, dueDate: "" }],
+          );
+        } else {
         const brideParts = splitPersonName(reservation.brideName);
         const groomParts = splitPersonName(reservation.groomName);
         setBrideFirstName(
@@ -405,6 +442,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               )
             : [{ amount: 0, dueDate: "" }],
         );
+        }
       } else if (requestId) {
         const requestRes = await fetch(`/api/admin/requests/${requestId}`);
         const request = await requestRes.json();
@@ -489,10 +527,102 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       }
 
       setLoading(false);
+      window.setTimeout(() => {
+        hydrateReadyRef.current = true;
+      }, 0);
     }
 
     load();
   }, [requestId, reservationId, prefillDateParam]);
+
+  function buildDraftPayload() {
+    return {
+      brideFirstName,
+      brideLastName,
+      brideTc,
+      bridePhone,
+      groomFirstName,
+      groomLastName,
+      groomTc,
+      groomPhone,
+      totalPrice,
+      discountAmount: discountEnabled ? discountAmount : 0,
+      discountEnabled,
+      notes,
+      items,
+      installments,
+      postShoot,
+      ...(requestId && !isEditing ? { requestId } : {}),
+    };
+  }
+
+  async function saveDraft(options?: { navigateToList?: boolean }) {
+    const payload = buildDraftPayload();
+    if (!hasMeaningfulDraftContent(payload)) {
+      setError("Taslak kaydetmek için en az bir bilgi girin.");
+      return false;
+    }
+
+    setSavingDraft(true);
+    setError("");
+
+    const response = await fetch("/api/admin/reservations/draft", {
+      method: reservationId ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        ...(reservationId ? { reservationId } : {}),
+      }),
+    });
+
+    setSavingDraft(false);
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "Taslak kaydedilemedi");
+      return false;
+    }
+
+    const data = await response.json();
+    setDirty(false);
+    setIsDraft(true);
+
+    if (options?.navigateToList) {
+      router.push("/admin/rezervasyonlar");
+      router.refresh();
+      return true;
+    }
+
+    if (!isEditing) {
+      router.replace(`/admin/rezervasyonlar/${data.id}/duzenle`);
+      router.refresh();
+    }
+
+    return true;
+  }
+
+  async function handleBackClick(
+    event: React.MouseEvent<HTMLAnchorElement>,
+  ) {
+    if (!dirty || (isEditing && !isDraft)) return;
+
+    event.preventDefault();
+    const shouldSave = window.confirm(
+      "Girdiğiniz bilgiler kaybolacak. Taslak olarak kaydedip çıkmak ister misiniz?",
+    );
+    if (shouldSave) {
+      const saved = await saveDraft({ navigateToList: true });
+      if (!saved) return;
+      return;
+    }
+
+    const discard = window.confirm(
+      "Kaydetmeden çıkmak istediğinize emin misiniz? Bilgiler silinecek.",
+    );
+    if (discard) {
+      router.push(backHref);
+    }
+  }
 
   useEffect(() => {
     if (serviceAreas.length === 0 || items.length === 0) {
@@ -535,41 +665,36 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   }, [loading, serviceAreas, itemKeysSignature, items]);
 
   useEffect(() => {
-    if (loading || items.length === 0) return;
+    if (loading) return;
+
+    if (items.length === 0) {
+      trackedItemsTotalRef.current = null;
+      if (!totalPriceManual) {
+        setTotalPrice(0);
+      }
+      return;
+    }
 
     const previousTotal = trackedItemsTotalRef.current;
     trackedItemsTotalRef.current = itemsTotal;
 
-    if (previousTotal === null) return;
+    if (totalPriceManual) return;
 
-    if (itemsTotal !== previousTotal) {
+    if (previousTotal === null || itemsTotal !== previousTotal) {
       setTotalPrice(itemsTotal);
     }
-  }, [loading, itemsTotal, items.length]);
+  }, [loading, itemsTotal, items.length, totalPriceManual]);
 
   useEffect(() => {
     if (loading) return;
 
     setInstallments((prev) => {
-      if (hasPartialPayment(items)) {
-        const count = Math.max(prev.length, 2);
-        const prevTotal = prev.reduce((sum, row) => sum + row.amount, 0);
-        if (prev.length < 2 || prevTotal !== expectedPayable) {
-          return splitEqualInstallments(count, expectedPayable, prev);
-        }
-        return prev;
-      }
+      const minCount = hasPartialPayment(items) ? 2 : 1;
+      const count = Math.max(prev.length, minCount);
+      const prevTotal = prev.reduce((sum, row) => sum + row.amount, 0);
 
-      if (prev.length > 1) {
-        return [{ amount: expectedPayable, dueDate: prev[0]?.dueDate ?? "" }];
-      }
-
-      if (
-        prev.length === 1 &&
-        prev[0].amount !== expectedPayable &&
-        expectedPayable >= 0
-      ) {
-        return [{ ...prev[0], amount: expectedPayable }];
+      if (prev.length < minCount || prevTotal !== expectedPayable) {
+        return splitEqualInstallments(count, expectedPayable, prev);
       }
 
       return prev;
@@ -779,23 +904,36 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
   if (loading) return <p className="text-zinc-400">Yükleniyor...</p>;
 
-  const backHref = isEditing
-    ? `/admin/rezervasyonlar/${reservationId}`
-    : "/admin/rezervasyonlar";
+  const backHref =
+    isEditing && !isDraft
+      ? `/admin/rezervasyonlar/${reservationId}`
+      : "/admin/rezervasyonlar";
 
   const coupleTitle = formatCoupleName(
     joinPersonName(brideFirstName, brideLastName),
     joinPersonName(groomFirstName, groomLastName),
   );
 
+  const canSaveDraft = !isEditing || isDraft;
+
   return (
-    <form onSubmit={handleSubmit} className="mx-auto min-w-0 max-w-4xl space-y-6">
+    <form
+      onSubmit={handleSubmit}
+      onInput={markDirty}
+      onChange={markDirty}
+      className="mx-auto min-w-0 max-w-4xl space-y-6"
+    >
       <div>
-        <Link href={backHref} className="text-sm text-zinc-400 hover:text-white">
-          ← {isEditing ? "Rezervasyon detayı" : "Rezervasyonlar"}
+        <Link
+          href={backHref}
+          onClick={handleBackClick}
+          className="text-sm text-zinc-400 hover:text-white"
+        >
+          ← {isEditing && !isDraft ? "Rezervasyon detayı" : "Rezervasyonlar"}
         </Link>
         <p className="mt-2 text-xs uppercase tracking-widest text-zinc-500">
           Sipariş Formu
+          {isDraft ? ` · ${RESERVATION_STATUS_LABELS.taslak}` : ""}
         </p>
         <h1 className="mt-1 text-xl font-semibold text-white sm:text-2xl">
           {isEditing ? `${coupleTitle} — Düzenle` : "Yeni Rezervasyon"}
@@ -1295,19 +1433,41 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
       {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
-      <button
-        type="submit"
-        disabled={saving || dateConflicts.length > 0 || items.length === 0}
-        className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50 sm:w-auto"
-      >
-        {saving
-          ? isEditing
-            ? "Kaydediliyor..."
-            : "Oluşturuluyor..."
-          : isEditing
-            ? "Değişiklikleri Kaydet"
-            : "Rezervasyon Oluştur"}
-      </button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        {canSaveDraft ? (
+          <button
+            type="button"
+            disabled={saving || savingDraft}
+            onClick={() => void saveDraft()}
+            className="w-full rounded-xl border border-amber-400/40 bg-amber-500/10 px-6 py-3 text-sm font-semibold text-amber-100 transition hover:bg-amber-500/20 disabled:opacity-50 sm:w-auto"
+          >
+            {savingDraft ? "Taslak kaydediliyor..." : "Taslak Olarak Kaydet"}
+          </button>
+        ) : null}
+        <button
+          type="submit"
+          disabled={saving || savingDraft || dateConflicts.length > 0 || items.length === 0}
+          className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50 sm:w-auto"
+        >
+          {saving
+            ? isDraft
+              ? "Rezervasyon oluşturuluyor..."
+              : isEditing
+                ? "Kaydediliyor..."
+                : "Oluşturuluyor..."
+            : isDraft
+              ? "Rezervasyonu Tamamla"
+              : isEditing
+                ? "Değişiklikleri Kaydet"
+                : "Rezervasyon Oluştur"}
+        </button>
+      </div>
+      {canSaveDraft ? (
+        <p className="text-xs text-zinc-500">
+          Yarım kalan formu taslak olarak kaydedebilirsiniz. Taslaklar rezervasyon
+          listesinde görünür; daha sonra düzenleyip tamamlayabilirsiniz.
+        </p>
+      ) : null}
     </form>
   );
 }

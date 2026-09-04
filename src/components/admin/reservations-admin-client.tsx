@@ -22,6 +22,8 @@ import {
   reservationMatchesWorkflowStage,
   type ReservationListColoredSegment,
 } from "@/lib/reservation-list";
+import { RESERVATION_STATUS_LABELS } from "@/lib/constants";
+import { draftReservationDisplayName } from "@/lib/reservation-draft";
 import { resolvePersonFirstName } from "@/lib/reservation-utils";
 import { getCurrentReservationYear } from "@/lib/reservation-year";
 import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
@@ -44,8 +46,10 @@ type Reservation = {
   id: string;
   brideName: string;
   brideFirstName?: string;
+  brideLastName?: string;
   groomName: string;
   groomFirstName?: string;
+  groomLastName?: string;
   status: ReservationStatus;
   postShoot: unknown;
   deletedAt: string | null;
@@ -61,6 +65,9 @@ function getReservationListSurfaceClass(reservation: Reservation): string {
   if (reservation.deletedAt) {
     return "border-red-500/25 bg-red-500/10 hover:border-red-500/35";
   }
+  if (reservation.status === "taslak") {
+    return "border-amber-400/30 bg-amber-500/10 hover:border-amber-400/45";
+  }
   if (reservation.status === "teslim_edildi") {
     return "border-emerald-500/25 bg-emerald-500/10 hover:border-emerald-500/35";
   }
@@ -69,6 +76,27 @@ function getReservationListSurfaceClass(reservation: Reservation): string {
 
 function isReservationManageable(reservation: Reservation): boolean {
   return !reservation.deletedAt && reservation.status !== "teslim_edildi";
+}
+
+function reservationPrimaryHref(reservation: Reservation): string {
+  if (reservation.status === "taslak") {
+    return `/admin/rezervasyonlar/${reservation.id}/duzenle`;
+  }
+  return `/admin/rezervasyonlar/${reservation.id}`;
+}
+
+function ReservationTitle({ reservation }: { reservation: Reservation }) {
+  const title = draftReservationDisplayName(reservation);
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <p className="min-w-0 font-medium text-white">{title}</p>
+      {reservation.status === "taslak" ? (
+        <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-200">
+          {RESERVATION_STATUS_LABELS.taslak}
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 export function ReservationsAdminClient() {
@@ -299,48 +327,62 @@ export function ReservationsAdminClient() {
                 key={reservation.id}
                 role="link"
                 tabIndex={0}
-                onClick={() => router.push(detailHref(reservation.id))}
+                onClick={() => router.push(reservationPrimaryHref(reservation))}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    router.push(detailHref(reservation.id));
+                    router.push(reservationPrimaryHref(reservation));
                   }
                 }}
                 className={`cursor-pointer rounded-2xl border p-4 transition-colors ${getReservationListSurfaceClass(reservation)}`}
               >
-                <CoupleNames
-                  brideFirstName={reservation.brideFirstName}
-                  brideName={reservation.brideName}
-                  groomFirstName={reservation.groomFirstName}
-                  groomName={reservation.groomName}
-                />
+                <ReservationTitle reservation={reservation} />
                 <dl className="mt-4 space-y-2 text-sm">
                   <Row
                     label="Tarih"
-                    value={formatReservationListShootDate(reservation.items)}
+                    value={
+                      reservation.status === "taslak" &&
+                      reservation.items.length === 0
+                        ? "—"
+                        : formatReservationListShootDate(reservation.items)
+                    }
                   />
                   <Row
                     label="Paket"
                     value={
+                      reservation.status === "taslak" &&
+                      reservation.items.length === 0 ? (
+                        "Taslak — paket seçilmedi"
+                      ) : (
                       <ColoredSegments
                         segments={getReservationListPackageSegments(
                           reservation.items,
                         )}
                         separator=", "
                       />
+                      )
                     }
                   />
                   <Row
                     label="Çekim Yeri"
-                    value={formatReservationListLocation(reservation.items)}
+                    value={
+                      reservation.status === "taslak" &&
+                      reservation.items.length === 0
+                        ? "—"
+                        : formatReservationListLocation(reservation.items)
+                    }
                   />
                   <Row
                     label="Aşama"
                     value={
+                      reservation.status === "taslak" ? (
+                        RESERVATION_STATUS_LABELS.taslak
+                      ) : (
                       <ColoredSegments
                         segments={getReservationListStageSegments(reservation)}
                         separator=" · "
                       />
+                      )
                     }
                   />
                   {reservation.deletedAt ? (
@@ -358,12 +400,21 @@ export function ReservationsAdminClient() {
                   className="mt-4 flex gap-4 border-t border-white/5 pt-4 text-sm"
                   onClick={(event) => event.stopPropagation()}
                 >
+                  {reservation.status === "taslak" ? (
+                    <Link
+                      href={reservationPrimaryHref(reservation)}
+                      className="font-medium text-amber-200 hover:text-amber-100"
+                    >
+                      Taslağı Aç
+                    </Link>
+                  ) : (
                   <Link
                     href={detailHref(reservation.id)}
                     className="font-medium text-white hover:text-zinc-200"
                   >
                     Özet
                   </Link>
+                  )}
                   {reservation.deletedAt ? (
                     <button
                       type="button"
@@ -374,12 +425,14 @@ export function ReservationsAdminClient() {
                     </button>
                   ) : isReservationManageable(reservation) ? (
                     <>
+                      {reservation.status !== "taslak" ? (
                       <Link
                         href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
                         className="text-zinc-400 hover:text-white"
                       >
                         Düzenle
                       </Link>
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => handleDelete(reservation.id)}
@@ -412,47 +465,74 @@ export function ReservationsAdminClient() {
                   <tr
                     key={reservation.id}
                     className={`cursor-pointer border-t border-white/5 transition-colors hover:brightness-110 ${getReservationListSurfaceClass(reservation)}`}
-                    onClick={() => router.push(detailHref(reservation.id))}
+                    onClick={() =>
+                      router.push(reservationPrimaryHref(reservation))
+                    }
                   >
                     <td className="px-4 py-3">
-                      <CoupleNames
-                        brideFirstName={reservation.brideFirstName}
-                        brideName={reservation.brideName}
-                        groomFirstName={reservation.groomFirstName}
-                        groomName={reservation.groomName}
-                      />
+                      <ReservationTitle reservation={reservation} />
                     </td>
                     <td className="px-4 py-3 text-zinc-300">
-                      {formatReservationListShootDate(reservation.items)}
+                      {reservation.status === "taslak" &&
+                      reservation.items.length === 0
+                        ? "—"
+                        : formatReservationListShootDate(reservation.items)}
                     </td>
                     <td className="max-w-xs px-4 py-3">
-                      <ColoredSegments
-                        segments={getReservationListPackageSegments(
-                          reservation.items,
-                        )}
-                        separator=", "
-                      />
+                      {reservation.status === "taslak" &&
+                      reservation.items.length === 0 ? (
+                        <span className="text-zinc-500">
+                          Taslak — paket seçilmedi
+                        </span>
+                      ) : (
+                        <ColoredSegments
+                          segments={getReservationListPackageSegments(
+                            reservation.items,
+                          )}
+                          separator=", "
+                        />
+                      )}
                     </td>
                     <td className="px-4 py-3 text-zinc-300">
-                      {formatReservationListLocation(reservation.items)}
+                      {reservation.status === "taslak" &&
+                      reservation.items.length === 0
+                        ? "—"
+                        : formatReservationListLocation(reservation.items)}
                     </td>
                     <td className="max-w-xs px-4 py-3">
-                      <ColoredSegments
-                        segments={getReservationListStageSegments(reservation)}
-                        separator=" · "
-                      />
+                      {reservation.status === "taslak" ? (
+                        <span className="text-amber-200">
+                          {RESERVATION_STATUS_LABELS.taslak}
+                        </span>
+                      ) : (
+                        <ColoredSegments
+                          segments={getReservationListStageSegments(
+                            reservation,
+                          )}
+                          separator=" · "
+                        />
+                      )}
                     </td>
                     <td
                       className="px-4 py-3"
                       onClick={(event) => event.stopPropagation()}
                     >
                       <div className="flex items-center gap-3">
-                        <Link
-                          href={detailHref(reservation.id)}
-                          className="font-medium text-white hover:text-zinc-200"
-                        >
-                          Özet
-                        </Link>
+                        {reservation.status === "taslak" ? (
+                          <Link
+                            href={reservationPrimaryHref(reservation)}
+                            className="font-medium text-amber-200 hover:text-amber-100"
+                          >
+                            Taslağı Aç
+                          </Link>
+                        ) : (
+                          <Link
+                            href={detailHref(reservation.id)}
+                            className="font-medium text-white hover:text-zinc-200"
+                          >
+                            Özet
+                          </Link>
+                        )}
                         {reservation.deletedAt ? (
                           <button
                             type="button"
@@ -463,12 +543,14 @@ export function ReservationsAdminClient() {
                           </button>
                         ) : isReservationManageable(reservation) ? (
                           <>
-                            <Link
-                              href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
-                              className="text-zinc-400 hover:text-white"
-                            >
-                              Düzenle
-                            </Link>
+                            {reservation.status !== "taslak" ? (
+                              <Link
+                                href={`/admin/rezervasyonlar/${reservation.id}/duzenle`}
+                                className="text-zinc-400 hover:text-white"
+                              >
+                                Düzenle
+                              </Link>
+                            ) : null}
                             <button
                               type="button"
                               onClick={() => handleDelete(reservation.id)}

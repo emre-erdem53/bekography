@@ -1,6 +1,7 @@
 import { ReservationStatus } from "@prisma/client";
 
 export const INACTIVE_RESERVATION_STATUSES: ReservationStatus[] = [
+  "taslak",
   "iptal",
   "teslim_edildi",
 ];

@@ -46,12 +46,15 @@ async function loadReservationYearRows(): Promise<ReservationYearRow[]> {
   return prisma.$queryRaw<ReservationYearRow[]>`
     SELECT
       r.id,
-      EXTRACT(YEAR FROM MIN(ri."shootDate"))::int AS year,
+      COALESCE(
+        EXTRACT(YEAR FROM MIN(ri."shootDate"))::int,
+        EXTRACT(YEAR FROM r."createdAt")::int
+      ) AS year,
       r.status,
       r."deletedAt"
     FROM "Reservation" r
-    INNER JOIN "ReservationItem" ri ON ri."reservationId" = r.id
-    GROUP BY r.id, r.status, r."deletedAt"
+    LEFT JOIN "ReservationItem" ri ON ri."reservationId" = r.id
+    GROUP BY r.id, r.status, r."deletedAt", r."createdAt"
   `;
 }
 
@@ -59,9 +62,12 @@ async function loadReservationIdsForYear(year: number): Promise<string[]> {
   const rows = await prisma.$queryRaw<Array<{ id: string }>>`
     SELECT r.id
     FROM "Reservation" r
-    INNER JOIN "ReservationItem" ri ON ri."reservationId" = r.id
-    GROUP BY r.id
-    HAVING EXTRACT(YEAR FROM MIN(ri."shootDate")) = ${year}
+    LEFT JOIN "ReservationItem" ri ON ri."reservationId" = r.id
+    GROUP BY r.id, r."createdAt"
+    HAVING COALESCE(
+      EXTRACT(YEAR FROM MIN(ri."shootDate"))::int,
+      EXTRACT(YEAR FROM r."createdAt")::int
+    ) = ${year}
   `;
   return rows.map((row) => row.id);
 }

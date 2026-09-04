@@ -9,6 +9,11 @@ import {
   RESERVATION_STATUS_ORDER,
   formatPrice,
 } from "@/lib/constants";
+import {
+  CANCELLATION_FEE_RATE_BEYOND_30,
+  CANCELLATION_FEE_RATE_WITHIN_30,
+  calculateCancellationFeeAtRate,
+} from "@/lib/cancellation-fee";
 import type { TrackingData } from "@/lib/tracking-types";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
 import {
@@ -82,8 +87,8 @@ export const ReservationOrderDocument = forwardRef<
           <SectionHeading>Ödeme Planı</SectionHeading>
           <div className="mt-5 rounded-2xl border border-white/15 bg-[#0a0a0a]">
             <div
-              className={`grid grid-cols-2 border-b border-white/10 ${
-                data.discountEnabled ? "md:grid-cols-3" : ""
+              className={`grid border-b border-white/10 ${
+                data.discountEnabled ? "grid-cols-2" : "grid-cols-1"
               }`}
             >
               <PaymentSummaryCell
@@ -91,19 +96,36 @@ export const ReservationOrderDocument = forwardRef<
                 value={formatPrice(data.totalPrice)}
                 sublabel={data.paymentTypeLabel || undefined}
               />
-              <PaymentSummaryCell
-                label="Cayma Bedeli"
-                value={formatPrice(data.cancellationFeeMax)}
-                sublabel="Maksimum %75"
-                sublabelMuted
-              />
               {data.discountEnabled ? (
                 <PaymentSummaryCell
                   label="İndirim"
                   value={formatPrice(data.discountAmount)}
-                  className="col-span-2 md:col-span-1"
                 />
               ) : null}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2">
+              <PaymentSummaryCell
+                label="Cayma Bedeli %75"
+                value={formatPrice(
+                  calculateCancellationFeeAtRate(
+                    data.totalPrice,
+                    CANCELLATION_FEE_RATE_WITHIN_30,
+                  ),
+                )}
+                sublabel="Rezervasyona 30 günden daha az kalan sürelerde uygulanır."
+                sublabelMuted
+              />
+              <PaymentSummaryCell
+                label="Cayma Bedeli %50"
+                value={formatPrice(
+                  calculateCancellationFeeAtRate(
+                    data.totalPrice,
+                    CANCELLATION_FEE_RATE_BEYOND_30,
+                  ),
+                )}
+                sublabel="Rezervasyona 30 günden daha fazla kalan sürelerde uygulanır."
+                sublabelMuted
+              />
             </div>
             {data.installments.length > 0 ? (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -551,7 +573,7 @@ function PaymentSummaryCell({
       <p className="mt-2 text-lg font-semibold text-white sm:text-xl">{value}</p>
       {sublabel ? (
         <p
-          className={`mt-1 ${
+          className={`mt-1 leading-snug ${
             sublabelMuted
               ? "text-[10px] text-zinc-500"
               : "text-xs text-zinc-400"

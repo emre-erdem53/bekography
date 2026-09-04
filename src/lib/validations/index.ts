@@ -272,6 +272,14 @@ const trackingWorkflowFlagsSchema = z.object({
   shootCompletedAt: z.string().nullable().optional(),
   adminStage: z.string().nullable().optional(),
   customCompletedAt: z.record(z.string(), z.string()).optional(),
+  deadlineOverrides: z
+    .object({
+      dijital: z.string().nullable().optional(),
+      secim: z.string().nullable().optional(),
+      duzenleme: z.string().nullable().optional(),
+      baski: z.string().nullable().optional(),
+    })
+    .optional(),
 });
 
 const postShootSnapshotSchema = z.object({
@@ -308,6 +316,7 @@ export const createReservationSchema = z.object({
 
 export const updateReservationStatusSchema = z.object({
   status: z.enum([
+    "taslak",
     "planlandi",
     "cekim_yapildi",
     "montaj_yapiliyor",
@@ -321,6 +330,53 @@ export const updateReservationStatusSchema = z.object({
 
 export const updateReservationSchema = createReservationSchema.partial().extend({
   status: updateReservationStatusSchema.shape.status.optional(),
+});
+
+const draftItemSchema = z.object({
+  itemKey: z.string().min(1),
+  shootTypeId: z.string(),
+  packageId: z.string(),
+  packageTitle: z.string(),
+  serviceAreaId: z.string(),
+  serviceAreaSlug: z.string(),
+  serviceAreaTitle: z.string(),
+  paymentType: z.enum(["pesin", "taksitli"]),
+  unitPrice: z.number().int().min(0),
+  label: z.string(),
+  accentColor: z.string(),
+  shootDate: z.string(),
+  shootContent: z.string(),
+  readyTime: z.string(),
+  location: z.string(),
+  agreedUnitPrice: z.number().int().min(0),
+  departureTime: z.string(),
+  arrivalTime: z.string(),
+  startTime: z.string(),
+  endTime: z.string(),
+});
+
+const draftInstallmentSchema = z.object({
+  amount: z.number().int().min(0),
+  dueDate: z.string(),
+});
+
+export const saveReservationDraftSchema = z.object({
+  requestId: z.string().optional(),
+  brideFirstName: z.string().default(""),
+  brideLastName: z.string().default(""),
+  brideTc: z.string().default(""),
+  bridePhone: z.string().default(""),
+  groomFirstName: z.string().default(""),
+  groomLastName: z.string().default(""),
+  groomTc: z.string().default(""),
+  groomPhone: z.string().default(""),
+  totalPrice: z.number().int().min(0).default(0),
+  discountAmount: z.number().int().min(0).default(0),
+  discountEnabled: z.boolean().default(false),
+  notes: z.string().default(""),
+  items: z.array(draftItemSchema).default([]),
+  installments: z.array(draftInstallmentSchema).default([]),
+  postShoot: postShootSnapshotSchema.optional(),
 });
 
 export const trackReservationSchema = z.object({

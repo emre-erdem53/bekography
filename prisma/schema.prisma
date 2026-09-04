@@ -21,6 +21,7 @@ enum PaymentType {
 }
 
 enum ReservationStatus {
+  taslak
   planlandi
   cekim_yapildi
   montaj_yapiliyor
@@ -146,6 +147,7 @@ model Reservation {
   discountAmount      Int                          @default(0)
   discountEnabled     Boolean                      @default(false)
   postShoot           Json                         @default("{}")
+  draftPayload        Json?
   status              ReservationStatus            @default(planlandi)
   completedAt         DateTime?
   notes               String?

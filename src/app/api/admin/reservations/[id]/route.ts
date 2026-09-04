@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { calculateCancellationFeeMax, getEarliestShootDateInput } from "@/lib/cancellation-fee";
 import { parseDateOnlyInput, toDateInputValue } from "@/lib/date-only";
 import { requireAdmin } from "@/lib/admin-auth";
@@ -187,7 +188,10 @@ export async function PATCH(
         discountEnabled: data.discountEnabled ?? false,
         postShoot: data.postShoot,
         notes: data.notes !== undefined ? data.notes : undefined,
-        status: data.status,
+        status:
+          data.status ??
+          (existing.status === "taslak" ? "planlandi" : existing.status),
+        draftPayload: existing.status === "taslak" ? Prisma.DbNull : undefined,
         completedAt:
           data.status === "teslim_edildi"
             ? existing.completedAt ?? new Date()
@@ -195,8 +199,11 @@ export async function PATCH(
       },
     });
 
-    if (data.status && existing.status !== data.status) {
-      await addReservationStatusHistory(id, data.status);
+    const nextStatus =
+      data.status ??
+      (existing.status === "taslak" ? "planlandi" : existing.status);
+    if (nextStatus && existing.status !== nextStatus) {
+      await addReservationStatusHistory(id, nextStatus);
     }
 
     if (data.items) {

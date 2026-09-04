@@ -186,9 +186,15 @@ export function TrackingWorkflowTimeline({
                           ? `${format(new Date(stage.deadlineDate), "d MMM yyyy", {
                               locale: tr,
                             })}${stage.deadlineHint}`
-                          : format(new Date(stage.deadlineDate), "d MMM yyyy", {
-                              locale: tr,
-                            })}
+                          : stage.deadlineLabel
+                            ? `${stage.deadlineLabel} ${format(
+                                new Date(stage.deadlineDate),
+                                "d MMM yyyy",
+                                { locale: tr },
+                              )}`
+                            : format(new Date(stage.deadlineDate), "d MMM yyyy", {
+                                locale: tr,
+                              })}
                       </p>
                     ) : null}
                     {stage.deadlineHint && !stage.deadlineHintContinuesDate ? (

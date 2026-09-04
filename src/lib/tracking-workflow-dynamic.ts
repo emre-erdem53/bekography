@@ -9,6 +9,7 @@ import {
   emptyTrackingWorkflowFlags,
   getTrackingStageLabel,
   getWorkflowDayCounts,
+  isPrintingDeadlineApproved,
   resolveStageDeadlineDate,
   resolveStageDeadlineHint,
   stageShowsDeadlineWhenUpcoming,
@@ -305,13 +306,20 @@ function buildDynamicStages(
             reservationCreatedAt,
           );
 
-    const { hint, continuesDate } = builtinKey
-      ? resolveStageDeadlineHint(builtinKey, state, dayCounts)
+    const { hint, continuesDate, label } = builtinKey
+      ? resolveStageDeadlineHint(builtinKey, state, dayCounts, workflow)
       : {};
     const showDeadline =
-      state !== "upcoming" ||
-      (builtinKey ? stageShowsDeadlineWhenUpcoming(builtinKey) : false);
-    const showHint = Boolean(hint) && (showDeadline || !continuesDate);
+      (state !== "upcoming" ||
+        (builtinKey
+          ? stageShowsDeadlineWhenUpcoming(builtinKey, workflow)
+          : false)) &&
+      !(
+        builtinKey === "baski" &&
+        !isPrintingDeadlineApproved(workflow) &&
+        state !== "completed"
+      );
+    const showHint = Boolean(hint) && !showDeadline;
 
     return {
       id: def.id,
@@ -321,6 +329,10 @@ function buildDynamicStages(
       deadlineDate:
         showDeadline && stageDeadline
           ? stageDeadline.toISOString()
+          : undefined,
+      deadlineLabel:
+        showDeadline && state !== "completed"
+          ? label ?? (builtinKey ? "Son Gün" : undefined)
           : undefined,
       deadlineHint: showHint
         ? hint

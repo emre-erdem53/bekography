@@ -12,6 +12,7 @@ export const OUTDOOR_DEFAULT_ARRIVAL_TIME = "17:00";
 export const RESERVATION_RESTORE_DAYS = 30;
 
 export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
+  taslak: "Taslak",
   planlandi: "Planlandı",
   cekim_yapildi: "Çekim Yapıldı",
   montaj_yapiliyor: "Montaj Yapılıyor",
