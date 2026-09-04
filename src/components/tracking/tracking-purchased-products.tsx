@@ -5,6 +5,7 @@ import type { ReservationProductSnapshot } from "@/lib/reservation-product-snaps
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
 import { PurchasedProductInspectSheet } from "@/components/tracking/purchased-product-inspect-sheet";
 import { CartItemThumbnail } from "@/components/packages/cart-item-thumbnail";
+import { resolveFullDayStoryCoverageLabel } from "@/lib/full-day-story-coverage";
 
 const previewClassName =
   "relative aspect-square w-20 shrink-0 overflow-hidden rounded-xl bg-[#1a1a1a] sm:w-24";
@@ -30,6 +31,14 @@ export function TrackingPurchasedProducts({
         <SectionHeading>Satın Alınan Ürünler</SectionHeading>
         <ul className="mt-5 space-y-4">
           {products.map((product) => {
+            const coverageLabel = resolveFullDayStoryCoverageLabel(
+              product.serviceAreaTitle,
+              product.packageTitle ?? "",
+              product.packageTags,
+              product.serviceAreaSlug,
+            );
+            const packageLine = coverageLabel || product.packageTitle;
+
             const cardBody = (
               <>
                 <div className="flex gap-3 sm:gap-4">
@@ -45,9 +54,15 @@ export function TrackingPurchasedProducts({
                     >
                       {product.serviceAreaTitle}
                     </h3>
-                    {product.packageTitle ? (
-                      <p className="mt-0.5 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
-                        {product.packageTitle}
+                    {packageLine ? (
+                      <p
+                        className={
+                          coverageLabel
+                            ? "mt-0.5 text-sm font-medium leading-snug text-zinc-300"
+                            : "mt-0.5 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+                        }
+                      >
+                        {packageLine}
                       </p>
                     ) : null}
                     <p className="mt-0.5 text-base font-semibold leading-tight text-white/90 sm:text-lg">

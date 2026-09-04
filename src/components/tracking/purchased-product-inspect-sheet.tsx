@@ -61,6 +61,8 @@ export function PurchasedProductInspectSheet({
               <PackageOptionDetailBody
                 serviceAreaTitle={product.serviceAreaTitle}
                 packageTitle={product.packageTitle}
+                packageTags={product.packageTags}
+                serviceAreaSlug={product.serviceAreaSlug}
                 shootTypeLabel={
                   product.shootTypeLabelRaw || product.shootTypeLabel
                 }

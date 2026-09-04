@@ -61,6 +61,8 @@ function ShootTypeDetailView({
       <PackageOptionDetailBody
         serviceAreaTitle={serviceArea.title}
         packageTitle={pkg.title}
+        packageTags={pkg.tags}
+        serviceAreaSlug={serviceArea.slug}
         shootTypeLabel={shootType.label}
         highlightTags={shootType.tags}
         cashPrice={shootType.cashPrice}

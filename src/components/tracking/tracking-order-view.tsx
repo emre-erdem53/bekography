@@ -16,6 +16,7 @@ import {
 } from "@/lib/cancellation-fee";
 import type { TrackingData } from "@/lib/tracking-types";
 import { normalizeTrackingData } from "@/lib/normalize-tracking-data";
+import { resolveFullDayStoryCoverageLabel } from "@/lib/full-day-story-coverage";
 import {
   firstNameFromFullName,
   formatPersonDisplayName,
@@ -423,6 +424,13 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
   const shootContentLabel =
     item.shootContent.trim() || item.shootTypeLabel || "—";
   const locationLabel = item.location.trim() || "Belirlenecek";
+  const coverageLabel = resolveFullDayStoryCoverageLabel(
+    item.serviceAreaTitle,
+    item.packageTitle,
+    item.productSnapshot.packageTags,
+    item.productSnapshot.serviceAreaSlug,
+  );
+  const packageLine = coverageLabel || item.packageTitle;
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
@@ -433,9 +441,15 @@ function ShootServiceCard({ item }: { item: TrackingData["items"][number] }) {
         >
           {item.serviceAreaTitle}
         </h3>
-        {item.packageTitle ? (
-          <p className="text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
-            {item.packageTitle}
+        {packageLine ? (
+          <p
+            className={
+              coverageLabel
+                ? "max-w-md text-center text-sm font-medium leading-snug text-zinc-300 sm:text-base"
+                : "text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            }
+          >
+            {packageLine}
           </p>
         ) : null}
         <p className="text-sm font-medium text-zinc-400">{shootDateLabel}</p>

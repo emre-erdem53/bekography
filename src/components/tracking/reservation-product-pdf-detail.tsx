@@ -37,6 +37,8 @@ export function ReservationProductPdfDetail({
         <PackageOptionDetailBody
           serviceAreaTitle={product.serviceAreaTitle}
           packageTitle={product.packageTitle}
+          packageTags={product.packageTags}
+          serviceAreaSlug={product.serviceAreaSlug}
           shootTypeLabel={product.shootTypeLabelRaw || product.shootTypeLabel}
           highlightTags={product.highlightTags}
           cashPrice={product.cashPrice}

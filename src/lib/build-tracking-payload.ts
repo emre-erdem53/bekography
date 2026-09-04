@@ -88,6 +88,11 @@ function enrichPurchasedProductSnapshot(
 
   return {
     ...snapshot,
+    packageTitle: snapshot.packageTitle || fresh.packageTitle,
+    // Kapsam metni canlı paket etiketlerinden gelsin; admin güncellemesi
+    // müşteri önizlemesine hemen yansısın.
+    packageTags:
+      fresh.packageTags.length > 0 ? fresh.packageTags : snapshot.packageTags,
     highlightTags:
       snapshot.highlightTags.length > 0
         ? snapshot.highlightTags
@@ -215,6 +220,17 @@ function buildPayloadFromReservation(
       const scheduleType = serviceArea.scheduleType as ScheduleType;
       const outdoor = isOutdoorScheduleType(scheduleType);
       const snapshot = resolveItemProductSnapshot(item);
+      const livePackageTags = pkg.tags ?? [];
+      const productSnapshot = {
+        ...snapshot,
+        packageTitle: snapshot.packageTitle || pkg.title,
+        packageTags:
+          livePackageTags.length > 0
+            ? livePackageTags
+            : snapshot.packageTags,
+        serviceAreaSlug: snapshot.serviceAreaSlug || serviceArea.slug,
+        serviceAreaTitle: snapshot.serviceAreaTitle || serviceArea.title,
+      };
       const shootTypeForContent = shootTypeContentOf(item.shootType);
       const stageDefinitions = resolveWorkflowStages(
         shootTypeForContent,
@@ -238,8 +254,8 @@ function buildPayloadFromReservation(
 
       return {
         id: item.id,
-        serviceAreaTitle: snapshot.serviceAreaTitle || serviceArea.title,
-        packageTitle: snapshot.packageTitle || pkg.title,
+        serviceAreaTitle: productSnapshot.serviceAreaTitle,
+        packageTitle: productSnapshot.packageTitle,
         accentColor: snapshot.accentColor || serviceArea.accentColor,
         optionLabel: snapshot.shootTypeLabelRaw || item.shootType.label,
         shootTypeLabel:
@@ -257,7 +273,7 @@ function buildPayloadFromReservation(
         arrivalTime: item.arrivalTime,
         startTime: item.startTime,
         endTime: item.endTime,
-        productSnapshot: snapshot,
+        productSnapshot,
         workflow: itemWorkflow,
         workflowFlags: itemWorkflowFlags,
         workflowStageTags,

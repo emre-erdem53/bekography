@@ -76,8 +76,6 @@ const STYLE_PROPS = [
   "list-style",
 ] as const;
 
-const PDF_PAGE_MARGIN_MM = 8;
-
 function inlineComputedStyles(source: Element, clone: Element) {
   if (!(source instanceof HTMLElement) || !(clone instanceof HTMLElement)) {
     return;
@@ -130,6 +128,77 @@ function resetCloneLayout(clonedElement: HTMLElement, width: number) {
   clonedElement.style.background = "#000000";
 }
 
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Failed to read image blob"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function waitForImage(img: HTMLImageElement): Promise<void> {
+  if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    const done = () => {
+      img.removeEventListener("load", done);
+      img.removeEventListener("error", done);
+      resolve();
+    };
+    img.addEventListener("load", done);
+    img.addEventListener("error", done);
+  });
+}
+
+/**
+ * html2canvas often drops cross-origin images even when they render on screen.
+ * Embed them as data URLs before capture so the PDF keeps product photos.
+ */
+async function embedImagesAsDataUrls(
+  element: HTMLElement,
+): Promise<() => void> {
+  const images = Array.from(element.querySelectorAll("img"));
+  const restores: Array<() => void> = [];
+
+  await Promise.all(
+    images.map(async (img) => {
+      const originalSrc = img.currentSrc || img.getAttribute("src") || img.src;
+      if (!originalSrc || originalSrc.startsWith("data:")) return;
+
+      try {
+        const response = await fetch(originalSrc, {
+          mode: "cors",
+          credentials: "omit",
+          cache: "reload",
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const blob = await response.blob();
+        const dataUrl = await blobToDataUrl(blob);
+        const previousSrc = img.getAttribute("src");
+        const previousCrossOrigin = img.getAttribute("crossorigin");
+        img.removeAttribute("crossorigin");
+        img.setAttribute("src", dataUrl);
+        await waitForImage(img);
+        restores.push(() => {
+          if (previousSrc != null) img.setAttribute("src", previousSrc);
+          else img.removeAttribute("src");
+          if (previousCrossOrigin != null) {
+            img.setAttribute("crossorigin", previousCrossOrigin);
+          }
+        });
+      } catch {
+        // Keep original src; capture may still succeed via useCORS.
+      }
+    }),
+  );
+
+  return () => {
+    for (const restore of restores) restore();
+  };
+}
+
 async function renderCanvas(element: HTMLElement, scale: number) {
   const width = Math.ceil(element.offsetWidth || element.scrollWidth);
   const height = Math.ceil(element.scrollHeight);
@@ -140,6 +209,7 @@ async function renderCanvas(element: HTMLElement, scale: number) {
     useCORS: true,
     allowTaint: false,
     logging: false,
+    imageTimeout: 15000,
     scrollX: -window.scrollX,
     scrollY: -window.scrollY,
     width,
@@ -160,6 +230,7 @@ async function renderCanvas(element: HTMLElement, scale: number) {
       if (documentElement) {
         documentElement.style.margin = "0";
         documentElement.style.padding = "0";
+        documentElement.style.background = "#000000";
       }
     },
   });
@@ -177,6 +248,8 @@ function loadDataUrlToCanvas(dataUrl: string): Promise<HTMLCanvasElement> {
         reject(new Error("Canvas context unavailable"));
         return;
       }
+      context.fillStyle = "#000000";
+      context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0);
       resolve(canvas);
     };
@@ -283,26 +356,34 @@ function trimBlackEdges(canvas: HTMLCanvasElement): HTMLCanvasElement {
   return trimmed;
 }
 
+function fillPdfPageBlack(pdf: jsPDF) {
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  pdf.setFillColor(0, 0, 0);
+  pdf.rect(0, 0, pageWidth, pageHeight, "F");
+}
+
 function addCanvasToPdf(canvas: HTMLCanvasElement, pdf: jsPDF) {
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const usableWidth = pageWidth - PDF_PAGE_MARGIN_MM * 2;
 
+  // Edge-to-edge on black pages — no white letterbox margins.
   const imgData = canvas.toDataURL("image/jpeg", 0.92);
-  const imgWidth = usableWidth;
+  const imgWidth = pageWidth;
   const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  const x = (pageWidth - imgWidth) / 2;
 
   let heightLeft = imgHeight;
-  let position = PDF_PAGE_MARGIN_MM;
+  let position = 0;
 
-  pdf.addImage(imgData, "JPEG", x, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight - PDF_PAGE_MARGIN_MM;
+  fillPdfPageBlack(pdf);
+  pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
+  heightLeft -= pageHeight;
 
   while (heightLeft > 0) {
     position -= pageHeight;
     pdf.addPage();
-    pdf.addImage(imgData, "JPEG", x, position, imgWidth, imgHeight);
+    fillPdfPageBlack(pdf);
+    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
     heightLeft -= pageHeight;
   }
 }
@@ -331,7 +412,11 @@ export async function exportElementToPdf(
   element.style.width = `${captureWidth}px`;
   element.style.transform = "none";
 
+  let restoreImages: (() => void) | undefined;
+
   try {
+    restoreImages = await embedImagesAsDataUrls(element);
+
     let canvas: HTMLCanvasElement | undefined;
     let lastError: unknown;
 
@@ -369,6 +454,7 @@ export async function exportElementToPdf(
     addCanvasToPdf(canvas, pdf);
     pdf.save(filename);
   } finally {
+    restoreImages?.();
     element.style.marginLeft = previousMarginLeft;
     element.style.marginRight = previousMarginRight;
     element.style.maxWidth = previousMaxWidth;

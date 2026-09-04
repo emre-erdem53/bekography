@@ -6,10 +6,14 @@ import type {
 import { PackageGalleryCarousel } from "@/components/packages/package-gallery-carousel";
 import { PackageDetailSectionsList } from "@/components/packages/package-detail-sections-list";
 import { PaymentTypePrice } from "@/components/packages/payment-type-price";
+import { resolveFullDayStoryCoverageLabel } from "@/lib/full-day-story-coverage";
 
 type PackageOptionDetailBodyProps = {
   serviceAreaTitle: string;
   packageTitle?: string | null;
+  /** Paket seviyesi etiketler — gün boyu kapsam metni bunlardan üretilir. */
+  packageTags?: string[];
+  serviceAreaSlug?: string;
   shootTypeLabel: string;
   highlightTags?: string[];
   cashPrice: number;
@@ -26,6 +30,8 @@ type PackageOptionDetailBodyProps = {
 export function PackageOptionDetailBody({
   serviceAreaTitle,
   packageTitle,
+  packageTags,
+  serviceAreaSlug,
   shootTypeLabel,
   highlightTags = [],
   cashPrice,
@@ -38,15 +44,29 @@ export function PackageOptionDetailBody({
   scrollHint = "Detaylar için aşağı kaydırın",
   sectionsTagsOnly = false,
 }: PackageOptionDetailBodyProps) {
+  const coverageLabel = resolveFullDayStoryCoverageLabel(
+    serviceAreaTitle,
+    packageTitle ?? "",
+    packageTags,
+    serviceAreaSlug,
+  );
+  const packageLine = coverageLabel || packageTitle;
+
   return (
     <>
       <header className="mb-4 sm:mb-5">
         <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
           {serviceAreaTitle}
         </h2>
-        {packageTitle ? (
-          <p className="mt-0.5 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500">
-            {packageTitle}
+        {packageLine ? (
+          <p
+            className={
+              coverageLabel
+                ? "mt-1 text-sm font-medium leading-snug text-zinc-300 sm:text-base"
+                : "mt-0.5 text-xs font-medium uppercase tracking-[0.16em] text-zinc-500"
+            }
+          >
+            {packageLine}
           </p>
         ) : null}
         <p className="mt-0.5 text-lg font-semibold leading-tight text-white/90 sm:text-xl">

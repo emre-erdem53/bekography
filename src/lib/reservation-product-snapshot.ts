@@ -34,6 +34,8 @@ export type ReservationProductSnapshot = {
   /** "Fotoğraf + Video" gibi normalize edilmiş kısa etiket. */
   shootTypeLabel: string;
   highlightTags: string[];
+  /** Paket seviyesi etiketler (ör. kapsam çekimleri). */
+  packageTags: string[];
   detailSections: PackageDetailSection[];
   services: PackageServiceItem[];
   galleryMedia: PackageGalleryMedia[];
@@ -57,6 +59,7 @@ export function emptyProductSnapshot(): ReservationProductSnapshot {
     previewVideoUrl: null,
     shootTypeLabel: "",
     highlightTags: [],
+    packageTags: [],
     detailSections: [],
     services: [],
     galleryMedia: [],
@@ -86,6 +89,7 @@ export type ShootTypeWithParents = {
   package: {
     id: string;
     title: string;
+    tags?: string[];
     accentColor?: string | null;
     serviceArea: {
       id: string;
@@ -125,6 +129,7 @@ export function buildProductSnapshotFromShootType(
     previewVideoUrl: preview?.type === "video" ? preview.url : null,
     shootTypeLabel: getShootTypeLabel(shootType.label),
     highlightTags: shootType.tags,
+    packageTags: pkg.tags ?? [],
     detailSections: getShootTypeDetailSections(shootTypeData),
     services: serviceAreaContent.services ?? [],
     galleryMedia: getShootTypeGalleryMedia(shootTypeData),
@@ -185,6 +190,8 @@ export function mergeProductSnapshot(
       stored.highlightTags.length > 0
         ? stored.highlightTags
         : fresh.highlightTags,
+    packageTags:
+      stored.packageTags.length > 0 ? stored.packageTags : fresh.packageTags,
     detailSections:
       stored.detailSections.length > 0
         ? stored.detailSections
@@ -290,6 +297,9 @@ export function parseProductSnapshot(
       ? data.highlightTags.filter(
           (tag): tag is string => typeof tag === "string",
         )
+      : [],
+    packageTags: Array.isArray(data.packageTags)
+      ? data.packageTags.filter((tag): tag is string => typeof tag === "string")
       : [],
     detailSections: Array.isArray(data.detailSections)
       ? normalizeDetailSections(
