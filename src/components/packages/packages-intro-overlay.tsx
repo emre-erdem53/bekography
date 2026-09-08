@@ -110,7 +110,7 @@ export function PackagesIntroOverlay({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
           >
-            <BekographyBrand href={null} size="sm" className="justify-center" />
+            <BekographyBrand href={null} size="lg" className="justify-center" />
           </motion.div>
 
           <motion.p

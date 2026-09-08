@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 type BekographyBrandProps = {
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   href?: string | null;
   className?: string;
 };
@@ -12,15 +12,23 @@ export function BekographyBrand({
   className = "",
 }: BekographyBrandProps) {
   const logoHeight =
-    size === "sm" ? "h-6 sm:h-7" : "h-[2.375rem] md:h-[2.875rem]";
+    size === "sm"
+      ? "h-6 sm:h-7"
+      : size === "lg"
+        ? "h-10 sm:h-12"
+        : "h-[2.375rem] md:h-[2.875rem]";
   const titleClass =
     size === "sm"
       ? "font-brand text-sm leading-none lowercase tracking-wide text-white sm:text-base"
-      : "font-brand text-[1.65rem] leading-none lowercase tracking-wide text-white md:text-[2.1rem]";
+      : size === "lg"
+        ? "font-brand text-[1.85rem] leading-none lowercase tracking-wide text-white sm:text-[2.35rem]"
+        : "font-brand text-[1.65rem] leading-none lowercase tracking-wide text-white md:text-[2.1rem]";
   const subtitleClass =
     size === "sm"
       ? "text-[7px] font-medium uppercase leading-none tracking-[0.34em] text-white/40 sm:text-[8px]"
-      : "text-[8px] font-medium uppercase leading-none tracking-[0.34em] text-white/40 md:text-[9px]";
+      : size === "lg"
+        ? "text-[9px] font-medium uppercase leading-none tracking-[0.34em] text-white/45 sm:text-[10px]"
+        : "text-[8px] font-medium uppercase leading-none tracking-[0.34em] text-white/40 md:text-[9px]";
 
   const content = (
     <span
