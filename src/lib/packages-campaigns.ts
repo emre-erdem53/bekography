@@ -37,6 +37,9 @@ export const PACKAGES_CAMPAIGNS = PACKAGES_CAMPAIGN_ITEMS.map(
   (campaign) => campaign.body,
 );
 
+/** Baştaki nokta/boşluğu temizler; sonda nokta varsa kaldırır (◆ ayrı basılır). */
 export function formatCampaignBody(body: string) {
-  return body.replace(/^\.\s*/, "");
+  return body.replace(/^\.\s*/, "").replace(/\.+\s*$/, "").trim();
 }
+
+export const CAMPAIGN_END_MARK = "◆";

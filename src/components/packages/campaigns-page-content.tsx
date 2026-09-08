@@ -1,6 +1,7 @@
 import localFont from "next/font/local";
 import Link from "next/link";
 import {
+  CAMPAIGN_END_MARK,
   formatCampaignBody,
   PACKAGES_CAMPAIGN_ITEMS,
   PACKAGES_TAGLINE,
@@ -43,6 +44,9 @@ export function CampaignsPageContent() {
               </p>
               <p className="mt-3 text-xl font-semibold leading-snug text-white sm:text-2xl">
                 {formatCampaignBody(campaign.body)}
+                <span className="ml-2 text-white/35" aria-hidden>
+                  {CAMPAIGN_END_MARK}
+                </span>
               </p>
             </li>
           ))}

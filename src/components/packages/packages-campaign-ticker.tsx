@@ -1,6 +1,10 @@
 "use client";
 
-import { PACKAGES_CAMPAIGNS } from "@/lib/packages-campaigns";
+import {
+  CAMPAIGN_END_MARK,
+  formatCampaignBody,
+  PACKAGES_CAMPAIGNS,
+} from "@/lib/packages-campaigns";
 
 function TickerSegment({ duplicate = false }: { duplicate?: boolean }) {
   return (
@@ -8,22 +12,20 @@ function TickerSegment({ duplicate = false }: { duplicate?: boolean }) {
       className="packages-ticker-segment packages-campaign-pulse inline-flex shrink-0 items-center whitespace-nowrap px-10 text-[11px] font-semibold tracking-wide sm:px-12 sm:text-xs"
       aria-hidden={duplicate || undefined}
     >
-      {PACKAGES_CAMPAIGNS.map((campaign, index) => (
+      {PACKAGES_CAMPAIGNS.map((campaign) => (
         <span
           key={campaign}
           className="inline-flex items-center gap-10 sm:gap-14"
         >
-          {index > 0 ? (
+          <span>
+            {formatCampaignBody(campaign)}
             <span className="select-none px-1 text-white/35" aria-hidden>
-              ◆
+              {" "}
+              {CAMPAIGN_END_MARK}
             </span>
-          ) : null}
-          {campaign}
+          </span>
         </span>
       ))}
-      <span className="select-none px-1 text-white/35" aria-hidden>
-        ◆
-      </span>
     </span>
   );
 }
