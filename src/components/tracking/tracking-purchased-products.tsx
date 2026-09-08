@@ -46,6 +46,7 @@ export function TrackingPurchasedProducts({
                     imageUrl={product.previewImageUrl}
                     videoUrl={product.previewVideoUrl}
                     className={previewClassName}
+                    nativeImg={staticMode}
                   />
                   <div className="min-w-0 flex-1">
                     <h3

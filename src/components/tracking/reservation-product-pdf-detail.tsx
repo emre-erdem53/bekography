@@ -8,6 +8,12 @@ function resolveHeroImageUrl(product: ReservationProductSnapshot): string | null
   return null;
 }
 
+function resolveHeroVideoUrl(product: ReservationProductSnapshot): string | null {
+  if (product.previewVideoUrl) return product.previewVideoUrl;
+  const firstVideo = product.galleryMedia.find((item) => item.type === "video");
+  return firstVideo?.url ?? null;
+}
+
 /** Rezervasyon PDF'inde ürün detay sayfasının statik karşılığı. */
 export function ReservationProductPdfDetail({
   product,
@@ -18,6 +24,7 @@ export function ReservationProductPdfDetail({
     (a, b) => a.sortOrder - b.sortOrder,
   );
   const heroImageUrl = resolveHeroImageUrl(product);
+  const heroVideoUrl = heroImageUrl ? null : resolveHeroVideoUrl(product);
 
   return (
     <article className="rounded-2xl border border-white/15 bg-[#0a0a0a] p-5 sm:p-6">
@@ -27,13 +34,26 @@ export function ReservationProductPdfDetail({
           <img
             src={heroImageUrl}
             alt=""
+            decoding="sync"
+            loading="eager"
             className="h-full w-full object-cover"
+            data-pdf-image="true"
+          />
+        </div>
+      ) : heroVideoUrl ? (
+        <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-[#111]">
+          <video
+            src={heroVideoUrl}
+            muted
+            playsInline
+            preload="auto"
             crossOrigin="anonymous"
+            className="h-full w-full object-cover"
           />
         </div>
       ) : null}
 
-      <div className={heroImageUrl ? "mt-5 sm:mt-6" : ""}>
+      <div className={heroImageUrl || heroVideoUrl ? "mt-5 sm:mt-6" : ""}>
         <PackageOptionDetailBody
           serviceAreaTitle={product.serviceAreaTitle}
           packageTitle={product.packageTitle}

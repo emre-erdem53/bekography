@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { PaketlerPageClient } from "@/components/packages/paketler-page-client";
 import { getActivePackages, serializeServiceAreas } from "@/lib/packages";
 import type { ServiceAreaData } from "@/lib/package-types";
@@ -22,5 +23,9 @@ export default async function PaketlerPage() {
     console.error("Failed to load packages:", error);
   }
 
-  return <PaketlerPageClient serviceAreas={serviceAreas} />;
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
+      <PaketlerPageClient serviceAreas={serviceAreas} />
+    </Suspense>
+  );
 }

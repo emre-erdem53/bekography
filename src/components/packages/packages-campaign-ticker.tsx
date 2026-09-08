@@ -1,6 +1,6 @@
 "use client";
 
-import { PACKAGES_CAMPAIGNS } from "@/components/packages/packages-intro-overlay";
+import { PACKAGES_CAMPAIGNS } from "@/lib/packages-campaigns";
 
 function TickerSegment({ duplicate = false }: { duplicate?: boolean }) {
   return (

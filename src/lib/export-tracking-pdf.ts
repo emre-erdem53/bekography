@@ -150,40 +150,186 @@ function waitForImage(img: HTMLImageElement): Promise<void> {
   });
 }
 
+function unwrapNextImageUrl(url: string): string {
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (parsed.pathname.includes("/_next/image")) {
+      const raw = parsed.searchParams.get("url");
+      if (raw) return decodeURIComponent(raw);
+    }
+  } catch {
+    // ignore
+  }
+  return url;
+}
+
+function pickSrcFromSrcset(srcset: string): string | null {
+  const candidates = srcset
+    .split(",")
+    .map((part) => {
+      const [url, descriptor] = part.trim().split(/\s+/);
+      const width = descriptor?.endsWith("w")
+        ? Number.parseInt(descriptor, 10)
+        : descriptor?.endsWith("x")
+          ? Number.parseFloat(descriptor) * 1000
+          : 0;
+      return { url, width: Number.isFinite(width) ? width : 0 };
+    })
+    .filter((entry) => Boolean(entry.url));
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.width - a.width);
+  return candidates[0]?.url ?? null;
+}
+
+function resolveImageFetchUrl(img: HTMLImageElement): string | null {
+  const current = img.currentSrc || "";
+  if (current && !current.startsWith("data:")) {
+    return unwrapNextImageUrl(current);
+  }
+
+  const srcset = img.getAttribute("srcset");
+  if (srcset) {
+    const fromSrcset = pickSrcFromSrcset(srcset);
+    if (fromSrcset && !fromSrcset.startsWith("data:")) {
+      return unwrapNextImageUrl(fromSrcset);
+    }
+  }
+
+  const src = img.getAttribute("src") || img.src || "";
+  if (src && !src.startsWith("data:")) {
+    return unwrapNextImageUrl(src);
+  }
+
+  // Tiny blur placeholder already in src — try data-pdf / original attributes.
+  const dataSrc =
+    img.getAttribute("data-pdf-src") ||
+    img.getAttribute("data-src") ||
+    img.getAttribute("data-original");
+  if (dataSrc && !dataSrc.startsWith("data:")) {
+    return unwrapNextImageUrl(dataSrc);
+  }
+
+  return null;
+}
+
+async function fetchImageBlob(url: string): Promise<Blob> {
+  const absolute = new URL(url, window.location.origin).toString();
+
+  try {
+    const direct = await fetch(absolute, {
+      mode: "cors",
+      credentials: "omit",
+      cache: "reload",
+    });
+    if (direct.ok) return direct.blob();
+  } catch {
+    // fall through to proxy
+  }
+
+  const proxyUrl = `/api/pdf-image?url=${encodeURIComponent(absolute)}`;
+  const proxied = await fetch(proxyUrl, { credentials: "same-origin" });
+  if (!proxied.ok) {
+    throw new Error(`Image proxy failed (${proxied.status})`);
+  }
+  return proxied.blob();
+}
+
+async function videoFrameToDataUrl(
+  video: HTMLVideoElement,
+): Promise<string | null> {
+  if (video.readyState < 2) {
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        video.removeEventListener("loadeddata", done);
+        video.removeEventListener("error", done);
+        resolve();
+      };
+      video.addEventListener("loadeddata", done);
+      video.addEventListener("error", done);
+    });
+  }
+
+  if (video.videoWidth <= 0 || video.videoHeight <= 0) return null;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+  context.drawImage(video, 0, 0);
+  try {
+    return canvas.toDataURL("image/jpeg", 0.92);
+  } catch {
+    return null;
+  }
+}
+
+async function prepareMediaForCapture(element: HTMLElement) {
+  const images = Array.from(element.querySelectorAll("img"));
+  for (const img of images) {
+    img.setAttribute("loading", "eager");
+    img.setAttribute("decoding", "sync");
+    img.removeAttribute("loading");
+  }
+
+  // Lazy-loaded / below-fold media: scroll through the capture tree.
+  const totalHeight = element.scrollHeight;
+  const step = Math.max(window.innerHeight * 0.8, 400);
+  for (let y = 0; y < totalHeight; y += step) {
+    window.scrollTo(0, y);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+  }
+  window.scrollTo(0, 0);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  await Promise.all(images.map((img) => waitForImage(img)));
+}
+
 /**
- * html2canvas often drops cross-origin images even when they render on screen.
- * Embed them as data URLs before capture so the PDF keeps product photos.
+ * html2canvas often drops cross-origin / Next.js-optimized images even when
+ * they render on screen. Embed them as data URLs before capture.
  */
 async function embedImagesAsDataUrls(
   element: HTMLElement,
 ): Promise<() => void> {
+  await prepareMediaForCapture(element);
+
   const images = Array.from(element.querySelectorAll("img"));
   const restores: Array<() => void> = [];
 
   await Promise.all(
     images.map(async (img) => {
-      const originalSrc = img.currentSrc || img.getAttribute("src") || img.src;
-      if (!originalSrc || originalSrc.startsWith("data:")) return;
+      // Already a real (non-placeholder) data URL.
+      if (
+        img.src.startsWith("data:") &&
+        img.naturalWidth > 32 &&
+        img.complete
+      ) {
+        return;
+      }
+
+      const fetchUrl = resolveImageFetchUrl(img);
+      if (!fetchUrl) return;
 
       try {
-        const response = await fetch(originalSrc, {
-          mode: "cors",
-          credentials: "omit",
-          cache: "reload",
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const blob = await response.blob();
+        const blob = await fetchImageBlob(fetchUrl);
         const dataUrl = await blobToDataUrl(blob);
         const previousSrc = img.getAttribute("src");
+        const previousSrcset = img.getAttribute("srcset");
         const previousCrossOrigin = img.getAttribute("crossorigin");
+
+        img.removeAttribute("srcset");
+        img.removeAttribute("sizes");
         img.removeAttribute("crossorigin");
         img.setAttribute("src", dataUrl);
         await waitForImage(img);
+
         restores.push(() => {
           if (previousSrc != null) img.setAttribute("src", previousSrc);
           else img.removeAttribute("src");
+          if (previousSrcset != null) img.setAttribute("srcset", previousSrcset);
+          else img.removeAttribute("srcset");
           if (previousCrossOrigin != null) {
             img.setAttribute("crossorigin", previousCrossOrigin);
           }
@@ -194,10 +340,42 @@ async function embedImagesAsDataUrls(
     }),
   );
 
+  // Replace videos with a still frame <img> so posters survive html2canvas.
+  const videos = Array.from(element.querySelectorAll("video"));
+  for (const video of videos) {
+    try {
+      const dataUrl = await videoFrameToDataUrl(video);
+      if (!dataUrl || !video.parentElement) continue;
+
+      const replacement = document.createElement("img");
+      replacement.src = dataUrl;
+      replacement.alt = "";
+      replacement.setAttribute("data-pdf-image", "true");
+      replacement.className = video.className;
+      replacement.style.cssText = video.style.cssText;
+      if (!replacement.style.objectFit) {
+        replacement.style.objectFit = "cover";
+      }
+      if (!replacement.style.width) {
+        replacement.style.width = "100%";
+        replacement.style.height = "100%";
+      }
+
+      const parent = video.parentElement;
+      parent.replaceChild(replacement, video);
+      restores.push(() => {
+        parent.replaceChild(video, replacement);
+      });
+    } catch {
+      // ignore video frame failures
+    }
+  }
+
   return () => {
-    for (const restore of restores) restore();
+    for (const restore of restores.reverse()) restore();
   };
 }
+
 
 async function renderCanvas(element: HTMLElement, scale: number) {
   const width = Math.ceil(element.offsetWidth || element.scrollWidth);
@@ -220,6 +398,27 @@ async function renderCanvas(element: HTMLElement, scale: number) {
       stripStylesheets(clonedDocument);
       inlineComputedStyles(element, clonedElement);
       resetCloneLayout(clonedElement, width);
+
+      // Ensure every cloned <img> keeps an embeddable data URL / absolute src.
+      const liveImages = element.querySelectorAll("img");
+      const clonedImages = clonedElement.querySelectorAll("img");
+      clonedImages.forEach((cloneImg, index) => {
+        const liveImg = liveImages[index];
+        if (!(cloneImg instanceof HTMLImageElement)) return;
+        if (liveImg instanceof HTMLImageElement && liveImg.src.startsWith("data:")) {
+          cloneImg.removeAttribute("srcset");
+          cloneImg.src = liveImg.src;
+        }
+        cloneImg.style.opacity = "1";
+        cloneImg.style.visibility = "visible";
+        if (
+          cloneImg.style.position === "absolute" &&
+          (!cloneImg.style.width || cloneImg.style.width === "auto")
+        ) {
+          cloneImg.style.width = "100%";
+          cloneImg.style.height = "100%";
+        }
+      });
 
       const { body, documentElement } = clonedDocument;
       if (body) {
@@ -416,6 +615,9 @@ export async function exportElementToPdf(
 
   try {
     restoreImages = await embedImagesAsDataUrls(element);
+    // Layout settle after src swaps / video → img replacements.
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     let canvas: HTMLCanvasElement | undefined;
     let lastError: unknown;

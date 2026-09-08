@@ -23,6 +23,7 @@ const links: {
   { href: "/fotograflar", label: "Fotoğraflar" },
   { href: "/videolar", label: "Videolar" },
   { href: "/paketler", label: "Paketler" },
+  { href: "/kampanyalar", label: "Kampanyalar" },
   { href: "/about", label: "Hakkımızda" },
   { href: "/contact", label: "İletişim" },
 ];

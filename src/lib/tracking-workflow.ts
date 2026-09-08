@@ -372,6 +372,15 @@ export function resolveStageDeadlineOverride(
   return endOfDay(parsed);
 }
 
+/** Düzenleme son günü ancak seçim tamamlanınca (veya override girilince) belli olur. */
+export function isEditingDeadlineKnown(
+  workflow: TrackingWorkflowFlags,
+): boolean {
+  return Boolean(
+    workflow.selectionCompletedAt || workflow.deadlineOverrides?.duzenleme,
+  );
+}
+
 /** Baskı onayı = düzenleme tamamlandı (veya override girildi). */
 export function isPrintingDeadlineApproved(
   workflow: TrackingWorkflowFlags,
@@ -527,12 +536,18 @@ export function resolveStageDeadlineHint(
   switch (id) {
     case "dijital":
     case "secim":
+      return { label: "Son Gün" };
     case "duzenleme":
+      if (!isEditingDeadlineKnown(workflow)) {
+        return {
+          hint: `Seçimden sonra ${dayCounts.editingDaysAfter} gün`,
+        };
+      }
       return { label: "Son Gün" };
     case "baski":
       if (!isPrintingDeadlineApproved(workflow)) {
         return {
-          hint: `Onaydan sonra ${dayCounts.printingDaysAfter} günde kargoda`,
+          hint: `Onaydan sonra ${dayCounts.printingDaysAfter} gün`,
         };
       }
       return { label: "Son Gün" };
@@ -545,10 +560,24 @@ export function stageShowsDeadlineWhenUpcoming(
   id: TrackingWorkflowStageId,
   workflow: TrackingWorkflowFlags = emptyTrackingWorkflowFlags(),
 ): boolean {
-  if (id === "dijital" || id === "secim" || id === "duzenleme") return true;
+  if (id === "dijital" || id === "secim") return true;
+  if (id === "duzenleme") return isEditingDeadlineKnown(workflow);
   if (id === "baski") return isPrintingDeadlineApproved(workflow);
   return false;
 }
+
+function stageAllowsConcreteDeadlineDate(
+  id: TrackingWorkflowStageId,
+  state: TrackingWorkflowStageState,
+  workflow: TrackingWorkflowFlags,
+): boolean {
+  if (state === "completed") return true;
+  if (id === "duzenleme") return isEditingDeadlineKnown(workflow);
+  if (id === "baski") return isPrintingDeadlineApproved(workflow);
+  return true;
+}
+
+export { stageAllowsConcreteDeadlineDate };
 
 function buildStagesFromEffectiveStage(
   effectiveStageId: TrackingWorkflowStageId,
@@ -594,7 +623,7 @@ function buildStagesFromEffectiveStage(
     );
     const showDeadline =
       (state !== "upcoming" || stageShowsDeadlineWhenUpcoming(id, workflow)) &&
-      !(id === "baski" && !isPrintingDeadlineApproved(workflow) && state !== "completed");
+      stageAllowsConcreteDeadlineDate(id, state, workflow);
     const showHint = Boolean(hint) && !showDeadline;
     return {
       id,
@@ -609,10 +638,9 @@ function buildStagesFromEffectiveStage(
             reservationCreatedAt,
           ).toISOString()
         : undefined,
+      // Çekim gibi aşamalarda yalnızca tarih; "Son Gün" yalnızca hint'ten gelince.
       deadlineLabel:
-        showDeadline && state !== "completed"
-          ? label ?? "Son Gün"
-          : undefined,
+        showDeadline && state !== "completed" ? label : undefined,
       deadlineHint: showHint ? hint : undefined,
       deadlineHintContinuesDate: showDeadline ? continuesDate : undefined,
     };

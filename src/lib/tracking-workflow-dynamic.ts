@@ -9,9 +9,9 @@ import {
   emptyTrackingWorkflowFlags,
   getTrackingStageLabel,
   getWorkflowDayCounts,
-  isPrintingDeadlineApproved,
   resolveStageDeadlineDate,
   resolveStageDeadlineHint,
+  stageAllowsConcreteDeadlineDate,
   stageShowsDeadlineWhenUpcoming,
   type TrackingWorkflowFlags,
   type TrackingWorkflowStageId,
@@ -314,11 +314,8 @@ function buildDynamicStages(
         (builtinKey
           ? stageShowsDeadlineWhenUpcoming(builtinKey, workflow)
           : false)) &&
-      !(
-        builtinKey === "baski" &&
-        !isPrintingDeadlineApproved(workflow) &&
-        state !== "completed"
-      );
+      (!builtinKey ||
+        stageAllowsConcreteDeadlineDate(builtinKey, state, workflow));
     const showHint = Boolean(hint) && !showDeadline;
 
     return {
@@ -331,9 +328,7 @@ function buildDynamicStages(
           ? stageDeadline.toISOString()
           : undefined,
       deadlineLabel:
-        showDeadline && state !== "completed"
-          ? label ?? (builtinKey ? "Son Gün" : undefined)
-          : undefined,
+        showDeadline && state !== "completed" ? label : undefined,
       deadlineHint: showHint
         ? hint
         : def.kind === "custom" && def.daysAfterPrevious && state !== "upcoming"

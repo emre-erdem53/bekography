@@ -1,4 +1,4 @@
-import { PACKAGES_TAGLINE } from "@/components/packages/packages-intro-overlay";
+import { PACKAGES_TAGLINE } from "@/lib/packages-campaigns";
 
 export function PackagesPageHeader() {
   return (
