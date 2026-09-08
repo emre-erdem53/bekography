@@ -88,18 +88,17 @@ export function PackagesIntroOverlay({
       />
 
       <div
-        className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/45 to-black/75"
+        className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-black/70"
         aria-hidden
       />
 
-      <div className="relative z-10 flex min-h-[100dvh] items-center justify-center px-6 py-10">
+      <div className="relative z-10 flex min-h-[100dvh] flex-col px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2.5rem,env(safe-area-inset-top))] sm:px-8 sm:pb-10 sm:pt-12">
         <motion.div
-          className="flex w-full max-w-lg -translate-y-2 flex-col items-center text-center sm:-translate-y-4"
-          initial={{ opacity: 0, y: 14 }}
+          className="mx-auto flex w-full max-w-lg flex-col items-center text-center"
+          initial={{ opacity: 0, y: 10 }}
           animate={{
             opacity: isExiting ? 0 : 1,
-            y: isExiting ? -10 : 0,
-            scale: isExiting ? 0.98 : 1,
+            y: isExiting ? -8 : 0,
           }}
           transition={{
             duration: isExiting ? 0.55 : 0.8,
@@ -115,7 +114,7 @@ export function PackagesIntroOverlay({
           </motion.div>
 
           <motion.p
-            className="mt-6 max-w-md text-base italic leading-relaxed text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.65)] sm:mt-8 sm:text-xl sm:leading-relaxed"
+            className="mt-4 max-w-md text-base italic leading-relaxed text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.65)] sm:mt-5 sm:text-xl sm:leading-relaxed"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
@@ -126,36 +125,41 @@ export function PackagesIntroOverlay({
           >
             {PACKAGES_TAGLINE}
           </motion.p>
+        </motion.div>
 
-          <motion.div
-            className="mt-10 flex w-full flex-col gap-3 sm:mt-12 sm:flex-row sm:gap-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              delay: 0.45,
-              duration: 0.6,
-              ease: [0.22, 1, 0.36, 1],
+        <div className="min-h-0 flex-1" aria-hidden />
+
+        <motion.div
+          className="mx-auto flex w-full max-w-lg flex-col gap-3 sm:flex-row sm:gap-4"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{
+            opacity: isExiting ? 0 : 1,
+            y: isExiting ? 8 : 0,
+          }}
+          transition={{
+            delay: isExiting ? 0 : 0.35,
+            duration: isExiting ? 0.45 : 0.6,
+            ease: [0.22, 1, 0.36, 1],
+          }}
+        >
+          <Link
+            href="/kampanyalar"
+            className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-white/35 bg-black/35 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/10 sm:text-base"
+            tabIndex={isExiting ? -1 : undefined}
+            onClick={(event) => {
+              if (isExiting) event.preventDefault();
             }}
           >
-            <Link
-              href="/kampanyalar"
-              className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border border-white/35 bg-black/35 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/10 sm:text-base"
-              tabIndex={isExiting ? -1 : undefined}
-              onClick={(event) => {
-                if (isExiting) event.preventDefault();
-              }}
-            >
-              Kampanyalar
-            </Link>
-            <button
-              type="button"
-              onClick={onDismiss}
-              disabled={isExiting}
-              className="min-h-12 flex-1 rounded-2xl bg-[#93f8b6] px-6 py-3.5 text-sm font-semibold text-black transition hover:bg-[#b8ffd0] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
-            >
-              Paketler
-            </button>
-          </motion.div>
+            Kampanyalar
+          </Link>
+          <button
+            type="button"
+            onClick={onDismiss}
+            disabled={isExiting}
+            className="min-h-12 flex-1 rounded-2xl bg-[#93f8b6] px-6 py-3.5 text-sm font-semibold text-black transition hover:bg-[#b8ffd0] disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
+          >
+            Paketler
+          </button>
         </motion.div>
       </div>
     </motion.div>
