@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 import { nanoid } from "nanoid";
 import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME, RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/date-only";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
+import { usesInstallmentPricing, type PaymentType } from "@/lib/constants";
 import type { ServiceAreaData } from "@/lib/package-types";
 import {
   emptyPostShootSnapshot,
@@ -76,7 +77,7 @@ type SelectedItem = {
   serviceAreaId: string;
   serviceAreaSlug: string;
   serviceAreaTitle: string;
-  paymentType: "pesin" | "taksitli";
+  paymentType: PaymentType;
   unitPrice: number;
   label: string;
   accentColor: string;
@@ -95,6 +96,10 @@ type Installment = {
   amount: number;
   dueDate: string;
 };
+
+function hasPartialPayment(items: SelectedItem[]) {
+  return items.some((item) => item.paymentType !== "pesin");
+}
 
 function splitEqualInstallments(
   count: number,
@@ -223,9 +228,14 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     [totalPrice, earliestShootDate],
   );
 
+  const hasTaksitliPayment = useMemo(
+    () => hasPartialPayment(items),
+    [items],
+  );
+
   const installmentMismatch = installmentTotal !== expectedPayable;
 
-  const minInstallmentCount = 1;
+  const minInstallmentCount = hasTaksitliPayment ? 2 : 1;
 
   const itemKeysSignature = items.map((item) => item.itemKey).join(",");
 
@@ -233,7 +243,6 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     setInstallments((prev) =>
       splitEqualInstallments(prev.length + 1, expectedPayable, prev),
     );
-    markDirty();
   }
 
   function removeInstallment(index: number) {
@@ -242,7 +251,6 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       const next = prev.filter((_, i) => i !== index);
       return splitEqualInstallments(next.length, expectedPayable, next);
     });
-    markDirty();
   }
 
   function updateInstallment(index: number, patch: Partial<Installment>) {
@@ -381,7 +389,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                   };
                 };
               };
-              paymentType: "pesin" | "taksitli";
+              paymentType: PaymentType;
               unitPrice: number;
               shootDate: string;
               shootContent: string;
@@ -478,7 +486,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 };
               };
             };
-            paymentType: "pesin" | "taksitli";
+            paymentType: PaymentType;
             unitPrice: number;
           }) => {
             const serviceArea = item.shootType.package.serviceArea;
@@ -682,10 +690,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     if (loading) return;
 
     setInstallments((prev) => {
-      const count = Math.max(prev.length, 1);
+      const minCount = hasPartialPayment(items) ? 2 : 1;
+      const count = Math.max(prev.length, minCount);
       const prevTotal = prev.reduce((sum, row) => sum + row.amount, 0);
 
-      if (prev.length < 1 || prevTotal !== expectedPayable) {
+      if (prev.length < minCount || prevTotal !== expectedPayable) {
         return splitEqualInstallments(count, expectedPayable, prev);
       }
 
@@ -1156,13 +1165,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                     <select
                       value={item.paymentType}
                       onChange={(e) => {
-                        const paymentType = e.target.value as "pesin" | "taksitli";
+                        const paymentType = e.target.value as PaymentType;
                         const shootType = context?.shootType;
                         if (!shootType) return;
-                        const unitPrice =
-                          paymentType === "pesin"
-                            ? shootType.cashPrice
-                            : shootType.installmentPrice;
+                        const unitPrice = usesInstallmentPricing(paymentType)
+                          ? shootType.installmentPrice
+                          : shootType.cashPrice;
                         updateItem(index, {
                           paymentType,
                           unitPrice,
@@ -1173,6 +1181,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                     >
                       <option value="pesin">{paymentLabels.pesin}</option>
                       <option value="taksitli">{paymentLabels.taksitli}</option>
+                      <option value="vadeli">{paymentLabels.vadeli}</option>
                     </select>
                   </Field>
 
@@ -1392,13 +1401,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 <button
                   type="button"
                   onClick={() => removeInstallment(index)}
-                  aria-label={`Vade ${index + 1} kaldır`}
-                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center self-end rounded-lg border border-white/10 text-zinc-400 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-400 sm:mt-6"
+                  className="self-end rounded-lg p-2 text-zinc-400 hover:text-red-400 sm:mt-6"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                 </button>
               ) : (
-                <div className="hidden sm:block" />
+                <div />
               )}
             </div>
           ))}

@@ -57,7 +57,7 @@ export const createRequestSchema = z.object({
     .array(
       z.object({
         shootTypeId: z.string().min(1),
-        paymentType: z.enum(["pesin", "taksitli"]),
+        paymentType: z.enum(["pesin", "taksitli", "vadeli"]),
         shootDate: z.string().min(1, "Çekim tarihi seçin"),
         city: z.string().min(2, "Şehir girin"),
       }),
@@ -243,7 +243,7 @@ export const serviceAreaPackagesSchema = z.object({
 
 const reservationItemSchema = z.object({
   shootTypeId: z.string().min(1),
-  paymentType: z.enum(["pesin", "taksitli"]),
+  paymentType: z.enum(["pesin", "taksitli", "vadeli"]),
   unitPrice: z.number().int().positive(),
   shootDate: z.string().min(1, "Çekim günü seçin"),
   shootContent: z.string().min(1, "Çekim içeriği girin"),
@@ -340,7 +340,7 @@ const draftItemSchema = z.object({
   serviceAreaId: z.string(),
   serviceAreaSlug: z.string(),
   serviceAreaTitle: z.string(),
-  paymentType: z.enum(["pesin", "taksitli"]),
+  paymentType: z.enum(["pesin", "taksitli", "vadeli"]),
   unitPrice: z.number().int().min(0),
   label: z.string(),
   accentColor: z.string(),

@@ -1,3 +1,4 @@
+import type { PaymentType } from "@/lib/constants";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
 
 export type ReservationDraftItem = {
@@ -8,7 +9,7 @@ export type ReservationDraftItem = {
   serviceAreaId: string;
   serviceAreaSlug: string;
   serviceAreaTitle: string;
-  paymentType: "pesin" | "taksitli";
+  paymentType: PaymentType;
   unitPrice: number;
   label: string;
   accentColor: string;

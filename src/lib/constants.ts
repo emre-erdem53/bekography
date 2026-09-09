@@ -35,15 +35,22 @@ export const RESERVATION_STATUS_ORDER: ReservationStatus[] = [
 
 export const PAYMENT_TYPE_LABELS = {
   pesin: "Peşin İndirimli",
-  taksitli: "Vadeli",
+  taksitli: "3 Taksitli",
+  vadeli: "Vadeli",
 } as const;
 
 export type PaymentType = keyof typeof PAYMENT_TYPE_LABELS;
 
 export const PAYMENT_TYPE_DESCRIPTIONS: Record<PaymentType, string> = {
   pesin: "Rezervasyondan önce tümü ödenir.",
-  taksitli: "Belirlenen vadelerde tamamlanır.",
+  taksitli: "3 ayda tamamlanır.",
+  vadeli: "Ödeme planı vadeli olarak tanımlanır.",
 };
+
+/** Peşin dışı ödeme tipleri — taksit/vade planı ve taksitli fiyat kullanır. */
+export function usesInstallmentPricing(type: PaymentType): boolean {
+  return type === "taksitli" || type === "vadeli";
+}
 
 export const WHATSAPP_NUMBER =
   process.env.WHATSAPP_NUMBER ?? "905469370464";

@@ -9,6 +9,7 @@ import { StatusSelect } from "@/components/admin/status-select";
 import {
   REQUEST_STATUS_LABELS,
   formatPrice,
+  type PaymentType,
 } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 
@@ -21,7 +22,7 @@ type RequestDetail = {
   shootDate: string;
   status: RequestStatus;
   items: {
-    paymentType: "pesin" | "taksitli";
+    paymentType: PaymentType;
     unitPrice: number;
     shootDate: string | null;
     city: string | null;

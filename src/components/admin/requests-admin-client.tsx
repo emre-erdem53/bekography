@@ -13,7 +13,7 @@ import {
   deleteRequest,
   restoreRequest,
 } from "@/components/admin/request-status-actions";
-import { REQUEST_STATUS_LABELS } from "@/lib/constants";
+import { REQUEST_STATUS_LABELS, type PaymentType } from "@/lib/constants";
 import { buildAdminListHref } from "@/lib/admin-list-navigation";
 import { formatTurkishPhone } from "@/lib/reservation-utils";
 import {
@@ -34,7 +34,7 @@ type RequestItem = {
   deletedAt: string | null;
   createdAt: string;
   items: {
-    paymentType: "pesin" | "taksitli";
+    paymentType: PaymentType;
     shootType: {
       label: string;
       package: {

@@ -156,10 +156,12 @@ function buildPayloadFromReservation(
   );
   const reservationCreatedAt = reservation.createdAt;
   const paymentTypeLabel = reservation.items.some(
-    (item) => item.paymentType === "taksitli",
+    (item) => item.paymentType === "vadeli",
   )
-    ? paymentLabels.taksitli
-    : paymentLabels.pesin;
+    ? paymentLabels.vadeli
+    : reservation.items.some((item) => item.paymentType === "taksitli")
+      ? paymentLabels.taksitli
+      : paymentLabels.pesin;
 
   const workflow = buildTrackingWorkflowView({
     shootDate: earliestShoot,

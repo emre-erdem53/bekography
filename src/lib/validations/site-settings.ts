@@ -9,5 +9,6 @@ export const updateSiteSettingsSchema = z.object({
   paymentTypes: z.object({
     pesin: paymentTypeCopySchema,
     taksitli: paymentTypeCopySchema,
+    vadeli: paymentTypeCopySchema,
   }),
 });

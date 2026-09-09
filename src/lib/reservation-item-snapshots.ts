@@ -1,4 +1,5 @@
 import { parseDateOnlyInput } from "@/lib/date-only";
+import type { PaymentType } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { type ItemWorkflowStageTags } from "@/lib/item-workflow-stage-tags";
 import {
@@ -11,7 +12,7 @@ import {
 
 export type ReservationItemInput = {
   shootTypeId: string;
-  paymentType: "pesin" | "taksitli";
+  paymentType: PaymentType;
   unitPrice: number;
   shootDate: string;
   shootContent: string;

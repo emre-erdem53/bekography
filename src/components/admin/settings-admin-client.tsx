@@ -71,14 +71,19 @@ export function SettingsAdminClient() {
           </p>
         </div>
 
-        <div className="grid-safe grid gap-5 md:grid-cols-2">
-          {(["pesin", "taksitli"] as const).map((type) => (
+        <div className="grid-safe grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {(["pesin", "taksitli", "vadeli"] as const).map((type) => (
             <div
               key={type}
               className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-4"
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                {type === "pesin" ? "Peşin indirimli" : "Vadeli"} alanı
+                {type === "pesin"
+                  ? "Peşin indirimli"
+                  : type === "taksitli"
+                    ? "3 Taksitli"
+                    : "Vadeli"}{" "}
+                alanı
               </p>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-zinc-500">

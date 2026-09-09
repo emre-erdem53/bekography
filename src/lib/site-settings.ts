@@ -13,6 +13,25 @@ export type SiteSettingsData = {
   paymentTypes: Record<PaymentType, PaymentTypeCopy>;
 };
 
+function copyFor(
+  type: PaymentType,
+  source: Partial<Record<PaymentType, Partial<PaymentTypeCopy>>> | undefined,
+  defaults: SiteSettingsData,
+): PaymentTypeCopy {
+  const fromSource = source?.[type];
+  return {
+    label:
+      typeof fromSource?.label === "string" && fromSource.label.trim()
+        ? fromSource.label.trim()
+        : defaults.paymentTypes[type].label,
+    description:
+      typeof fromSource?.description === "string" &&
+      fromSource.description.trim()
+        ? fromSource.description.trim()
+        : defaults.paymentTypes[type].description,
+  };
+}
+
 export function defaultSiteSettings(): SiteSettingsData {
   return {
     paymentTypes: {
@@ -23,6 +42,10 @@ export function defaultSiteSettings(): SiteSettingsData {
       taksitli: {
         label: PAYMENT_TYPE_LABELS.taksitli,
         description: PAYMENT_TYPE_DESCRIPTIONS.taksitli,
+      },
+      vadeli: {
+        label: PAYMENT_TYPE_LABELS.vadeli,
+        description: PAYMENT_TYPE_DESCRIPTIONS.vadeli,
       },
     },
   };
@@ -37,30 +60,9 @@ export function parseSiteSettings(input: unknown): SiteSettingsData {
 
   return {
     paymentTypes: {
-      pesin: {
-        label:
-          typeof paymentTypes.pesin?.label === "string" &&
-          paymentTypes.pesin.label.trim()
-            ? paymentTypes.pesin.label.trim()
-            : defaults.paymentTypes.pesin.label,
-        description:
-          typeof paymentTypes.pesin?.description === "string" &&
-          paymentTypes.pesin.description.trim()
-            ? paymentTypes.pesin.description.trim()
-            : defaults.paymentTypes.pesin.description,
-      },
-      taksitli: {
-        label:
-          typeof paymentTypes.taksitli?.label === "string" &&
-          paymentTypes.taksitli.label.trim()
-            ? paymentTypes.taksitli.label.trim()
-            : defaults.paymentTypes.taksitli.label,
-        description:
-          typeof paymentTypes.taksitli?.description === "string" &&
-          paymentTypes.taksitli.description.trim()
-            ? paymentTypes.taksitli.description.trim()
-            : defaults.paymentTypes.taksitli.description,
-      },
+      pesin: copyFor("pesin", paymentTypes, defaults),
+      taksitli: copyFor("taksitli", paymentTypes, defaults),
+      vadeli: copyFor("vadeli", paymentTypes, defaults),
     },
   };
 }
@@ -69,6 +71,7 @@ export function getPaymentTypeLabels(settings: SiteSettingsData) {
   return {
     pesin: settings.paymentTypes.pesin.label,
     taksitli: settings.paymentTypes.taksitli.label,
+    vadeli: settings.paymentTypes.vadeli.label,
   } as const;
 }
 
@@ -76,5 +79,6 @@ export function getPaymentTypeDescriptions(settings: SiteSettingsData) {
   return {
     pesin: settings.paymentTypes.pesin.description,
     taksitli: settings.paymentTypes.taksitli.description,
+    vadeli: settings.paymentTypes.vadeli.description,
   } as const;
 }

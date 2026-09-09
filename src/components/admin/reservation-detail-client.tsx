@@ -6,7 +6,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Check } from "lucide-react";
-import { formatPrice } from "@/lib/constants";
+import { formatPrice, type PaymentType } from "@/lib/constants";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { formatCoupleName, formatTurkishPhone } from "@/lib/reservation-utils";
 import { ReservationItemWorkflowAdmin } from "@/components/admin/reservation-item-workflow-admin";
@@ -43,7 +43,7 @@ type ReservationDetail = {
   notes: string | null;
   items: {
     id: string;
-    paymentType: "pesin" | "taksitli";
+    paymentType: PaymentType;
     unitPrice: number;
     shootDate: string;
     shootContent: string;
