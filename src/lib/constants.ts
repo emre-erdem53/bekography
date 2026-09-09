@@ -35,14 +35,14 @@ export const RESERVATION_STATUS_ORDER: ReservationStatus[] = [
 
 export const PAYMENT_TYPE_LABELS = {
   pesin: "Peşin İndirimli",
-  taksitli: "3 Taksitli",
+  taksitli: "Vadeli",
 } as const;
 
 export type PaymentType = keyof typeof PAYMENT_TYPE_LABELS;
 
 export const PAYMENT_TYPE_DESCRIPTIONS: Record<PaymentType, string> = {
   pesin: "Rezervasyondan önce tümü ödenir.",
-  taksitli: "3 ayda tamamlanır.",
+  taksitli: "Belirlenen vadelerde tamamlanır.",
 };
 
 export const WHATSAPP_NUMBER =

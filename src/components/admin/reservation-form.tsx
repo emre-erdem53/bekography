@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
-import { AlertTriangle, Plus, X } from "lucide-react";
+import { AlertTriangle, Plus, Trash2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME, RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/date-only";
@@ -95,10 +95,6 @@ type Installment = {
   amount: number;
   dueDate: string;
 };
-
-function hasPartialPayment(items: SelectedItem[]) {
-  return items.some((item) => item.paymentType === "taksitli");
-}
 
 function splitEqualInstallments(
   count: number,
@@ -227,14 +223,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     [totalPrice, earliestShootDate],
   );
 
-  const hasTaksitliPayment = useMemo(
-    () => hasPartialPayment(items),
-    [items],
-  );
-
   const installmentMismatch = installmentTotal !== expectedPayable;
 
-  const minInstallmentCount = hasTaksitliPayment ? 2 : 1;
+  const minInstallmentCount = 1;
 
   const itemKeysSignature = items.map((item) => item.itemKey).join(",");
 
@@ -242,6 +233,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     setInstallments((prev) =>
       splitEqualInstallments(prev.length + 1, expectedPayable, prev),
     );
+    markDirty();
   }
 
   function removeInstallment(index: number) {
@@ -250,6 +242,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       const next = prev.filter((_, i) => i !== index);
       return splitEqualInstallments(next.length, expectedPayable, next);
     });
+    markDirty();
   }
 
   function updateInstallment(index: number, patch: Partial<Installment>) {
@@ -689,11 +682,10 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     if (loading) return;
 
     setInstallments((prev) => {
-      const minCount = hasPartialPayment(items) ? 2 : 1;
-      const count = Math.max(prev.length, minCount);
+      const count = Math.max(prev.length, 1);
       const prevTotal = prev.reduce((sum, row) => sum + row.amount, 0);
 
-      if (prev.length < minCount || prevTotal !== expectedPayable) {
+      if (prev.length < 1 || prevTotal !== expectedPayable) {
         return splitEqualInstallments(count, expectedPayable, prev);
       }
 
@@ -1400,12 +1392,13 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                 <button
                   type="button"
                   onClick={() => removeInstallment(index)}
-                  className="self-end rounded-lg p-2 text-zinc-400 hover:text-red-400 sm:mt-6"
+                  aria-label={`Vade ${index + 1} kaldır`}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center self-end rounded-lg border border-white/10 text-zinc-400 transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-400 sm:mt-6"
                 >
-                  <X className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
               ) : (
-                <div />
+                <div className="hidden sm:block" />
               )}
             </div>
           ))}
