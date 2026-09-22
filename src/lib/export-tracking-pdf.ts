@@ -555,36 +555,93 @@ function trimBlackEdges(canvas: HTMLCanvasElement): HTMLCanvasElement {
   return trimmed;
 }
 
-function fillPdfPageBlack(pdf: jsPDF) {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  pdf.setFillColor(0, 0, 0);
-  pdf.rect(0, 0, pageWidth, pageHeight, "F");
+const PDF_PAGE_WIDTH_MM = 210;
+
+function ensurePdfFilename(filename: string): string {
+  const trimmed = filename.trim() || "rezervasyon.pdf";
+  return trimmed.toLowerCase().endsWith(".pdf") ? trimmed : `${trimmed}.pdf`;
 }
 
-function addCanvasToPdf(canvas: HTMLCanvasElement, pdf: jsPDF) {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
+function isMobileClient(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  if (/Mobi|Android|iPhone|iPad|iPod/i.test(ua)) return true;
+  // iPadOS desktop UA
+  return navigator.maxTouchPoints > 1 && /Macintosh/i.test(ua);
+}
 
-  // Edge-to-edge on black pages — no white letterbox margins.
-  const imgData = canvas.toDataURL("image/jpeg", 0.92);
-  const imgWidth = pageWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+/**
+ * iOS Safari often opens pdf.save() / application/pdf blobs in a preview tab.
+ * Prefer the share sheet on mobile; otherwise force a download via octet-stream.
+ */
+async function downloadPdfFile(pdf: jsPDF, filename: string): Promise<void> {
+  const safeName = ensurePdfFilename(filename);
+  const pdfBlob = pdf.output("blob");
 
-  let heightLeft = imgHeight;
-  let position = 0;
+  if (isMobileClient() && typeof navigator.share === "function") {
+    const file = new File([pdfBlob], safeName, { type: "application/pdf" });
+    const canShareFiles =
+      typeof navigator.canShare === "function" &&
+      navigator.canShare({ files: [file] });
 
-  fillPdfPageBlack(pdf);
-  pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight;
-
-  while (heightLeft > 0) {
-    position -= pageHeight;
-    pdf.addPage();
-    fillPdfPageBlack(pdf);
-    pdf.addImage(imgData, "JPEG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    if (canShareFiles) {
+      try {
+        await navigator.share({ files: [file], title: safeName });
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        // Fall through to anchor download.
+      }
+    }
   }
+
+  const downloadBlob = new Blob([await pdfBlob.arrayBuffer()], {
+    type: "application/octet-stream",
+  });
+  const url = URL.createObjectURL(downloadBlob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = safeName;
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 2500);
+}
+
+/**
+ * One continuous page matching content height — avoids A4 slicing that cuts
+ * through timeline / cards mid-element on mobile PDF viewers.
+ */
+function buildPdfFromCanvas(canvas: HTMLCanvasElement): jsPDF {
+  const imgWidth = PDF_PAGE_WIDTH_MM;
+  const imgHeight = Math.max(
+    (canvas.height * imgWidth) / Math.max(canvas.width, 1),
+    1,
+  );
+
+  const pdf = new jsPDF({
+    orientation: imgHeight >= imgWidth ? "portrait" : "landscape",
+    unit: "mm",
+    format: [imgWidth, imgHeight],
+    compress: true,
+  });
+
+  pdf.setFillColor(0, 0, 0);
+  pdf.rect(0, 0, imgWidth, imgHeight, "F");
+  pdf.addImage(
+    canvas.toDataURL("image/jpeg", 0.92),
+    "JPEG",
+    0,
+    0,
+    imgWidth,
+    imgHeight,
+  );
+
+  return pdf;
 }
 
 export async function exportElementToPdf(
@@ -646,15 +703,8 @@ export async function exportElementToPdf(
       throw new Error("Canvas is empty");
     }
 
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
-      compress: true,
-    });
-
-    addCanvasToPdf(canvas, pdf);
-    pdf.save(filename);
+    const pdf = buildPdfFromCanvas(canvas);
+    await downloadPdfFile(pdf, filename);
   } finally {
     restoreImages?.();
     element.style.marginLeft = previousMarginLeft;
