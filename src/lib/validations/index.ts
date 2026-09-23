@@ -312,6 +312,8 @@ export const createReservationSchema = z.object({
   installments: z
     .array(installmentSchema)
     .min(1, "En az bir ödeme vadesi girin"),
+  /** Aynı güne ikinci randevu için admin onayı. */
+  allowDateConflicts: z.boolean().optional(),
 });
 
 export const updateReservationStatusSchema = z.object({

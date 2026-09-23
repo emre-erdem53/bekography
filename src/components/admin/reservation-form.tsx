@@ -44,6 +44,10 @@ import {
   splitPersonName,
 } from "@/lib/reservation-utils";
 import {
+  formatShootDateConflictSummary,
+  type ShootDateConflict,
+} from "@/lib/reservations";
+import {
   hasMeaningfulDraftContent,
   isReservationDraftPayload,
 } from "@/lib/reservation-draft";
@@ -184,7 +188,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     emptyPostShootSnapshot(),
   );
   const [serviceAreas, setServiceAreas] = useState<ServiceAreaData[]>([]);
-  const [dateConflicts, setDateConflicts] = useState<string[]>([]);
+  const [dateConflicts, setDateConflicts] = useState<ShootDateConflict[]>([]);
+  const [allowDateConflicts, setAllowDateConflicts] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -706,8 +711,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     const dates = [...new Set(items.map((item) => item.shootDate).filter(Boolean))];
     if (dates.length === 0) {
       setDateConflicts([]);
+      setAllowDateConflicts(false);
       return;
     }
+
+    let cancelled = false;
 
     Promise.all(
       dates.map((shootDate) =>
@@ -721,9 +729,17 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         }).then((res) => res.json()),
       ),
     ).then((results) => {
-      const conflicts = dates.filter((_, index) => !results[index]?.available);
+      if (cancelled) return;
+      const conflicts = results.flatMap((result) =>
+        Array.isArray(result?.conflicts) ? (result.conflicts as ShootDateConflict[]) : [],
+      );
       setDateConflicts(conflicts);
+      setAllowDateConflicts(false);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [items, reservationId]);
 
   function addItem(shootTypeId: string) {
@@ -788,7 +804,17 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (dateConflicts.length > 0) return;
+
+    let confirmedAllowDateConflicts = allowDateConflicts;
+    if (dateConflicts.length > 0 && !confirmedAllowDateConflicts) {
+      const summary = formatShootDateConflictSummary(dateConflicts);
+      const confirmed = window.confirm(
+        `Bu tarihte zaten rezervasyon var. Aynı güne ikinci randevu eklemek istiyor musunuz?\n\n${summary}\n\nOnaylarsanız mevcut randevu silinmez; ikinci randevu da aynı güne kaydedilir.`,
+      );
+      if (!confirmed) return;
+      confirmedAllowDateConflicts = true;
+      setAllowDateConflicts(true);
+    }
 
     if (!isValidTurkishMobilePhone(groomPhone)) {
       setError("Damat telefonu 10 haneli olmalı ve 5 ile başlamalıdır.");
@@ -866,6 +892,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         };
       }),
       installments: normalizedInstallments,
+      ...(confirmedAllowDateConflicts ? { allowDateConflicts: true } : {}),
       ...(requestId && !isEditing ? { requestId } : {}),
     };
 
@@ -890,7 +917,10 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             ? "Rezervasyon güncellenemedi"
             : "Rezervasyon oluşturulamadı"),
       );
-      if (data.conflicts) setDateConflicts(data.conflicts);
+      if (data.conflicts) {
+        setDateConflicts(data.conflicts);
+        setAllowDateConflicts(false);
+      }
       return;
     }
 
@@ -952,15 +982,70 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
       </div>
 
       {dateConflicts.length > 0 ? (
-        <div className="flex min-w-0 items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="flex min-w-0 items-start gap-3 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <div className="min-w-0 flex-1 break-words">
-            <p>Bu tarihler için zaten rezervasyon bulunmaktadır:</p>
-            <ul className="mt-1 list-disc pl-4">
-              {dateConflicts.map((date) => (
-                <li key={date}>{date}</li>
-              ))}
-            </ul>
+          <div className="min-w-0 flex-1 space-y-3 break-words">
+            <div>
+              <p className="font-medium">
+                Bu tarihte zaten rezervasyon var. Aynı güne ikinci randevu
+                ekleyebilirsiniz; mevcut randevu silinmez.
+              </p>
+              <ul className="mt-3 space-y-3">
+                {dateConflicts.map((conflict) => (
+                  <li key={conflict.date} className="rounded-lg bg-black/20 px-3 py-2">
+                    <p className="font-semibold text-amber-50">
+                      {format(
+                        new Date(`${conflict.date}T12:00:00`),
+                        "d MMMM yyyy",
+                        { locale: tr },
+                      )}
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {conflict.reservations.map((reservation) => (
+                        <li key={reservation.reservationId}>
+                          <p className="text-amber-50">{reservation.coupleName}</p>
+                          <ul className="mt-1 space-y-1 text-amber-100/85">
+                            {reservation.items.map((item, index) => {
+                              const title = [
+                                item.serviceAreaTitle,
+                                item.packageTitle,
+                                item.shootTypeLabel,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ");
+                              const time = item.isOutdoor
+                                ? [item.departureTime, item.arrivalTime]
+                                    .filter(Boolean)
+                                    .join("–")
+                                : [item.startTime, item.endTime]
+                                    .filter(Boolean)
+                                    .join("–");
+                              return (
+                                <li key={`${reservation.reservationId}-${index}`}>
+                                  • {title}
+                                  {time ? ` (${time})` : ""}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <label className="flex cursor-pointer items-start gap-2 text-amber-50">
+              <input
+                type="checkbox"
+                checked={allowDateConflicts}
+                onChange={(event) => setAllowDateConflicts(event.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-amber-400/50 bg-black/30"
+              />
+              <span>
+                Aynı güne ikinci randevuyu eklemek istediğimi onaylıyorum.
+              </span>
+            </label>
           </div>
         </div>
       ) : null}
@@ -1447,7 +1532,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         ) : null}
         <button
           type="submit"
-          disabled={saving || savingDraft || dateConflicts.length > 0 || items.length === 0}
+          disabled={
+            saving ||
+            savingDraft ||
+            items.length === 0 ||
+            (dateConflicts.length > 0 && !allowDateConflicts)
+          }
           className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50 sm:w-auto"
         >
           {saving

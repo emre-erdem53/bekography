@@ -6,7 +6,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
   addReservationStatusHistory,
-  findShootDateConflicts,
+  findShootDateConflictDetails,
   getTrackingUrl,
 } from "@/lib/reservations";
 import { formatZodError } from "@/lib/validation-errors";
@@ -132,15 +132,16 @@ export async function PATCH(
     }
 
     if (data.items) {
-      const conflicts = await findShootDateConflicts(
+      const conflicts = await findShootDateConflictDetails(
         data.items.map((item) => item.shootDate),
         id,
       );
 
-      if (conflicts.length > 0) {
+      if (conflicts.length > 0 && !data.allowDateConflicts) {
         return NextResponse.json(
           {
-            error: "Seçilen tarihlerden biri veya birkaçı için zaten rezervasyon bulunmaktadır.",
+            error:
+              "Seçilen tarihlerden biri veya birkaçı için zaten rezervasyon bulunmaktadır. Onaylarsanız aynı güne ikinci randevu eklenebilir.",
             code: "DATE_CONFLICT",
             conflicts,
           },

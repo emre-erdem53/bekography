@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import { parseDateOnlyInput } from "@/lib/date-only";
 import { formatCoupleFirstNames } from "@/lib/reservation-utils";
+import { findShootDateConflictDetails } from "@/lib/reservations";
 
 export async function GET(request: Request) {
   const authResult = await requireAdmin();
@@ -15,7 +16,10 @@ export async function GET(request: Request) {
 
     const items = await prisma.reservationItem.findMany({
       where: {
-        reservation: { status: { notIn: ["iptal", "teslim_edildi"] }, deletedAt: null },
+        reservation: {
+          status: { notIn: ["iptal", "teslim_edildi"] },
+          deletedAt: null,
+        },
         ...(start && end
           ? {
               shootDate: {
@@ -99,19 +103,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Tarih gerekli" }, { status: 400 });
     }
 
-    const existing = await prisma.reservationItem.findFirst({
-      where: {
-        shootDate: parseDateOnlyInput(shootDate),
-        reservation: {
-          status: { notIn: ["iptal", "teslim_edildi"] },
-          ...(excludeReservationId
-            ? { id: { not: excludeReservationId } }
-            : {}),
-        },
-      },
-    });
+    parseDateOnlyInput(shootDate);
 
-    return NextResponse.json({ available: !existing });
+    const conflicts = await findShootDateConflictDetails(
+      [shootDate],
+      typeof excludeReservationId === "string"
+        ? excludeReservationId
+        : undefined,
+    );
+
+    return NextResponse.json({
+      available: conflicts.length === 0,
+      conflicts,
+    });
   } catch (error) {
     console.error("POST /api/admin/calendar", error);
     return NextResponse.json(
