@@ -6,7 +6,8 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
 import {
   addReservationStatusHistory,
-  findShootDateConflictDetails,
+  buildProposedScheduleItemsFromReservationItems,
+  evaluateReservationScheduleConflicts,
   getTrackingUrl,
 } from "@/lib/reservations";
 import { formatZodError } from "@/lib/validation-errors";
@@ -132,18 +133,33 @@ export async function PATCH(
     }
 
     if (data.items) {
-      const conflicts = await findShootDateConflictDetails(
-        data.items.map((item) => item.shootDate),
+      const proposed = await buildProposedScheduleItemsFromReservationItems(
+        data.items,
+      );
+      const evaluation = await evaluateReservationScheduleConflicts(
+        proposed,
         id,
       );
 
-      if (conflicts.length > 0 && !data.allowDateConflicts) {
+      if (evaluation.timeOverlaps.length > 0) {
         return NextResponse.json(
           {
             error:
-              "Seçilen tarihlerden biri veya birkaçı için zaten rezervasyon bulunmaktadır. Onaylarsanız aynı güne ikinci randevu eklenebilir.",
+              "Aynı güne ikinci randevu yalnızca farklı saatlerde oluşturulabilir. Seçilen saatler mevcut randevuyla çakışıyor veya saat aralığı eksik.",
+            code: "TIME_CONFLICT",
+            conflicts: evaluation.timeOverlaps,
+          },
+          { status: 409 },
+        );
+      }
+
+      if (evaluation.sameDayOnly.length > 0 && !data.allowDateConflicts) {
+        return NextResponse.json(
+          {
+            error:
+              "Seçilen tarihlerden biri veya birkaçı için zaten rezervasyon bulunmaktadır. Onaylarsanız aynı güne (farklı saatlerde) ikinci randevu eklenebilir.",
             code: "DATE_CONFLICT",
-            conflicts,
+            conflicts: evaluation.sameDayOnly,
           },
           { status: 409 },
         );

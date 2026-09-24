@@ -45,6 +45,8 @@ import {
 } from "@/lib/reservation-utils";
 import {
   formatShootDateConflictSummary,
+  resolveItemTimeRange,
+  timeRangesOverlap,
   type ShootDateConflict,
 } from "@/lib/reservations";
 import {
@@ -103,6 +105,67 @@ type Installment = {
 
 function hasPartialPayment(items: SelectedItem[]) {
   return items.some((item) => item.paymentType !== "pesin");
+}
+
+function classifyScheduleConflicts(
+  existingConflicts: ShootDateConflict[],
+  items: SelectedItem[],
+  serviceAreas: ServiceAreaData[],
+): { timeOverlaps: ShootDateConflict[]; sameDayOnly: ShootDateConflict[] } {
+  const timeOverlaps: ShootDateConflict[] = [];
+  const sameDayOnly: ShootDateConflict[] = [];
+
+  for (const conflict of existingConflicts) {
+    const proposedForDay = items.filter(
+      (item) => item.shootDate === conflict.date,
+    );
+
+    const proposedMissingTimes = proposedForDay.some((item) => {
+      const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+      const isOutdoor = isOutdoorScheduleType(
+        context?.serviceArea.scheduleType,
+      );
+      return (
+        resolveItemTimeRange({
+          isOutdoor,
+          departureTime: item.departureTime,
+          arrivalTime: item.arrivalTime,
+          startTime: item.startTime,
+          endTime: item.endTime,
+        }) === null
+      );
+    });
+
+    const hasOverlap = conflict.reservations.some((reservation) =>
+      reservation.items.some((existingItem) => {
+        const existingRange = resolveItemTimeRange(existingItem);
+        if (!existingRange) return false;
+        return proposedForDay.some((item) => {
+          const context = findShootTypeContext(serviceAreas, item.shootTypeId);
+          const isOutdoor = isOutdoorScheduleType(
+            context?.serviceArea.scheduleType,
+          );
+          const proposedRange = resolveItemTimeRange({
+            isOutdoor,
+            departureTime: item.departureTime,
+            arrivalTime: item.arrivalTime,
+            startTime: item.startTime,
+            endTime: item.endTime,
+          });
+          if (!proposedRange) return false;
+          return timeRangesOverlap(existingRange, proposedRange);
+        });
+      }),
+    );
+
+    if (hasOverlap || proposedMissingTimes) {
+      timeOverlaps.push({ ...conflict, kind: "time_overlap" });
+    } else {
+      sameDayOnly.push({ ...conflict, kind: "same_day" });
+    }
+  }
+
+  return { timeOverlaps, sameDayOnly };
 }
 
 function splitEqualInstallments(
@@ -188,8 +251,15 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     emptyPostShootSnapshot(),
   );
   const [serviceAreas, setServiceAreas] = useState<ServiceAreaData[]>([]);
-  const [dateConflicts, setDateConflicts] = useState<ShootDateConflict[]>([]);
+  const [existingDateConflicts, setExistingDateConflicts] = useState<
+    ShootDateConflict[]
+  >([]);
   const [allowDateConflicts, setAllowDateConflicts] = useState(false);
+  const { timeOverlaps, sameDayOnly } = useMemo(
+    () =>
+      classifyScheduleConflicts(existingDateConflicts, items, serviceAreas),
+    [existingDateConflicts, items, serviceAreas],
+  );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
@@ -710,7 +780,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
   useEffect(() => {
     const dates = [...new Set(items.map((item) => item.shootDate).filter(Boolean))];
     if (dates.length === 0) {
-      setDateConflicts([]);
+      setExistingDateConflicts([]);
       setAllowDateConflicts(false);
       return;
     }
@@ -731,9 +801,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     ).then((results) => {
       if (cancelled) return;
       const conflicts = results.flatMap((result) =>
-        Array.isArray(result?.conflicts) ? (result.conflicts as ShootDateConflict[]) : [],
+        Array.isArray(result?.conflicts)
+          ? (result.conflicts as ShootDateConflict[])
+          : [],
       );
-      setDateConflicts(conflicts);
+      setExistingDateConflicts(conflicts);
       setAllowDateConflicts(false);
     });
 
@@ -806,10 +878,17 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
     event.preventDefault();
 
     let confirmedAllowDateConflicts = allowDateConflicts;
-    if (dateConflicts.length > 0 && !confirmedAllowDateConflicts) {
-      const summary = formatShootDateConflictSummary(dateConflicts);
+    if (timeOverlaps.length > 0) {
+      setError(
+        "Aynı güne ikinci randevu yalnızca farklı saatlerde oluşturulabilir. Saat aralığını mevcut randevuyla çakışmayacak şekilde girin.",
+      );
+      return;
+    }
+
+    if (sameDayOnly.length > 0 && !confirmedAllowDateConflicts) {
+      const summary = formatShootDateConflictSummary(sameDayOnly);
       const confirmed = window.confirm(
-        `Bu tarihte zaten rezervasyon var. Aynı güne ikinci randevu eklemek istiyor musunuz?\n\n${summary}\n\nOnaylarsanız mevcut randevu silinmez; ikinci randevu da aynı güne kaydedilir.`,
+        `Bu tarihte zaten rezervasyon var. Aynı güne (farklı saatlerde) ikinci randevu eklemek istiyor musunuz?\n\n${summary}\n\nOnaylarsanız mevcut randevu silinmez; ikinci randevu da aynı güne kaydedilir.`,
       );
       if (!confirmed) return;
       confirmedAllowDateConflicts = true;
@@ -918,7 +997,7 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             : "Rezervasyon oluşturulamadı"),
       );
       if (data.conflicts) {
-        setDateConflicts(data.conflicts);
+        setExistingDateConflicts(data.conflicts);
         setAllowDateConflicts(false);
       }
       return;
@@ -981,18 +1060,82 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         ) : null}
       </div>
 
-      {dateConflicts.length > 0 ? (
+      {timeOverlaps.length > 0 ? (
+        <div className="flex min-w-0 items-start gap-3 rounded-xl border border-red-500/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="min-w-0 flex-1 space-y-3 break-words">
+            <p className="font-medium">
+              Aynı saatlere denk gelen ikinci randevu oluşturulamaz. Saat
+              aralığını mevcut randevuyla çakışmayacak şekilde girin.
+            </p>
+            <ul className="space-y-3">
+              {timeOverlaps.map((conflict) => (
+                <li
+                  key={`hard-${conflict.date}`}
+                  className="rounded-lg bg-black/20 px-3 py-2"
+                >
+                  <p className="font-semibold text-red-50">
+                    {format(
+                      new Date(`${conflict.date}T12:00:00`),
+                      "d MMMM yyyy",
+                      { locale: tr },
+                    )}
+                  </p>
+                  <ul className="mt-2 space-y-2">
+                    {conflict.reservations.map((reservation) => (
+                      <li key={reservation.reservationId}>
+                        <p className="text-red-50">{reservation.coupleName}</p>
+                        <ul className="mt-1 space-y-1 text-red-100/85">
+                          {reservation.items.map((item, index) => {
+                            const title = [
+                              item.serviceAreaTitle,
+                              item.packageTitle,
+                              item.shootTypeLabel,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ");
+                            const time = item.isOutdoor
+                              ? [item.departureTime, item.arrivalTime]
+                                  .filter(Boolean)
+                                  .join("–")
+                              : [item.startTime, item.endTime]
+                                  .filter(Boolean)
+                                  .join("–");
+                            return (
+                              <li
+                                key={`${reservation.reservationId}-${index}`}
+                              >
+                                • {title}
+                                {time ? ` (${time})` : ""}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+
+      {sameDayOnly.length > 0 && timeOverlaps.length === 0 ? (
         <div className="flex min-w-0 items-start gap-3 rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <div className="min-w-0 flex-1 space-y-3 break-words">
             <div>
               <p className="font-medium">
-                Bu tarihte zaten rezervasyon var. Aynı güne ikinci randevu
-                ekleyebilirsiniz; mevcut randevu silinmez.
+                Bu tarihte zaten rezervasyon var. Saatler çakışmıyorsa aynı güne
+                ikinci randevu ekleyebilirsiniz; mevcut randevu silinmez.
               </p>
               <ul className="mt-3 space-y-3">
-                {dateConflicts.map((conflict) => (
-                  <li key={conflict.date} className="rounded-lg bg-black/20 px-3 py-2">
+                {sameDayOnly.map((conflict) => (
+                  <li
+                    key={`soft-${conflict.date}`}
+                    className="rounded-lg bg-black/20 px-3 py-2"
+                  >
                     <p className="font-semibold text-amber-50">
                       {format(
                         new Date(`${conflict.date}T12:00:00`),
@@ -1003,7 +1146,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                     <ul className="mt-2 space-y-2">
                       {conflict.reservations.map((reservation) => (
                         <li key={reservation.reservationId}>
-                          <p className="text-amber-50">{reservation.coupleName}</p>
+                          <p className="text-amber-50">
+                            {reservation.coupleName}
+                          </p>
                           <ul className="mt-1 space-y-1 text-amber-100/85">
                             {reservation.items.map((item, index) => {
                               const title = [
@@ -1021,7 +1166,9 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                                     .filter(Boolean)
                                     .join("–");
                               return (
-                                <li key={`${reservation.reservationId}-${index}`}>
+                                <li
+                                  key={`${reservation.reservationId}-${index}`}
+                                >
                                   • {title}
                                   {time ? ` (${time})` : ""}
                                 </li>
@@ -1039,11 +1186,14 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
               <input
                 type="checkbox"
                 checked={allowDateConflicts}
-                onChange={(event) => setAllowDateConflicts(event.target.checked)}
+                onChange={(event) =>
+                  setAllowDateConflicts(event.target.checked)
+                }
                 className="mt-1 h-4 w-4 rounded border-amber-400/50 bg-black/30"
               />
               <span>
-                Aynı güne ikinci randevuyu eklemek istediğimi onaylıyorum.
+                Aynı güne (farklı saatlerde) ikinci randevuyu eklemek istediğimi
+                onaylıyorum.
               </span>
             </label>
           </div>
@@ -1536,7 +1686,8 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             saving ||
             savingDraft ||
             items.length === 0 ||
-            (dateConflicts.length > 0 && !allowDateConflicts)
+            timeOverlaps.length > 0 ||
+            (sameDayOnly.length > 0 && !allowDateConflicts)
           }
           className="w-full rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black disabled:opacity-50 sm:w-auto"
         >
