@@ -9,6 +9,10 @@ import { AlertTriangle, Plus, X } from "lucide-react";
 import { nanoid } from "nanoid";
 import { formatPrice, OUTDOOR_DEFAULT_ARRIVAL_TIME, OUTDOOR_DEFAULT_DEPARTURE_TIME, RESERVATION_STATUS_LABELS } from "@/lib/constants";
 import { toDateInputValue } from "@/lib/date-only";
+import {
+  formatMoneyInputValue,
+  parseMoneyInput,
+} from "@/lib/money-input";
 import { usePaymentTypeCopy } from "@/components/site-settings-provider";
 import { usesInstallmentPricing, type PaymentType } from "@/lib/constants";
 import type { ServiceAreaData } from "@/lib/package-types";
@@ -1374,10 +1378,12 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
                   </Field>
                   <Field label="Belirlenen Fiyat (₺)">
                     <input
-                      type="number"
-                      value={item.agreedUnitPrice}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      value={formatMoneyInputValue(item.agreedUnitPrice)}
                       onChange={(e) => {
-                        const agreedUnitPrice = Number(e.target.value);
+                        const agreedUnitPrice = parseMoneyInput(e.target.value);
                         updateItem(index, {
                           agreedUnitPrice,
                           unitPrice: agreedUnitPrice,
@@ -1547,11 +1553,13 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
         >
           <Field label="Toplam Fiyat (₺)">
             <input
-              type="number"
-              value={totalPrice}
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={formatMoneyInputValue(totalPrice)}
               onChange={(e) => {
                 setTotalPriceManual(true);
-                setTotalPrice(Number(e.target.value));
+                setTotalPrice(parseMoneyInput(e.target.value));
               }}
               required
               className={inputClass}
@@ -1572,10 +1580,11 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
           {discountEnabled ? (
             <Field label="İndirim (₺)">
               <input
-                type="number"
-                min={0}
-                value={discountAmount}
-                onChange={(e) => setDiscountAmount(Number(e.target.value))}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={formatMoneyInputValue(discountAmount)}
+                onChange={(e) => setDiscountAmount(parseMoneyInput(e.target.value))}
                 className={inputClass}
               />
             </Field>
@@ -1612,10 +1621,14 @@ export function ReservationForm({ reservationId }: ReservationFormProps) {
             <div key={index} className="grid-safe grid gap-3 sm:grid-cols-2 md:grid-cols-[1fr_1fr_auto]">
               <Field label={`Ödenecek Tutar ${index + 1} (₺)`}>
                 <input
-                  type="number"
-                  value={row.amount}
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={formatMoneyInputValue(row.amount)}
                   onChange={(e) =>
-                    updateInstallment(index, { amount: Number(e.target.value) })
+                    updateInstallment(index, {
+                      amount: parseMoneyInput(e.target.value),
+                    })
                   }
                   required
                   className={inputClass}
