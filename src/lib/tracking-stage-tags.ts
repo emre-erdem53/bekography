@@ -11,6 +11,7 @@ import {
 } from "@/lib/package-workflow-stage-tags";
 import { normalizePostShootSectionTitle } from "@/lib/post-shoot-from-inspect";
 import type { PostShootSnapshot } from "@/lib/post-shoot";
+import { filterStageTagsForShootTypeMedia } from "@/lib/shoot-type-media";
 import type { TrackingWorkflowStageId } from "@/lib/tracking-workflow";
 
 const EMPTY_STAGE_TAGS: Record<TrackingWorkflowStageId, string[]> = {
@@ -121,19 +122,27 @@ export function resolveDetailSectionsForStageTags(input: {
 /** Rezervasyon / çekim türü tanımından süreç etiketlerini çözümler. */
 export function buildWorkflowStageTags(
   postShoot?: PostShootSnapshot,
-  shootType?: Pick<ShootTypeData, "content">,
+  shootType?: Pick<ShootTypeData, "content" | "label">,
   itemId?: string,
 ): Record<string, string[]> {
+  const optionLabel = shootType?.label ?? "";
+
   if (itemId && postShoot?.itemStageTags?.[itemId]) {
     const overrides = postShoot.itemStageTags[itemId];
     const tags = tagsFromItemOverrides(overrides);
-    if (hasAnyWorkflowStageTags(tags)) return tags;
+    if (hasAnyWorkflowStageTags(tags)) {
+      return optionLabel
+        ? filterStageTagsForShootTypeMedia(tags, optionLabel)
+        : tags;
+    }
   }
 
   if (shootType) {
     const fromShootType = resolveShootTypeWorkflowStageTags(shootType);
     if (hasAnyWorkflowStageTags(fromShootType)) {
-      return fromShootType;
+      return optionLabel
+        ? filterStageTagsForShootTypeMedia(fromShootType, optionLabel)
+        : fromShootType;
     }
   }
 

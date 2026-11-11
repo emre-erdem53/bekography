@@ -93,9 +93,11 @@ function shootTypeContent(
         typeof previous.workflowStageTags === "object"
           ? (previous.workflowStageTags as WorkflowStageTagsMap)
           : undefined;
-      return stored && hasAnyWorkflowStageTags(stored)
-        ? stored
-        : ensureWorkflowStageTags(undefined, area.scheduleType);
+      return ensureWorkflowStageTags(
+        stored && hasAnyWorkflowStageTags(stored) ? stored : undefined,
+        area.scheduleType,
+        shootType.label,
+      );
     })(),
   };
   return jsonValue(content);

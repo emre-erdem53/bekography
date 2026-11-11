@@ -75,8 +75,11 @@ function resolveItemProductSnapshot(item: {
 
 function shootTypeContentOf(
   shootType: ShootTypeWithParents,
-): Pick<{ content: ShootTypeContent }, "content"> {
-  return { content: (shootType.content ?? {}) as ShootTypeContent };
+): Pick<ShootTypeWithParents, "label"> & { content: ShootTypeContent } {
+  return {
+    label: shootType.label,
+    content: (shootType.content ?? {}) as ShootTypeContent,
+  };
 }
 
 function enrichPurchasedProductSnapshot(

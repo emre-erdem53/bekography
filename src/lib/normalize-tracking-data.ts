@@ -50,9 +50,14 @@ export function normalizeTrackingData(
       reservationCreatedAt,
     });
     const snapshot = item.productSnapshot ?? emptyProductSnapshot();
+    const optionLabel =
+      item.optionLabel ??
+      snapshot.shootTypeLabelRaw ??
+      item.shootTypeLabel ??
+      "";
     const workflowStageTags = buildWorkflowStageTags(
       postShoot,
-      undefined,
+      optionLabel ? { label: optionLabel, content: {} } : undefined,
       itemId,
     );
 

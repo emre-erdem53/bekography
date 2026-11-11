@@ -8,6 +8,10 @@ import type { ShootTypeContent } from "../src/lib/package-seed-data";
 
 const prisma = new PrismaClient();
 const DRY_RUN = process.argv.includes("--dry-run");
+/** Mevcut etiketleri de yeni varsayılanlarla değiştirir. */
+const FORCE = process.argv.includes("--force");
+/** Yalnızca dış çekim (outdoor) hizmet alanları. */
+const OUTDOOR_ONLY = process.argv.includes("--outdoor-only");
 
 function parseContent(raw: unknown): ShootTypeContent {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -34,19 +38,29 @@ async function main() {
   let skipped = 0;
 
   for (const shootType of shootTypes) {
-    const content = parseContent(shootType.content);
-    const existing = content.workflowStageTags as WorkflowStageTagsMap | undefined;
-
-    if (existing && hasAnyWorkflowStageTags(existing)) {
-      skipped += 1;
-      continue;
-    }
-
     const scheduleType =
       shootType.package.serviceArea.scheduleType === "outdoor"
         ? "outdoor"
         : "indoor";
-    const workflowStageTags = ensureWorkflowStageTags(undefined, scheduleType);
+
+    if (OUTDOOR_ONLY && scheduleType !== "outdoor") {
+      skipped += 1;
+      continue;
+    }
+
+    const content = parseContent(shootType.content);
+    const existing = content.workflowStageTags as WorkflowStageTagsMap | undefined;
+
+    if (!FORCE && existing && hasAnyWorkflowStageTags(existing)) {
+      skipped += 1;
+      continue;
+    }
+
+    const workflowStageTags = ensureWorkflowStageTags(
+      undefined,
+      scheduleType,
+      shootType.label,
+    );
     const nextContent: ShootTypeContent = {
       ...content,
       workflowStageTags,

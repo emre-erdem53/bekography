@@ -21,7 +21,10 @@ import {
   mergeDefaultPostShootSections,
   STANDARD_INSPECT_SECTION_TITLES,
 } from "@/lib/default-inspect-sections";
-import { ensureWorkflowStageTags } from "@/lib/default-workflow-stage-tags";
+import {
+  buildDefaultWorkflowStageTags,
+  ensureWorkflowStageTags,
+} from "@/lib/default-workflow-stage-tags";
 import { normalizeDetailSections } from "@/lib/package-detail-section";
 import type { ScheduleType } from "@/lib/package-types";
 import { AdminFileUpload } from "@/components/admin/admin-file-upload";
@@ -122,6 +125,7 @@ function nextPackageKey() {
 function normalizeShootTypeContent(
   content: ShootTypeContent | null | undefined,
   scheduleType: ScheduleType = "indoor",
+  optionLabel = "",
 ): ShootTypeContent {
   const base = (content ?? {}) as ShootTypeContent;
   return {
@@ -132,6 +136,7 @@ function normalizeShootTypeContent(
     workflowStageTags: ensureWorkflowStageTags(
       base.workflowStageTags,
       scheduleType,
+      optionLabel,
     ),
   };
 }
@@ -193,7 +198,11 @@ function mapApiPackage(
             installmentPrice: shootType.installmentPrice,
             iconKey: shootType.iconKey ?? "",
             tags: shootType.tags ?? [],
-            content: normalizeShootTypeContent(shootType.content, scheduleType),
+            content: normalizeShootTypeContent(
+              shootType.content,
+              scheduleType,
+              shootType.label,
+            ),
           }))
         : [emptyShootType(scheduleType)],
   };
@@ -1167,15 +1176,43 @@ export function PackageForm({
                     </div>
 
                     <div className="space-y-3 border-t border-white/10 pt-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-white">
-                          Süreç Etiketleri
-                        </h4>
-                        <p className="mt-1 text-xs text-zinc-500">
-                          Müşteri takip sayfasındaki sipariş durumu
-                          timeline&apos;ında her aşamada gösterilecek etiketler.
-                          İnceleme metinlerinden bağımsızdır.
-                        </p>
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h4 className="text-sm font-medium text-white">
+                            Süreç Etiketleri
+                          </h4>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            Müşteri takip sayfasındaki sipariş durumu
+                            timeline&apos;ında her aşamada gösterilecek etiketler.
+                            İnceleme metinlerinden bağımsızdır.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const defaults = buildDefaultWorkflowStageTags({
+                              scheduleType,
+                              optionLabel: shootType.label,
+                            });
+                            const next: Record<string, string[]> = {};
+                            for (const stageDef of stageDefinitions) {
+                              const fromBuiltin =
+                                stageDef.builtinKey &&
+                                defaults[stageDef.builtinKey];
+                              next[stageDef.id] = fromBuiltin
+                                ? [...fromBuiltin]
+                                : defaults[stageDef.id]
+                                  ? [...defaults[stageDef.id]]
+                                  : [];
+                            }
+                            updateContent(pkg.key, key, {
+                              workflowStageTags: next,
+                            });
+                          }}
+                          className="shrink-0 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-zinc-400 hover:text-white"
+                        >
+                          Varsayılan etiketleri uygula
+                        </button>
                       </div>
                       {stageDefinitions.map((stageDef) => (
                         <PostShootTagsEditor

@@ -1,4 +1,8 @@
 import type { PackageDetailSection } from "@/lib/package-seed-data";
+import {
+  includesPhoto,
+  includesVideo,
+} from "@/lib/shoot-type-media";
 
 const REZERVASYON = {
   title: "REZERVASYON",
@@ -36,18 +40,11 @@ type PackageInspectContext = {
   scheduleType?: "outdoor" | "indoor";
 };
 
-function includesPhoto(optionLabel: string): boolean {
-  const label = optionLabel.toLocaleLowerCase("tr");
-  return label.includes("fotoğraf") || label.includes("fotograf");
-}
-
-function includesVideo(optionLabel: string): boolean {
-  const label = optionLabel.toLocaleLowerCase("tr");
-  return (
-    label.includes("video") ||
-    label.includes("film") ||
-    label.includes("hikaye")
-  );
+function selectionTags(optionLabel: string): string[] {
+  const tags = ["30 Günde"];
+  if (includesVideo(optionLabel)) tags.push("1 Müzik");
+  tags.push("Whatsapp'dan Gönder");
+  return tags;
 }
 
 function isOutdoor(ctx: PackageInspectContext): boolean {
@@ -214,13 +211,15 @@ function buildSalonSections(ctx: PackageInspectContext): PackageDetailSection[] 
     createSection(
       "SEÇİM",
       salonSelectionBody(ctx),
-      ["30 Günde", "1 Müzik", "Whatsapp'dan Gönder"],
+      selectionTags(ctx.optionLabel),
       4,
     ),
     createSection(
       "DÜZENLEME",
       salonEditingBody(ctx),
-      ["En fazla 70 gün", `${ctx.categoryTitle} Filmi`],
+      includesVideo(ctx.optionLabel)
+        ? ["En fazla 70 gün", `${ctx.categoryTitle} Filmi`]
+        : ["En fazla 70 gün"],
       5,
     ),
     createSection(
@@ -260,15 +259,17 @@ function buildOutdoorSections(ctx: PackageInspectContext): PackageDetailSection[
     createSection(
       "SEÇİM",
       outdoorSelectionBody(ctx),
-      ["30 Günde", "1 Müzik", "Whatsapp'dan Gönder"],
+      selectionTags(ctx.optionLabel),
       4,
     ),
     createSection(
       "DÜZENLEME",
       outdoorEditingBody(ctx),
-      includesPhoto(ctx.optionLabel)
-        ? ["18 Fotoğraf", "Dış Çekim Filmi", "70 Gün"]
-        : ["Dış Çekim Filmi", "70 Gün"],
+      [
+        ...(includesPhoto(ctx.optionLabel) ? ["18 Fotoğraf"] : []),
+        ...(includesVideo(ctx.optionLabel) ? ["Dış Çekim Filmi"] : []),
+        "70 Gün",
+      ],
       5,
     ),
     createSection(
@@ -314,13 +315,15 @@ function buildGelinCikisiSections(ctx: PackageInspectContext): PackageDetailSect
     createSection(
       "SEÇİM",
       salonSelectionBody(ctx),
-      ["30 Günde", "1 Müzik", "Whatsapp'dan Gönder"],
+      selectionTags(ctx.optionLabel),
       4,
     ),
     createSection(
       "DÜZENLEME",
       gelinCikisiEditingBody(ctx),
-      ["En fazla 70 gün", "Çıkış Filmi"],
+      includesVideo(ctx.optionLabel)
+        ? ["En fazla 70 gün", "Çıkış Filmi"]
+        : ["En fazla 70 gün"],
       5,
     ),
     createSection(
@@ -358,13 +361,15 @@ function buildKuaforSections(ctx: PackageInspectContext): PackageDetailSection[]
     createSection(
       "SEÇİM",
       salonSelectionBody(ctx),
-      ["30 Günde", "1 Müzik", "Whatsapp'dan Gönder"],
+      selectionTags(ctx.optionLabel),
       4,
     ),
     createSection(
       "DÜZENLEME",
       kuaforEditingBody(ctx),
-      ["En fazla 70 gün", "Kuaför Filmi"],
+      includesVideo(ctx.optionLabel)
+        ? ["En fazla 70 gün", "Kuaför Filmi"]
+        : ["En fazla 70 gün"],
       5,
     ),
     createSection(

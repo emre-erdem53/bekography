@@ -14,6 +14,7 @@ import {
   getShootTypeGalleryMedia,
   getShootTypeGalleryPreviewMedia,
 } from "@/lib/package-media";
+import { includesPhoto, includesVideo } from "@/lib/shoot-type-media";
 
 export const PRODUCT_SNAPSHOT_VERSION = 3;
 
@@ -68,9 +69,8 @@ export function emptyProductSnapshot(): ReservationProductSnapshot {
 }
 
 export function getShootTypeLabel(label: string): string {
-  const lower = label.toLowerCase();
-  const hasPhoto = lower.includes("fotoğraf") || lower.includes("fotograf");
-  const hasVideo = lower.includes("video") || lower.includes("film");
+  const hasPhoto = includesPhoto(label);
+  const hasVideo = includesVideo(label);
 
   if (hasPhoto && hasVideo) return "Fotoğraf + Video";
   if (hasVideo) return "Video";

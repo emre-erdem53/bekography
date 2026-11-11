@@ -74,14 +74,20 @@ export function buildItemStageTagsFromShootType(
   const context = findShootTypeContext(serviceAreas, shootTypeId);
   if (!context) return emptyItemWorkflowStageTags();
 
+  const optionLabel = context.shootType.label;
   const fromShootType = resolveShootTypeWorkflowStageTags(context.shootType);
   if (hasAnyWorkflowStageTags(fromShootType)) {
-    return fromShootType;
+    return ensureWorkflowStageTags(
+      fromShootType,
+      context.serviceArea.scheduleType,
+      optionLabel,
+    );
   }
 
   return ensureWorkflowStageTags(
     undefined,
     context.serviceArea.scheduleType,
+    optionLabel,
   );
 }
 

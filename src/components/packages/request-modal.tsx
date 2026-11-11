@@ -198,6 +198,7 @@ export function RequestModal({
   const [paymentType, setPaymentType] = useState<"pesin" | "taksitli">("pesin");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [whatsAppUrl, setWhatsAppUrl] = useState("");
   const [error, setError] = useState("");
 
   const discountItems = useMemo(
@@ -261,6 +262,7 @@ export function RequestModal({
     setPaymentType("pesin");
     setError("");
     setSuccess(false);
+    setWhatsAppUrl("");
   }
 
   function resolveServiceAreaFields(): ServiceAreaFields {
@@ -330,6 +332,10 @@ export function RequestModal({
       };
     });
 
+    // iOS Safari, await sonrası window.open'ı popup sanıp engeller.
+    // Tıklama anında boş sekme açıp başarıda URL'yi yazarız.
+    const whatsAppWindow = window.open("about:blank", "_blank");
+
     const response = await fetch("/api/requests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -344,6 +350,7 @@ export function RequestModal({
     setLoading(false);
 
     if (!response.ok) {
+      whatsAppWindow?.close();
       const data = await response.json();
       setError(data.error ?? "Talep oluşturulamadı");
       return;
@@ -365,9 +372,17 @@ export function RequestModal({
       contactRole,
       whatsAppItems,
     );
+    const url = buildWhatsAppUrl(message);
 
+    setWhatsAppUrl(url);
     setSuccess(true);
-    window.open(buildWhatsAppUrl(message), "_blank", "noopener,noreferrer");
+
+    if (whatsAppWindow && !whatsAppWindow.closed) {
+      whatsAppWindow.location.href = url;
+    } else {
+      // Popup tamamen engellendiyse aynı sekmede açmayı dene.
+      window.location.assign(url);
+    }
   }
 
   function handleClose() {
@@ -408,12 +423,23 @@ export function RequestModal({
               <div className="mt-6 space-y-3 text-sm text-zinc-300">
                 <p>Talebiniz başarıyla oluşturuldu.</p>
                 <p>
-                  WhatsApp üzerinden mesajınızı göndererek iletişime geçebilirsiniz.
+                  WhatsApp açılmazsa aşağıdaki butona dokunarak şablon
+                  mesajınızı gönderebilirsiniz.
                 </p>
+                {whatsAppUrl ? (
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`${requestActionSurfaceClassFull} mt-4 rounded-xl bg-[#93f8b6] py-3 text-sm font-semibold text-black`}
+                  >
+                    <RequestActionLabel>WhatsApp&apos;a Git</RequestActionLabel>
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="mt-4 w-full rounded-xl bg-white py-3 text-sm font-semibold text-black"
+                  className="mt-2 w-full rounded-xl border border-white/15 py-3 text-sm font-semibold text-zinc-300 hover:text-white"
                 >
                   Tamam
                 </button>
